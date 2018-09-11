@@ -221,6 +221,16 @@ TLBlocConnector >> openInWindow: anElement named: aTitleString extent: aPoint [
 		title: aTitleString.
 	aSpace root background: Color white.
 	aSpace root addChild: anElement.
+	aSpace root
+		addEventHandler:
+			(BlEventHandler
+				on: BlMouseWheelEvent
+				do: [ :evt | 
+					aSpace root transform
+						inherit;
+						origin: (BlAffineTransformationPositionOrigin position: evt position x @ evt position y);
+						scaleBy: (self adaptZoomFromEvent: evt direction);
+						apply ]).
 	aSpace show
 ]
 
