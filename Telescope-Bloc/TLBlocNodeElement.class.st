@@ -22,8 +22,9 @@ TLBlocNodeElement >> dimension [
 ]
 
 { #category : #accessing }
-TLBlocNodeElement >> dimension: anObject [
-	dimension := anObject
+TLBlocNodeElement >> dimension: aDimension [
+	dimension := aDimension.
+	self size: aDimension
 ]
 
 { #category : #accessing }
