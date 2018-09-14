@@ -17,6 +17,16 @@ TLBlocNodeConnection class >> createFrom: aTLBlocNodeElementFrom to: aTLBlocNode
 		yourself
 ]
 
+{ #category : #initialization }
+TLBlocNodeConnection >> customizeFrom: aTLStyleSheet [
+	element border: (BlBorder paint: aTLStyleSheet color width: aTLStyleSheet width).
+	"element
+		toHead:
+			(BlArrowheadTriangle new
+				background: (aTLStyleSheet > #head) color;
+				border: (BlBorder paint: (aTLStyleSheet > #head) color width: 1))"
+]
+
 { #category : #accessing }
 TLBlocNodeConnection >> element [
 	^ element
