@@ -58,7 +58,12 @@ TLBlocConnector >> closeVisualization [
 
 { #category : #'generation - connection' }
 TLBlocConnector >> createElementConnection: aTLConnection From: fromNode to: toNode [
-	^ TLBlocConnectionElement createFrom: fromNode to: toNode
+	| blConnection |
+	blConnection := TLBlocNodeConnection
+		createFrom: (self elementFromTLDrawable: fromNode)
+		to: (self elementFromTLDrawable: toNode).
+	blConnection customizeFrom: aTLConnection effectiveStyleSheet.
+	^ blConnection
 ]
 
 { #category : #'generation - interaction' }
