@@ -1,6 +1,6 @@
 Class {
 	#name : #TLBlocVisualization,
-	#superclass : #BlScrollableElement,
+	#superclass : #BlElement,
 	#category : #'Telescope-Bloc'
 }
 
