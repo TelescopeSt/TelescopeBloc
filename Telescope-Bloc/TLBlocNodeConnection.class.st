@@ -1,15 +1,16 @@
 Class {
-	#name : #TLBlocNodeConnection,
-	#superclass : #BlElement,
+	#name : 'TLBlocNodeConnection',
+	#superclass : 'BlElement',
 	#instVars : [
 		'fromNode',
 		'toNode',
 		'element'
 	],
-	#category : #'Telescope-Bloc'
+	#category : 'Telescope-Bloc',
+	#package : 'Telescope-Bloc'
 }
 
-{ #category : #'instance creation' }
+{ #category : 'instance creation' }
 TLBlocNodeConnection class >> createFrom: aTLBlocNodeElementFrom to: aTLBlocNodeElementTo [
 	^ self new
 		fromNode: aTLBlocNodeElementFrom;
@@ -17,7 +18,7 @@ TLBlocNodeConnection class >> createFrom: aTLBlocNodeElementFrom to: aTLBlocNode
 		yourself
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 TLBlocNodeConnection >> customizeFrom: aTLStyleSheet [
 	element border: (BlBorder paint: aTLStyleSheet color width: aTLStyleSheet width).
 	"element
@@ -27,28 +28,28 @@ TLBlocNodeConnection >> customizeFrom: aTLStyleSheet [
 				border: (BlBorder paint: (aTLStyleSheet > #head) color width: 1))"
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 TLBlocNodeConnection >> element [
 	^ element
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 TLBlocNodeConnection >> element: anObject [
 	element := anObject
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 TLBlocNodeConnection >> fromNode [
 	^ fromNode
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 TLBlocNodeConnection >> fromNode: anObject [
 	fromNode := anObject.
 	self element fromAnchor: (BlElementCenterAnchor element: anObject)
 ]
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 TLBlocNodeConnection >> initialize [
 	super initialize.
 	element := BlLineElement new
@@ -61,12 +62,12 @@ TLBlocNodeConnection >> initialize [
 	self addChild: element
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 TLBlocNodeConnection >> toNode [
 	^ toNode
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 TLBlocNodeConnection >> toNode: anObject [
 	toNode := anObject.
 	self element toAnchor: (BlElementCenterAnchor element: anObject)

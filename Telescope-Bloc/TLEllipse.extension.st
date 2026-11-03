@@ -1,6 +1,7 @@
-Extension { #name : #TLEllipse }
+Extension { #name : 'TLEllipse' }
 
-{ #category : #'*Telescope-Bloc' }
+{ #category : '*Telescope-Bloc' }
 TLEllipse class >> obtainTLBlocShape [
-	^ BlEllipse new
+
+	^ BlEllipseGeometry new
 ]

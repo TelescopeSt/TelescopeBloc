@@ -1,11 +1,13 @@
 Class {
-	#name : #TLBlocVisualization,
-	#superclass : #BlElement,
-	#category : #'Telescope-Bloc'
+	#name : 'TLBlocVisualization',
+	#superclass : 'BlElement',
+	#category : 'Telescope-Bloc',
+	#package : 'Telescope-Bloc'
 }
 
-{ #category : #initialization }
+{ #category : 'initialization' }
 TLBlocVisualization >> initialize [
+
 	super initialize.
-	self size: 500@500
+	self extent: 500 @ 500
 ]

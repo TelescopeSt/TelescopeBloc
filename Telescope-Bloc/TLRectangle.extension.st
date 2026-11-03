@@ -1,6 +1,7 @@
-Extension { #name : #TLRectangle }
+Extension { #name : 'TLRectangle' }
 
-{ #category : #'*Telescope-Bloc' }
+{ #category : '*Telescope-Bloc' }
 TLRectangle class >> obtainTLBlocShape [
-	^ BlRectangle new
+
+	^ BlRectangleGeometry new
 ]

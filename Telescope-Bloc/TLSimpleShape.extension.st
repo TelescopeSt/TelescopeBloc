@@ -1,6 +1,6 @@
-Extension { #name : #TLSimpleShape }
+Extension { #name : 'TLSimpleShape' }
 
-{ #category : #'*Telescope-Bloc' }
+{ #category : '*Telescope-Bloc' }
 TLSimpleShape class >> obtainTLBlocShape [
 	^ self subclassResponsibility 
 ]

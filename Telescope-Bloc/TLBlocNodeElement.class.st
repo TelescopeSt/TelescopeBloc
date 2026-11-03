@@ -1,14 +1,15 @@
 Class {
-	#name : #TLBlocNodeElement,
-	#superclass : #BlElement,
+	#name : 'TLBlocNodeElement',
+	#superclass : 'BlElement',
 	#instVars : [
 		'dimension',
 		'position'
 	],
-	#category : #'Telescope-Bloc'
+	#category : 'Telescope-Bloc',
+	#package : 'Telescope-Bloc'
 }
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 TLBlocNodeElement >> customizeFrom: aTLStyleSheet [ 
 	self background: aTLStyleSheet backgroundColor.
 	self dimension: aTLStyleSheet width @ aTLStyleSheet height.
@@ -16,34 +17,36 @@ TLBlocNodeElement >> customizeFrom: aTLStyleSheet [
 	self border: (BlBorder paint: aTLStyleSheet borderColor width: aTLStyleSheet borderWidth)
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 TLBlocNodeElement >> dimension [
 	^ dimension
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 TLBlocNodeElement >> dimension: aDimension [
+
 	dimension := aDimension.
-	self size: aDimension
+	self extent: aDimension
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 TLBlocNodeElement >> isNode [
 	^ true
 ]
 
-{ #category : #dimension }
+{ #category : 'dimension' }
 TLBlocNodeElement >> occupyMaxSpace [
 	^ false
 ]
 
-{ #category : #accessing }
+{ #category : 'accessing' }
 TLBlocNodeElement >> position [
 	^ position
 ]
 
-{ #category : #accessing }
-TLBlocNodeElement >> position: aPoint [ 
+{ #category : 'accessing' }
+TLBlocNodeElement >> position: aPoint [
+
 	position := aPoint.
-	^ self relocate: aPoint 
+	^ super position: aPoint
 ]
