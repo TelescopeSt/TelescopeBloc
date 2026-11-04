@@ -68,9 +68,33 @@ TLBlocConnectionSegment >> join: aSourceOutline to: aTargetOutline [
 		       orElse: targetCenter
 ]
 
+{ #category : 'computing' }
+TLBlocConnectionSegment >> labelCenterFor: anExtent gap: aGap [
+	"The center of a label of the given extent, next to the middle of the segment and not on it: the label is pushed away from the line, perpendicularly, by its half extent in that direction and a gap. It is above a horizontal segment and on the right of a vertical one, whichever way the segment goes"
+
+	| middle normal distance |
+	middle := start + end / 2.
+	start = end ifTrue: [ ^ middle ].
+	normal := self upwardNormal.
+	distance := normal x abs * anExtent x / 2 + (normal y abs * anExtent y / 2) + aGap.
+	^ middle + (normal * distance)
+]
+
 { #category : 'accessing' }
 TLBlocConnectionSegment >> start [
 	"The point on the border of the source, where the segment starts"
 
 	^ start
+]
+
+{ #category : 'computing' }
+TLBlocConnectionSegment >> upwardNormal [
+	"The unit vector perpendicular to the segment which points up, or right when the segment is vertical"
+
+	| direction normal |
+	direction := end - start.
+	normal := (direction y negated @ direction x) normalized.
+	^ (normal y > 0 or: [ normal y = 0 and: [ normal x < 0 ] ])
+		  ifTrue: [ normal negated ]
+		  ifFalse: [ normal ]
 ]

@@ -1,5 +1,5 @@
 "
-I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions, the legends and the heads of the connections are not implemented yet.
+I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions and the legends are not implemented yet.
 "
 Class {
 	#name : 'TLBlocConnector',
@@ -66,9 +66,14 @@ TLBlocConnector >> configView [
 
 { #category : 'accessing' }
 TLBlocConnector >> connectionHeadShapesAvailableForConnector [
-	"The connections are not implemented yet, so no shape is available for their heads"
+	"Every shape can be the head of a connection, since the head is drawn from the outline of the shape"
 
-	^ #(  )
+	^ TLSimpleShape allSubclasses
+]
+
+{ #category : 'accessing' }
+TLBlocConnector >> connections [
+	^ connections
 ]
 
 { #category : 'generation - connection' }

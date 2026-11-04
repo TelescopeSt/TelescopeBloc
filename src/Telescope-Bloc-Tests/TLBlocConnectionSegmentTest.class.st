@@ -51,6 +51,47 @@ TLBlocConnectionSegmentTest >> testDiagonalBetweenSquaresGoesFromCornerToCorner 
 ]
 
 { #category : 'tests' }
+TLBlocConnectionSegmentTest >> testLabelIsOnTheSameSideWhicheverWayTheSegmentGoes [
+
+	| forward backward |
+	forward := TLBlocConnectionSegment from: (self square: 0 @ 0) to: (self square: 100 @ 0).
+	backward := TLBlocConnectionSegment from: (self square: 100 @ 0) to: (self square: 0 @ 0).
+	self assertPoint: (backward labelCenterFor: 30 @ 10 gap: 3) isCloseTo: (forward labelCenterFor: 30 @ 10 gap: 3)
+]
+
+{ #category : 'tests' }
+TLBlocConnectionSegmentTest >> testLabelOfADiagonalSegmentDoesNotTouchTheLine [
+
+	| segment center extent label line middle |
+	segment := TLBlocConnectionSegment from: (self square: 0 @ 0) to: (self square: 100 @ 100).
+	extent := 30 @ 10.
+	center := segment labelCenterFor: extent gap: 3.
+	label := GRectangle origin: center - (extent / 2) corner: center + (extent / 2).
+	line := GLine through: segment start asGPoint and: segment end asGPoint.
+	self assert: (label intersectionsWithLine: line) isEmpty.
+	"The label stays at the middle of the line, only moved away from it"
+	middle := segment start + segment end / 2.
+	self assert: (center - middle dotProduct: (segment end - segment start) normalized) abs < 0.01
+]
+
+{ #category : 'tests' }
+TLBlocConnectionSegmentTest >> testLabelOfAHorizontalSegmentIsAboveItsMiddle [
+
+	| segment |
+	segment := TLBlocConnectionSegment from: (self square: 0 @ 0) to: (self square: 100 @ 0).
+	"The middle of the segment is 70 @ 20, and the label is 30 pixels wide and 10 high, with a gap of 3"
+	self assertPoint: (segment labelCenterFor: 30 @ 10 gap: 3) isCloseTo: 70 @ (20 - 5 - 3)
+]
+
+{ #category : 'tests' }
+TLBlocConnectionSegmentTest >> testLabelOfAVerticalSegmentIsOnTheRightOfItsMiddle [
+
+	| segment |
+	segment := TLBlocConnectionSegment from: (self square: 0 @ 0) to: (self square: 0 @ 100).
+	self assertPoint: (segment labelCenterFor: 30 @ 10 gap: 3) isCloseTo: 20 + 15 + 3 @ 70
+]
+
+{ #category : 'tests' }
 TLBlocConnectionSegmentTest >> testNodesWithTheSameCenterGiveAnEmptySegment [
 
 	| segment |
