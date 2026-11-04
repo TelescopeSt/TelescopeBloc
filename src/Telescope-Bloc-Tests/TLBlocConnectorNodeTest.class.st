@@ -9,30 +9,25 @@ Class {
 	#tag : 'Connector'
 }
 
+{ #category : 'running' }
+TLBlocConnectorNodeTest >> setUp [
+
+	super setUp.
+	visualization layout: TLLinearLayout new
+]
+
 { #category : 'tests' }
 TLBlocConnectorNodeTest >> testNodeCreationGeneratesBlocNodeElement [
 
-	| group node |
-	group := TLEntitiesGroup new.
-	group
-		nodeCreationStrategy: TLNodeCreationStrategy default;
-		styleSheet: TLStyleSheet default.
-	node := group addNodeFromEntity: 1.
-	group generator: connector.
-	group generate.
+	| node |
+	node := visualization addNodeFromEntity: 1.
+	visualization generateWith: connector.
 	self assert: (connector elementFromTLDrawable: node) class identicalTo: TLBlocNodeElement
 ]
 
 { #category : 'tests' }
 TLBlocConnectorNodeTest >> testOpeningTenNodesShowsThemInAWindow [
 
-	| visualization |
-	visualization := TLVisualization new.
-	visualization
-		nodeCreationStrategy: TLNodeCreationStrategy default;
-		styleSheet: TLStyleSheet default;
-		layout: TLLinearLayout new;
-		generator: connector.
 	visualization addNodesFromEntities: (1 to: 10).
 	connector open: visualization inWindowSized: 400 @ 300 titled: 'Ten nodes'.
 	self assert: connector view children size equals: 10
@@ -41,13 +36,6 @@ TLBlocConnectorNodeTest >> testOpeningTenNodesShowsThemInAWindow [
 { #category : 'tests' }
 TLBlocConnectorNodeTest >> testTenNodesAreGeneratedInTheView [
 
-	| visualization |
-	visualization := TLVisualization new.
-	visualization
-		nodeCreationStrategy: TLNodeCreationStrategy default;
-		styleSheet: TLStyleSheet default;
-		layout: TLLinearLayout new;
-		generator: connector.
 	visualization addNodesFromEntities: (1 to: 10).
 	visualization generateWith: connector.
 	self assert: connector view children size equals: 10
@@ -56,13 +44,7 @@ TLBlocConnectorNodeTest >> testTenNodesAreGeneratedInTheView [
 { #category : 'tests' }
 TLBlocConnectorNodeTest >> testTenNodesAreLaidOutAtDistinctPositions [
 
-	| visualization positions |
-	visualization := TLVisualization new.
-	visualization
-		nodeCreationStrategy: TLNodeCreationStrategy default;
-		styleSheet: TLStyleSheet default;
-		layout: TLLinearLayout new;
-		generator: connector.
+	| positions |
 	visualization addNodesFromEntities: (1 to: 10).
 	visualization generateWith: connector.
 	positions := connector view children collect: [ :each | each position ].

@@ -9,16 +9,44 @@ Class {
 	#tag : 'Connector'
 }
 
+{ #category : 'running' }
+TLBlocConnectorLabelTest >> setUp [
+
+	super setUp.
+	visualization styleSheet nodeLabel: #yourself
+]
+
+{ #category : 'tests' }
+TLBlocConnectorLabelTest >> testEllipsizedLabelFitsItsMaxWidthOnOneLine [
+
+	| node label |
+	visualization styleSheet
+		nodeLabelWrap: 'ellipsis';
+		nodeLabelMaxWidth: 100.
+	node := visualization addNodeFromEntity: 'This is a node with an ellipsed label blablablablablabla'.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Ellipsis label'.
+	connector view space settleForDuration: 2 seconds.
+	label := (connector elementFromTLDrawable: node) children first.
+	self assert: label extent x <= 100.
+	self assert: (label labelText endsWith: '...').
+	self assert: label children size equals: 1
+]
+
+{ #category : 'tests' }
+TLBlocConnectorLabelTest >> testForcedLineReturnsGiveOneLinePerLine [
+
+	| node label |
+	visualization styleSheet nodeLabel: [ :string | String streamContents: [ :stream | stream << string << (String with: Character lf) << 'second line' ] ].
+	node := visualization addNodeFromEntity: 'first line'.
+	visualization generateWith: connector.
+	label := (connector elementFromTLDrawable: node) children first.
+	self assert: label children size equals: 2
+]
+
 { #category : 'tests' }
 TLBlocConnectorLabelTest >> testNodeDoesNotClipItsLabel [
 
-	| visualization node |
-	visualization := TLVisualization new.
-	visualization
-		nodeCreationStrategy: TLNodeCreationStrategy default;
-		styleSheet: TLStyleSheet default;
-		generator: connector.
-	visualization styleSheet nodeLabel: #yourself.
+	| node |
 	node := visualization addNodeFromEntity: 'abc'.
 	visualization generateWith: connector.
 	self deny: (connector elementFromTLDrawable: node) clipChildren
@@ -27,30 +55,17 @@ TLBlocConnectorLabelTest >> testNodeDoesNotClipItsLabel [
 { #category : 'tests' }
 TLBlocConnectorLabelTest >> testNodeWithLabelGeneratesItsLabelText [
 
-	| visualization node |
-	visualization := TLVisualization new.
-	visualization
-		nodeCreationStrategy: TLNodeCreationStrategy default;
-		styleSheet: TLStyleSheet default;
-		generator: connector.
-	visualization styleSheet nodeLabel: #yourself.
+	| node |
 	node := visualization addNodeFromEntity: 'abc'.
 	visualization generateWith: connector.
-	self assert: (connector elementFromTLDrawable: node) children first text asString equals: 'abc'
+	self assert: (connector elementFromTLDrawable: node) children first labelText equals: 'abc'
 ]
 
 { #category : 'tests' }
 TLBlocConnectorLabelTest >> testTopLabelIsAboveItsNode [
 
-	| visualization node label |
-	visualization := TLVisualization new.
-	visualization
-		nodeCreationStrategy: TLNodeCreationStrategy default;
-		styleSheet: TLStyleSheet default;
-		generator: connector.
-	visualization styleSheet
-		nodeLabel: #yourself;
-		nodeLabelPosition: #top.
+	| node label |
+	visualization styleSheet nodeLabelPosition: #top.
 	node := visualization addNodeFromEntity: 'abc'.
 	connector open: visualization inWindowSized: 300 @ 300 titled: 'Top label'.
 	connector view space settleForDuration: 1 seconds.
@@ -59,20 +74,44 @@ TLBlocConnectorLabelTest >> testTopLabelIsAboveItsNode [
 ]
 
 { #category : 'tests' }
-TLBlocConnectorLabelTest >> testTopLabelIsSeparatedFromItsNodeByPadding [
+TLBlocConnectorLabelTest >> testTopLabelIsSeparatedFromItsNodeByAGap [
 
-	| visualization node label |
-	visualization := TLVisualization new.
-	visualization
-		nodeCreationStrategy: TLNodeCreationStrategy default;
-		styleSheet: TLStyleSheet default;
-		generator: connector.
-	visualization styleSheet
-		nodeLabel: #yourself;
-		nodeLabelPosition: #top.
+	| node label |
+	visualization styleSheet nodeLabelPosition: #top.
 	node := visualization addNodeFromEntity: 'abc'.
-	connector open: visualization inWindowSized: 300 @ 300 titled: 'Top label padding'.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Top label gap'.
 	connector view space settleForDuration: 1 seconds.
 	label := (connector elementFromTLDrawable: node) children first.
 	self assert: label position y + label extent y closeTo: -5
+]
+
+{ #category : 'tests' }
+TLBlocConnectorLabelTest >> testWrappedLabelFitsItsMaxWidthAndGrowsInHeight [
+
+	| node label |
+	visualization styleSheet
+		nodeLabelWrap: 'wrap';
+		nodeLabelMaxWidth: 100.
+	node := visualization addNodeFromEntity: 'This is a node with an automatic wrap'.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Wrap label'.
+	connector view space settleForDuration: 2 seconds.
+	label := (connector elementFromTLDrawable: node) children first.
+	self assert: label extent x <= 100.
+	self assert: label children size >= 3.
+	self assert: (label children allSatisfy: [ :each | each extent x <= 100 ])
+]
+
+{ #category : 'tests' }
+TLBlocConnectorLabelTest >> testWrappedLinesAreCentered [
+
+	| node label |
+	visualization styleSheet
+		nodeLabelWrap: 'wrap';
+		nodeLabelMaxWidth: 100.
+	node := visualization addNodeFromEntity: 'This is a node with an automatic wrap'.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Centered lines'.
+	connector view space settleForDuration: 2 seconds.
+	label := (connector elementFromTLDrawable: node) children first.
+	self assert: label children size >= 3.
+	self assert: (label children allSatisfy: [ :each | (each position x + (each extent x / 2) - (label extent x / 2)) abs < 1 ])
 ]

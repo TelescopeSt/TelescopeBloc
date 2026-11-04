@@ -3,7 +3,7 @@ I display the label of a Telescope node in a Bloc visualization. My placement is
 "
 Class {
 	#name : 'TLBlocLabelElement',
-	#superclass : 'BlTextElement',
+	#superclass : 'BlElement',
 	#instVars : [
 		'placement',
 		'wrapping',
@@ -23,34 +23,44 @@ TLBlocLabelElement class >> forNode: aNode [
 ]
 
 { #category : 'initialization' }
+TLBlocLabelElement >> addLines: aString [
+	"One text element per line, because Bloc does not break a text at line feeds"
+
+	aString lines do: [ :line | self addChild: (self lineElementWith: line) ]
+]
+
+{ #category : 'initialization' }
 TLBlocLabelElement >> configureForNode: aNode [
 
-	| styleSheet |
+	| styleSheet labelValue |
 	styleSheet := aNode effectiveStyleSheet.
-
-	self text: (styleSheet obtainValue: #nodeLabel forEntity: aNode entity inNode: aNode) asString asRopedText.
-
+	labelValue := (styleSheet obtainValue: #nodeLabel forEntity: aNode entity inNode: aNode) asString.
 	placement := styleSheet obtainValue: #nodeLabelPosition forEntity: aNode entity inNode: aNode.
-
 	wrapping := (styleSheet attributes includesKey: #nodeLabelWrap) ifTrue: [ styleSheet obtainValue: #nodeLabelWrap forEntity: aNode entity inNode: aNode ].
 	(#( 'wrap' 'ellipsis' ) includes: wrapping) ifTrue: [ maximumWidth := styleSheet obtainValue: #nodeLabelMaxWidth forEntity: aNode entity inNode: aNode ].
-	wrapping = 'wrap' ifTrue: [ self constraintsDo: [ :someConstraints | someConstraints horizontal exact: maximumWidth ] ].
-
+	self layout: BlLinearLayout vertical.
+	self constraintsDo: [ :labelConstraints |
+			labelConstraints horizontal fitContent.
+			labelConstraints vertical fitContent ].
+	self addLines: (wrapping = 'ellipsis'
+			 ifTrue: [ labelValue copyReplaceAll: (String with: Character lf) with: ' ' ]
+			 ifFalse: [ labelValue ]).
 	self addEventHandlerOn: BlElementLayoutComputedEvent do: [ :event | self onLayoutComputed ]
 ]
 
 { #category : 'wrapping' }
 TLBlocLabelElement >> ellipsize [
-	"Removes one visible character at a time, until the measured label fits, and marks the cut with three dots"
+	"Removes one visible character at a time from the line, until it fits, and marks the cut with three dots"
 
-	| currentText visibleText |
-	self extent x <= maximumWidth ifTrue: [ ^ self ].
-	currentText := self text asString.
+	| line currentText visibleText |
+	self children isEmpty ifTrue: [ ^ self ].
+	line := self children first.
+	line extent x <= maximumWidth ifTrue: [ ^ self ].
+	currentText := line text asString.
 	visibleText := (currentText endsWith: '...')
 		               ifTrue: [ currentText allButLast: 3 ]
 		               ifFalse: [ currentText ].
-	visibleText isEmpty ifTrue: [ ^ self ].
-	self text: (visibleText allButLast , '...') asRopedText
+	visibleText ifEmpty: [ ^ self ] ifNotEmpty: [ line text: (visibleText allButLast , '...') asRopedText ]
 ]
 
 { #category : 'placement' }
@@ -83,6 +93,48 @@ TLBlocLabelElement >> gapVector [
 	^ 0 @ 0
 ]
 
+{ #category : 'wrapping' }
+TLBlocLabelElement >> join: aCollection with: aSeparator [
+
+	^ aCollection ifEmpty: [ '' ] ifNotEmpty: [ aCollection allButFirst inject: aCollection first into: [ :result :string | result , aSeparator , string ] ]
+]
+
+{ #category : 'wrapping' }
+TLBlocLabelElement >> labelText [
+	"The text of the label, its lines separated by line feeds"
+
+	^ self join: (self children collect: [ :child | child text asString ] as: Array) with: (String with: Character lf)
+]
+
+{ #category : 'initialization' }
+TLBlocLabelElement >> lineElementWith: aString [
+	"A line of the label, centered in the label"
+
+	| line |
+	line := BlTextElement new text: aString asRopedText.
+	line constraintsDo: [ :lineConstraints | lineConstraints linear horizontal alignCenter ].
+	^ line
+]
+
+{ #category : 'wrapping' }
+TLBlocLabelElement >> moveOneOverflowingWord [
+	"Moves the last word of the first line that is too wide to the next line. Only one word moves per layout, so that the next layout measures the lines again"
+
+	| overflowing index words |
+	overflowing := self children
+		               detect: [ :each | each extent x > maximumWidth and: [ each text asString substrings size > 1 ] ]
+		               ifNone: [ ^ self ].
+	index := self children indexOf: overflowing.
+	words := overflowing text asString substrings.
+	overflowing text: (self join: words allButLast with: ' ') asRopedText.
+	self children size > index
+		ifTrue: [
+				| nextLine |
+				nextLine := self children at: index + 1.
+				nextLine text: (words last , ' ' , nextLine text asString) asRopedText ]
+		ifFalse: [ self addChild: (self lineElementWith: words last) at: index + 1 ]
+]
+
 { #category : 'placement' }
 TLBlocLabelElement >> offsetForNodeExtent: aNodeExtent [
 	"The label is placed so that its reversed position meets the node anchor of the position, then pushed away from the node"
@@ -93,11 +145,12 @@ TLBlocLabelElement >> offsetForNodeExtent: aNodeExtent [
 	^ aNodeExtent * nodeAnchor - (self extent * ((self fractionFor: labelAnchor horizontal) @ (self fractionFor: labelAnchor vertical))) + self gapVector
 ]
 
-{ #category : 'initialization' }
+{ #category : 'wrapping' }
 TLBlocLabelElement >> onLayoutComputed [
-	"Placement depends on the measured label, so it is recomputed after each layout"
+	"Placement and wrapping depend on the measured lines, so they are recomputed after each layout"
 
 	self placeOutsideNode.
+	wrapping = 'wrap' ifTrue: [ self moveOneOverflowingWord ].
 	wrapping = 'ellipsis' ifTrue: [ self ellipsize ]
 ]
 

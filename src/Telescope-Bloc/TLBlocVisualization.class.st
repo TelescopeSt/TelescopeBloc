@@ -11,8 +11,7 @@ TLBlocVisualization >> contentTopLeft [
 
 	| corners |
 	corners := self children flatCollect: [ :node | { node position } , (node children collect: [ :label | node position + label position ]) ].
-	corners isEmpty ifTrue: [ ^ 0 @ 0 ].
-	^ (corners collect: [ :corner | corner x ]) min @ (corners collect: [ :corner | corner y ]) min
+	^ corners ifEmpty: [ 0 @ 0 ] ifNotEmpty: [ (corners collect: [ :corner | corner x ]) min @ (corners collect: [ :corner | corner y ]) min ]
 ]
 
 { #category : 'layout' }

@@ -5,7 +5,8 @@ Class {
 	#name : 'TLBlocConnectorTest',
 	#superclass : 'TestCase',
 	#instVars : [
-		'connector'
+		'connector',
+		'visualization'
 	],
 	#category : 'Telescope-Bloc-Tests-Connector',
 	#package : 'Telescope-Bloc-Tests',
@@ -23,7 +24,12 @@ TLBlocConnectorTest class >> isAbstract [
 TLBlocConnectorTest >> setUp [
 
 	super setUp.
-	connector := TLBlocConnector new
+	connector := TLBlocConnector new.
+	visualization := TLVisualization new.
+	visualization
+		nodeCreationStrategy: TLNodeCreationStrategy default;
+		styleSheet: TLStyleSheet default;
+		generator: connector
 ]
 
 { #category : 'running' }
