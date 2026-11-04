@@ -9,6 +9,12 @@ Class {
 	#tag : 'Connector'
 }
 
+{ #category : 'tests' }
+TLBlocConnectorLabelTest >> labelHeightOf: aNode [
+
+	^ (connector elementFromTLDrawable: aNode) children first extent y
+]
+
 { #category : 'running' }
 TLBlocConnectorLabelTest >> setUp [
 
@@ -41,6 +47,49 @@ TLBlocConnectorLabelTest >> testForcedLineReturnsGiveOneLinePerLine [
 	visualization generateWith: connector.
 	label := (connector elementFromTLDrawable: node) children first.
 	self assert: label children size equals: 2
+]
+
+{ #category : 'tests' }
+TLBlocConnectorLabelTest >> testLabelSizeCanDependOnTheEntity [
+
+	| small big |
+	visualization styleSheet
+		nodeLabel: [ :entity | 'Hello' ];
+		labelSize: [ :entity | entity ].
+	small := visualization addNodeFromEntity: 8.
+	big := visualization addNodeFromEntity: 30.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Label size'.
+	connector view space settleForDuration: 1 seconds.
+	self assert: (self labelHeightOf: big) > ((self labelHeightOf: small) * 2)
+]
+
+{ #category : 'tests' }
+TLBlocConnectorLabelTest >> testLabelSizeOfTheStyleIsTheSizeOfTheFont [
+
+	| small big |
+	small := visualization addNodeFromEntity: 'Hello'.
+	small styleSheet labelSize: 8.
+	big := visualization addNodeFromEntity: 'Hello'.
+	big styleSheet labelSize: 30.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Label size'.
+	connector view space settleForDuration: 1 seconds.
+	self assert: (self labelHeightOf: big) > ((self labelHeightOf: small) * 2)
+]
+
+{ #category : 'tests' }
+TLBlocConnectorLabelTest >> testNameCloudDemoGeneratesLabelsSizedByTheirLabelSizeWithoutOverlap [
+	"The widths of the nodes come from their labels and their label size: the biggest word is much bigger than the smallest one, and a word is not drawn over its neighbour"
+
+	| demo sizeOf sorted rectangles |
+	demo := TLDemos exampleNameCloud.
+	demo generator: connector.
+	connector open: demo inWindowSized: 1000 @ 700 titled: 'Name cloud'.
+	connector view space settleForDuration: 2 seconds.
+	sizeOf := [ :node | node effectiveStyleSheet obtainValue: #labelSize forEntity: node entity inNode: node ].
+	sorted := demo allNodes asSortedCollection: [ :first :second | (sizeOf value: first) <= (sizeOf value: second) ].
+	self assert: (self labelHeightOf: sorted last) > ((self labelHeightOf: sorted first) * 1.5).
+	rectangles := demo allNodes collect: [ :node | (connector elementFromTLDrawable: node) encompassingRectangle ].
+	self assert: (rectangles count: [ :rectangle | rectangles anySatisfy: [ :other | other ~~ rectangle and: [ (rectangle intersect: other) area > (rectangle area / 4) ] ] ]) < (rectangles size / 20)
 ]
 
 { #category : 'tests' }

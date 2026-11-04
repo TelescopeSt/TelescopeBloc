@@ -1,5 +1,5 @@
 "
-I display the label of a Telescope node in a Bloc visualization, as a vertical stack of lines, because Bloc neither breaks a text at line feeds nor wraps it. Each line is a text element, centered in me. My placement is a TLPosition: I place myself so that my reversed position meets the anchor of the position on my node, with a gap. I wrap my lines to a maximum width by moving one word at a time to the next line, or I cut my text with three dots, measuring the lines after each layout.
+I display the label of a Telescope node in a Bloc visualization, as a vertical stack of lines, because Bloc neither breaks a text at line feeds nor wraps it. Each line is a text element, centered in me. My placement is a TLPosition: I place myself so that my reversed position meets the anchor of the position on my node, with a gap. I wrap my lines to a maximum width by moving one word at a time to the next line, or I cut my text with three dots, measuring the lines after each layout. The size of my font is the label size of the style sheet of my node, because Telescope computes the width of a node from its label and its label size: I give it again to the text of a line each time the text changes.
 "
 Class {
 	#name : 'TLBlocLabelElement',
@@ -7,7 +7,8 @@ Class {
 	#instVars : [
 		'placement',
 		'wrapping',
-		'maximumWidth'
+		'maximumWidth',
+		'fontSize'
 	],
 	#category : 'Telescope-Bloc-Elements',
 	#package : 'Telescope-Bloc',
@@ -31,10 +32,12 @@ TLBlocLabelElement >> addLines: aString [
 
 { #category : 'initialization' }
 TLBlocLabelElement >> configureForNode: aNode [
+	"The size of the font is the label size of the style sheet, which Telescope uses to compute the width of a node from its label"
 
 	| styleSheet labelValue |
 	styleSheet := aNode effectiveStyleSheet.
 	labelValue := (styleSheet obtainValue: #nodeLabel forEntity: aNode entity inNode: aNode) asString.
+	fontSize := styleSheet obtainValue: #labelSize forEntity: aNode entity inNode: aNode.
 	placement := styleSheet obtainValue: #nodeLabelPosition forEntity: aNode entity inNode: aNode.
 	wrapping := (styleSheet attributes includesKey: #nodeLabelWrap) ifTrue: [ styleSheet obtainValue: #nodeLabelWrap forEntity: aNode entity inNode: aNode ].
 	(#( 'wrap' 'ellipsis' ) includes: wrapping) ifTrue: [ maximumWidth := styleSheet obtainValue: #nodeLabelMaxWidth forEntity: aNode entity inNode: aNode ].
@@ -48,7 +51,7 @@ TLBlocLabelElement >> configureForNode: aNode [
 	self addEventHandlerOn: BlElementLayoutComputedEvent do: [ :event | self onLayoutComputed ]
 ]
 
-{ #category : 'wrapping' }
+{ #category : 'private' }
 TLBlocLabelElement >> ellipsize [
 	"Removes one visible character at a time from the line, until it fits, and marks the cut with three dots"
 
@@ -60,7 +63,7 @@ TLBlocLabelElement >> ellipsize [
 	visibleText := (currentText endsWith: '...')
 		               ifTrue: [ currentText allButLast: 3 ]
 		               ifFalse: [ currentText ].
-	visibleText ifEmpty: [ ^ self ] ifNotEmpty: [ line text: (visibleText allButLast , '...') asRopedText ]
+	visibleText ifEmpty: [ ^ self ] ifNotEmpty: [ line text: (self ropedTextOf: visibleText allButLast , '...') ]
 ]
 
 { #category : 'placement' }
@@ -106,17 +109,17 @@ TLBlocLabelElement >> labelText [
 	^ self join: (self children collect: [ :child | child text asString ] as: Array) with: (String with: Character lf)
 ]
 
-{ #category : 'initialization' }
+{ #category : 'private' }
 TLBlocLabelElement >> lineElementWith: aString [
 	"A line of the label, centered in the label"
 
 	| line |
-	line := BlTextElement new text: aString asRopedText.
+	line := BlTextElement new text: (self ropedTextOf: aString).
 	line constraintsDo: [ :lineConstraints | lineConstraints linear horizontal alignCenter ].
 	^ line
 ]
 
-{ #category : 'wrapping' }
+{ #category : 'private' }
 TLBlocLabelElement >> moveOneOverflowingWord [
 	"Moves the last word of the first line that is too wide to the next line. Only one word moves per layout, so that the next layout measures the lines again"
 
@@ -126,12 +129,12 @@ TLBlocLabelElement >> moveOneOverflowingWord [
 		               ifNone: [ ^ self ].
 	index := self children indexOf: overflowing.
 	words := overflowing text asString substrings.
-	overflowing text: (self join: words allButLast with: ' ') asRopedText.
+	overflowing text: (self ropedTextOf: (self join: words allButLast with: ' ')).
 	self children size > index
 		ifTrue: [
 				| nextLine |
 				nextLine := self children at: index + 1.
-				nextLine text: (words last , ' ' , nextLine text asString) asRopedText ]
+				nextLine text: (self ropedTextOf: words last , ' ' , nextLine text asString) ]
 		ifFalse: [ self addChild: (self lineElementWith: words last) at: index + 1 ]
 ]
 
@@ -161,4 +164,13 @@ TLBlocLabelElement >> placeOutsideNode [
 	| offset |
 	offset := self offsetForNodeExtent: self parent extent.
 	self measuredBounds position = offset ifFalse: [ self position: offset ]
+]
+
+{ #category : 'private' }
+TLBlocLabelElement >> ropedTextOf: aString [
+	"The text of a line, in the font size of the label: every time the text of a line changes, the size has to be given again"
+
+	^ fontSize
+		  ifNil: [ aString asRopedText ]
+		  ifNotNil: [ aString asRopedText fontSize: fontSize ]
 ]
