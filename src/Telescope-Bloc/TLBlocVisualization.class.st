@@ -1,5 +1,5 @@
 "
-I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels. I move myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. The pan and zoom handlers are installed on the root of the window while I am in it. I do not clip my children, because the window already clips me.
+I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels. I move myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. The pan and zoom handlers are installed on the root of the window while I am in it. The first time I am laid out with some content I am fitted into the window: scaled down when the content is bigger than the window, never enlarged, and centered, which #fitIntoWindow does again on request. #zoomIn and #zoomOut zoom around the center of the window, and #exportAsPngTo: and #exportAsSvgTo: write me as I am shown. I put my toolbar in the root of the window while I am in it. I do not clip my children, because the window already clips me.
 "
 Class {
 	#name : 'TLBlocVisualization',
@@ -8,7 +8,9 @@ Class {
 		'panOffset',
 		'panHandler',
 		'zoomFactor',
-		'zoomHandler'
+		'zoomHandler',
+		'toolbar',
+		'fitPending'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -43,13 +45,40 @@ TLBlocVisualization >> basePosition [
 	^ self windowMargin @ self windowMargin - (self contentTopLeft * zoomFactor)
 ]
 
-{ #category : 'layout' }
+{ #category : 'fitting' }
+TLBlocVisualization >> contentRectangle [
+	"The smallest rectangle which contains the nodes and their labels, relative to the visualization, whatever the depth of the groups they are in"
+
+	| rectangles |
+	rectangles := self children flatCollect: [ :child | child rectanglesRelativeTo: 0 @ 0 ].
+	^ rectangles ifEmpty: [ 0 @ 0 corner: 0 @ 0 ] ifNotEmpty: [ Rectangle merging: rectangles ]
+]
+
+{ #category : 'fitting' }
 TLBlocVisualization >> contentTopLeft [
 	"Answers the smallest top left corner of the nodes and their labels, relative to the visualization, whatever the depth of the groups they are in"
 
-	| corners |
-	corners := self children flatCollect: [ :child | child cornersRelativeTo: 0 @ 0 ].
-	^ corners ifEmpty: [ 0 @ 0 ] ifNotEmpty: [ (corners collect: [ :corner | corner x ]) min @ (corners collect: [ :corner | corner y ]) min ]
+	^ self contentRectangle origin
+]
+
+{ #category : 'export' }
+TLBlocVisualization >> exportAsPngTo: aFileReference [
+	"Writes the visualization as an image, as it is shown: with its zoom and its panning"
+
+	^ BAExporter png
+		  target: aFileReference;
+		  element: self;
+		  export
+]
+
+{ #category : 'export' }
+TLBlocVisualization >> exportAsSvgTo: aFileReference [
+	"Writes the visualization as a vector image, as it is shown: with its zoom and its panning"
+
+	^ BAExporter svg
+		  target: aFileReference;
+		  element: self;
+		  export
 ]
 
 { #category : 'layout' }
@@ -59,28 +88,57 @@ TLBlocVisualization >> fitContentToWindow [
 	self position: self basePosition + panOffset
 ]
 
+{ #category : 'fitting' }
+TLBlocVisualization >> fitIfPendingOtherwiseKeepContentInWindow [
+	"The first layout with some content fits the visualization into the window. The next ones only keep the content where the panning and the zoom put it"
+
+	(fitPending and: [ self children isNotEmpty ])
+		ifTrue: [
+				fitPending := false.
+				self fitIntoWindow ]
+		ifFalse: [ self fitContentToWindow ]
+]
+
+{ #category : 'fitting' }
+TLBlocVisualization >> fitIntoWindow [
+	"Scales the visualization, never above its natural size, so that all its nodes and labels are in the window, and centers it. The panning is forgotten"
+
+	| rectangle windowExtent ratios |
+	self space ifNil: [ ^ self ].
+	rectangle := self contentRectangle.
+	rectangle extent isZero ifTrue: [ ^ self ].
+	windowExtent := self space extent.
+	ratios := windowExtent - (self windowMargin * 2) / (rectangle extent max: 1 @ 1).
+	zoomFactor := ((ratios x min: ratios y) min: 1) min: self class maximumZoom max: self class minimumZoom.
+	self applyZoom.
+	panOffset := windowExtent - (rectangle extent * zoomFactor) / 2 - self windowMargin.
+	self fitContentToWindow
+]
+
 { #category : 'initialization' }
 TLBlocVisualization >> initialize [
-	"The window already clips the visualization, so nodes and labels placed outside the default extent must still be drawn"
+	"The window already clips the visualization, so nodes and labels placed outside the default extent must still be drawn. The visualization is fitted into the window the first time it is laid out"
 
 	super initialize.
 	self clipChildren: false.
 	panOffset := 0 @ 0.
 	zoomFactor := 1.
+	fitPending := true.
 	panHandler := TLBlocPanHandler on: self.
 	zoomHandler := TLBlocZoomHandler on: self.
-	self addEventHandlerOn: BlElementLayoutComputedEvent do: [ :event | self fitContentToWindow ].
+	self addEventHandlerOn: BlElementLayoutComputedEvent do: [ :event | self fitIfPendingOtherwiseKeepContentInWindow ].
 	self addEventHandlerOn: BlElementAddedToSceneGraphEvent do: [ :event | self installNavigationHandlers ].
 	self addEventHandlerOn: BlElementRemovedFromSceneGraphEvent do: [ :event | self uninstallNavigationHandlers ]
 ]
 
 { #category : 'initialization' }
 TLBlocVisualization >> installNavigationHandlers [
-	"The mouse events of the background arrive on the root of the window"
+	"The mouse events of the background arrive on the root of the window, which also holds the toolbar"
 
 	{
 		panHandler.
-		zoomHandler } do: [ :handler | self space root addEventHandlerIfNotPresent: handler ]
+		zoomHandler } do: [ :handler | self space root addEventHandlerIfNotPresent: handler ].
+	self toolbar hasParent ifFalse: [ self space root addChild: self toolbar ]
 ]
 
 { #category : 'layout' }
@@ -91,12 +149,20 @@ TLBlocVisualization >> panBy: aPoint [
 	self fitContentToWindow
 ]
 
+{ #category : 'toolbar' }
+TLBlocVisualization >> toolbar [
+	"The buttons which act on me, in the window"
+
+	^ toolbar ifNil: [ toolbar := TLBlocToolbar for: self ]
+]
+
 { #category : 'initialization' }
 TLBlocVisualization >> uninstallNavigationHandlers [
 
 	{
 		panHandler.
-		zoomHandler } do: [ :handler | handler uninstall ]
+		zoomHandler } do: [ :handler | handler uninstall ].
+	toolbar ifNotNil: [ :element | element removeFromParent ]
 ]
 
 { #category : 'layout' }
@@ -124,4 +190,18 @@ TLBlocVisualization >> zoomBy: aFactor around: aPoint [
 	panOffset := aPoint - (ratio * (aPoint - currentPosition)) - self basePosition.
 	self applyZoom.
 	self fitContentToWindow
+]
+
+{ #category : 'fitting' }
+TLBlocVisualization >> zoomIn [
+	"Zooms around the center of the window"
+
+	self zoomBy: 1.25 around: self space extent / 2
+]
+
+{ #category : 'fitting' }
+TLBlocVisualization >> zoomOut [
+	"Zooms around the center of the window"
+
+	self zoomBy: 1 / 1.25 around: self space extent / 2
 ]

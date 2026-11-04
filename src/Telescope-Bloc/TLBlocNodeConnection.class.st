@@ -41,13 +41,6 @@ TLBlocNodeConnection >> centerLabel [
 	label measuredBounds position = offset ifFalse: [ label position: offset ]
 ]
 
-{ #category : 'layout' }
-TLBlocNodeConnection >> cornersRelativeTo: anOrigin [
-	"A connection is between its nodes: it does not take part in the fit of the visualization in its window"
-
-	^ #(  )
-]
-
 { #category : 'initialization' }
 TLBlocNodeConnection >> createLabelFrom: aStyleSheet [
 	"A text next to the middle of the line, placed once it is measured"
@@ -221,6 +214,13 @@ TLBlocNodeConnection >> placeSegment [
 	self position: topLeft.
 	self extent: (bottomRight - topLeft max: 1 @ 1).
 	self placeLinesRelativeTo: topLeft
+]
+
+{ #category : 'layout' }
+TLBlocNodeConnection >> rectanglesRelativeTo: anOrigin [
+	"A connection is between nodes, so it does not make a visualization bigger"
+
+	^ #(  )
 ]
 
 { #category : 'accessing' }

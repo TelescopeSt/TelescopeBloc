@@ -9,18 +9,18 @@ Class {
 	#tag : 'Elements'
 }
 
-{ #category : 'layout' }
-TLBlocGroupElement >> cornersRelativeTo: anOrigin [
-	"The top left corners of the nodes and labels of the group, from the given origin"
-
-	| groupOrigin |
-	groupOrigin := anOrigin + self measuredBounds position.
-	^ self children flatCollect: [ :child | child cornersRelativeTo: groupOrigin ]
-]
-
 { #category : 'initialization' }
 TLBlocGroupElement >> initialize [
 
 	super initialize.
 	self clipChildren: false
+]
+
+{ #category : 'layout' }
+TLBlocGroupElement >> rectanglesRelativeTo: anOrigin [
+	"The rectangles of the nodes and labels of the group, from the given origin"
+
+	| groupOrigin |
+	groupOrigin := anOrigin + self measuredBounds position.
+	^ self children flatCollect: [ :child | child rectanglesRelativeTo: groupOrigin ]
 ]

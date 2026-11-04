@@ -42,15 +42,6 @@ TLBlocNodeElement >> asBlocElement [
 	^ self
 ]
 
-{ #category : 'layout' }
-TLBlocNodeElement >> cornersRelativeTo: anOrigin [
-	"The top left corners of the node and of its labels, from the given origin: the corners are what a visualization fits in a window"
-
-	| topLeft |
-	topLeft := anOrigin + self measuredBounds position.
-	^ { topLeft } , (self children collect: [ :label | topLeft + label position ])
-]
-
 { #category : 'initialization' }
 TLBlocNodeElement >> customizeFromNode: aNode [
 	"The colors, the dimension and the shape of the style sheet can depend on the entity of the node: a block, or a gradient for the colors, gives the value of each node. The border is drawn with the line style of the style sheet, solid by default, half inside and half outside of the edge of the node"
@@ -151,6 +142,15 @@ TLBlocNodeElement >> position: aCenter [
 	"The layouts of Telescope place a node by its center, and Bloc places an element by its top left corner. Only the setter is the one of Telescope: Bloc reads #position to draw the element, so it must keep answering the top left corner"
 
 	^ super position: aCenter - (dimension / 2)
+]
+
+{ #category : 'layout' }
+TLBlocNodeElement >> rectanglesRelativeTo: anOrigin [
+	"The rectangles of the node and of its labels, from the given origin: their union is what a visualization fits in a window"
+
+	| topLeft |
+	topLeft := anOrigin + self measuredBounds position.
+	^ { (topLeft extent: dimension) } , (self children collect: [ :label | topLeft + label position extent: label extent ])
 ]
 
 { #category : 'connections' }
