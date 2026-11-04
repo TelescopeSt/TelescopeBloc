@@ -120,6 +120,34 @@ TLBlocConnectorFitTest >> testFitForgetsThePanningAndTheZoomWhenTheLayoutIsAppli
 ]
 
 { #category : 'tests' }
+TLBlocConnectorFitTest >> testFitKeepsTheContentAwayFromTheLegend [
+	"A square of nodes fills the window, so it would be under the legend"
+
+	| legend |
+	visualization legend
+		description: 'Dead code' forColor: Color red;
+		description: 'Alive code' forColor: Color green.
+	visualization layout: ((TLLinearLayout perLine: 3)
+			 gap: 20;
+			 yourself).
+	visualization addNodesFromEntities: (1 to: 9).
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Fit'.
+	connector view space settleForDuration: 1 seconds.
+	legend := (connector view space root children detect: [ :child | child class = TLBlocLegendElement ]) boundsInSpace asRectangle.
+	self nodeBoundsInWindow do: [ :rectangle | self deny: (legend intersects: rectangle) ].
+	self assertEveryNodeIsInTheWindow
+]
+
+{ #category : 'tests' }
+TLBlocConnectorFitTest >> testFitWithoutLegendUsesTheWholeWindow [
+
+	| rectangle |
+	self openNodes: 40.
+	rectangle := self contentRectangleInWindow.
+	self assert: (rectangle left - connector view windowMargin) abs < 30
+]
+
+{ #category : 'tests' }
 TLBlocConnectorFitTest >> testLargeVisualizationFitsTheWindowWhenItOpens [
 
 	| window |

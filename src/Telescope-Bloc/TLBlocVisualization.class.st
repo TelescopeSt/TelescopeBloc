@@ -1,5 +1,5 @@
 "
-I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels. I move myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. The pan and zoom handlers are installed on the root of the window while I am in it. The first time I am laid out with some content I am fitted into the window: scaled so that the content fills the window, down or up as far as the zoom allows, and centered, which #fitIntoWindow does again on request. #zoomIn and #zoomOut zoom around the center of the window, and #exportAsPngTo: and #exportAsSvgTo: write me as I am shown. I put my toolbar in the root of the window while I am in it. I do not clip my children, because the window already clips me. I let the user drag the nodes, and the panning compensates the nodes which move my content, so that the other nodes stay under the mouse. The connector is told when a node moved, to join the nodes again.
+I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels. I move myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. The pan and zoom handlers are installed on the root of the window while I am in it. The first time I am laid out with some content I am fitted into the window: scaled so that the content fills the window, down or up as far as the zoom allows, and centered, which #fitIntoWindow does again on request. #zoomIn and #zoomOut zoom around the center of the window, and #exportAsPngTo: and #exportAsSvgTo: write me as I am shown. I put my toolbar in the root of the window while I am in it. I do not clip my children, because the window already clips me. I let the user drag the nodes, and the panning compensates the nodes which move my content, so that the other nodes stay under the mouse. The connector is told when a node moved, to join the nodes again. I keep the legend, and I fit my content in what is at its right.
 "
 Class {
 	#name : 'TLBlocVisualization',
@@ -12,7 +12,8 @@ Class {
 		'toolbar',
 		'fitPending',
 		'dragHandler',
-		'nodesMovedAction'
+		'nodesMovedAction',
+		'legend'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -103,17 +104,18 @@ TLBlocVisualization >> fitIfPendingOtherwiseKeepContentInWindow [
 
 { #category : 'fitting' }
 TLBlocVisualization >> fitIntoWindow [
-	"Scales the visualization so that all its nodes and labels fill the window, as much as the zoom allows, and centers it. The panning is forgotten"
+	"Scales the visualization so that all its nodes and labels fill the window, as much as the zoom allows, and centers it. The legend is at the left of the window: the visualization fills what is at its right. The panning is forgotten"
 
-	| rectangle windowExtent ratios |
+	| rectangle available ratios reserved |
 	self space ifNil: [ ^ self ].
 	rectangle := self contentRectangle.
 	rectangle extent isZero ifTrue: [ ^ self ].
-	windowExtent := self space extent.
-	ratios := windowExtent - (self windowMargin * 2) / (rectangle extent max: 1 @ 1).
+	reserved := self legendReservedWidth.
+	available := self space extent x - reserved @ self space extent y.
+	ratios := available - (self windowMargin * 2) / (rectangle extent max: 1 @ 1).
 	zoomFactor := (ratios x min: ratios y) min: self class maximumZoom max: self class minimumZoom.
 	self applyZoom.
-	panOffset := windowExtent - (rectangle extent * zoomFactor) / 2 - self windowMargin.
+	panOffset := reserved @ 0 + (available - (rectangle extent * zoomFactor) / 2) - self windowMargin.
 	self fitContentToWindow
 ]
 
@@ -142,15 +144,24 @@ TLBlocVisualization >> initialize [
 	self addEventHandlerOn: BlElementRemovedFromSceneGraphEvent do: [ :event | self uninstallNavigationHandlers ]
 ]
 
+{ #category : 'legend' }
+TLBlocVisualization >> installLegend [
+	"Adds the legend to the window when I am in one, unless it has no entry"
+
+	(legend isNil or: [ self space isNil or: [ legend hasParent or: [ legend entries isEmpty ] ] ]) ifTrue: [ ^ self ].
+	self space root addChild: legend
+]
+
 { #category : 'initialization' }
 TLBlocVisualization >> installNavigationHandlers [
-	"The mouse events of the background and of the nodes arrive on the root of the window, which also holds the toolbar"
+	"The mouse events of the background and of the nodes arrive on the root of the window, which also holds the toolbar and the legend"
 
 	{
 		panHandler.
 		zoomHandler.
 		dragHandler } do: [ :handler | self space root addEventHandlerIfNotPresent: handler ].
-	self toolbar hasParent ifFalse: [ self space root addChild: self toolbar ]
+	self toolbar hasParent ifFalse: [ self space root addChild: self toolbar ].
+	self installLegend
 ]
 
 { #category : 'dragging' }
@@ -162,6 +173,23 @@ TLBlocVisualization >> keepPositionWhile: aBlock [
 	aBlock value.
 	panOffset := keptPosition - self basePosition.
 	self fitContentToWindow
+]
+
+{ #category : 'legend' }
+TLBlocVisualization >> legend: aLegendElement [
+	"The legend is in the window, not in me: the zoom and the panning do not move it. A legend without entries is not shown"
+
+	legend ifNotNil: [ :previous | previous removeFromParent ].
+	legend := aLegendElement.
+	self installLegend
+]
+
+{ #category : 'fitting' }
+TLBlocVisualization >> legendReservedWidth [
+	"The width of the strip of the window which the legend takes at the left, when there is one: the legend is measured once it is in the window"
+
+	(legend isNil or: [ legend hasParent not ]) ifTrue: [ ^ 0 ].
+	^ legend extent x + (legend windowMargin * 2)
 ]
 
 { #category : 'dragging' }
@@ -185,6 +213,13 @@ TLBlocVisualization >> panBy: aPoint [
 	self fitContentToWindow
 ]
 
+{ #category : 'legend' }
+TLBlocVisualization >> removeLegend [
+
+	legend ifNotNil: [ :previous | previous removeFromParent ].
+	legend := nil
+]
+
 { #category : 'toolbar' }
 TLBlocVisualization >> toolbar [
 	"The buttons which act on me, in the window"
@@ -199,7 +234,8 @@ TLBlocVisualization >> uninstallNavigationHandlers [
 		panHandler.
 		zoomHandler.
 		dragHandler } do: [ :handler | handler uninstall ].
-	toolbar ifNotNil: [ :element | element removeFromParent ]
+	toolbar ifNotNil: [ :element | element removeFromParent ].
+	legend ifNotNil: [ :element | element removeFromParent ]
 ]
 
 { #category : 'layout' }

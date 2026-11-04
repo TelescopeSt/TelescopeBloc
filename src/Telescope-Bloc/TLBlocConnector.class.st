@@ -1,5 +1,5 @@
 "
-I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, slowly at first and at the end (see TLBlocSmoothEasing), and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The visualization is fitted into its window again when a layout which is applied again moves or adds a node. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet. The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back, with the animation. The menus of Telescope open at the mouse when a node is clicked with the secondary button, as Bloc elements (see TLBlocMenu). When an interaction changes the style of a node or of a connection, for example to highlight it, its element is made again from the style sheet. Closing a visualization closes its window. The pop up action, which Telescope leaves to its connectors, shows its text in a TLBlocPopUpElement near the node, while the mouse is over it or after a click.
+I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, slowly at first and at the end (see TLBlocSmoothEasing), and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The visualization is fitted into its window again when a layout which is applied again moves or adds a node. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet. The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back, with the animation. The menus of Telescope open at the mouse when a node is clicked with the secondary button, as Bloc elements (see TLBlocMenu). When an interaction changes the style of a node or of a connection, for example to highlight it, its element is made again from the style sheet. Closing a visualization closes its window. The pop up action, which Telescope leaves to its connectors, shows its text in a TLBlocPopUpElement near the node, while the mouse is over it or after a click. The legend of a visualization is made of the entries of Telescope, static or dynamic, as TLBlocLegendElement.
 "
 Class {
 	#name : 'TLBlocConnector',
@@ -38,9 +38,11 @@ TLBlocConnector >> addElementInteractionInView: element [
 	self shouldBeImplemented
 ]
 
-{ #category : 'view' }
+{ #category : 'generation - legend' }
 TLBlocConnector >> addElementLegendInView: legend [
-	self flag: #TODO
+	"The legend is in the window, not in the view, so that the zoom does not move it"
+
+	self view legend: legend
 ]
 
 { #category : 'view' }
@@ -168,7 +170,11 @@ TLBlocConnector >> createGroup: aTLGroup with: anObject [
 
 { #category : 'generation - legend' }
 TLBlocConnector >> createLegendFrom: legendItems [
-	self flag: #TODO 
+	"The legend is a box with the elements of its entries, one above the other"
+
+	^ TLBlocLegendElement new
+		  entries: legendItems;
+		  yourself
 ]
 
 { #category : 'generation - interaction' }
@@ -185,6 +191,16 @@ TLBlocConnector >> createMenuFor: aTLDrawable [
 { #category : 'generation - node' }
 TLBlocConnector >> define: parentCompositeElement asParentFor: aCollectionOfChildrenElements [
 	self shouldBeImplemented
+]
+
+{ #category : 'generation - legend' }
+TLBlocConnector >> dynamicLegendEntry: aDynamicEntry swatchFor: aBlock [
+	"An entry with a row for each description of the entry, in the order of the descriptions. The swatch of a row comes from the first node with the description"
+
+	| element |
+	element := TLBlocLegendEntryElement new.
+	aDynamicEntry obtainAssociations keysAndValuesDo: [ :description :nodes | element addRow: (aBlock value: nodes first) label: description asString ].
+	^ element
 ]
 
 { #category : 'layout' }
@@ -272,20 +288,26 @@ TLBlocConnector >> generateMultiChoiceMenuInteraction: aTLMultiChoiceMenuInterac
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateNodeBackgroundLegendEntry: aTLNodeBackgroundLegendEntry [
+	"A row for each description, with the background of the first node which has it"
 
-	self flag: #TODO
+	^ self dynamicLegendEntry: aTLNodeBackgroundLegendEntry swatchFor: [ :node | TLBlocLegendSwatch color: (self elementFromTLDrawable: node) background paint color ]
 ]
 
 { #category : 'generation-legendEntry' }
-TLBlocConnector >> generateNodeBorderColorLegendEntry: aLegendEntry [
+TLBlocConnector >> generateNodeBorderColorLegendEntry: aTLNodeBorderColorLegendEntry [
+	"A row for each description, with the border color of the first node which has it"
 
-	self flag: #TODO
+	^ self dynamicLegendEntry: aTLNodeBorderColorLegendEntry swatchFor: [ :node | TLBlocLegendSwatch borderColor: (self elementFromTLDrawable: node) border paint color ]
 ]
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateNodeShapeLegendEntry: aTLNodeShapeLegendEntry [
+	"A row for each description, with the shape and the colors of the first node which has it"
 
-	self flag: #TODO
+	^ self dynamicLegendEntry: aTLNodeShapeLegendEntry swatchFor: [ :node |
+			  | element |
+			  element := self elementFromTLDrawable: node.
+			  TLBlocLegendSwatch shape: (element valueOf: #shape forNode: node) background: element background paint color border: element border paint color ]
 ]
 
 { #category : 'generation - interaction' }
@@ -301,43 +323,51 @@ TLBlocConnector >> generateRightClickInteraction: aRightClickInteraction onDrawa
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateTLBorderColorLegendEntry: aTLBorderColorLegendEntry [
 
-	self flag: #TODO
+	^ self legendEntryWith: (TLBlocLegendSwatch borderColor: aTLBorderColorLegendEntry color) label: aTLBorderColorLegendEntry label
 ]
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateTLBorderShapeLegendEntry: aTLBorderShapeLegendEntry [
+	"The shape is only an outline: it is a border shape"
 
-	self flag: #TODO
+	^ self legendEntryWith: (TLBlocLegendSwatch shape: aTLBorderShapeLegendEntry styleSheet shape background: Color transparent border: Color black) label: aTLBorderShapeLegendEntry label
 ]
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateTLColorLegendEntry: aTLColorLegendEntry [
 
-	self flag: #TODO
+	^ self legendEntryWith: (TLBlocLegendSwatch color: aTLColorLegendEntry color) label: aTLColorLegendEntry label
 ]
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateTLGradientLegendEntry: aTLGradientLegendEntry [
 
-	self flag: #TODO
+	^ self legendEntryWith: (TLBlocLegendSwatch gradient: aTLGradientLegendEntry gradient) label: aTLGradientLegendEntry label
 ]
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateTLHeightLegendEntry: aTLHeightLegendEntry [
 
-	self flag: #TODO
+	^ self legendEntryWith: TLBlocLegendSwatch heightArrow label: aTLHeightLegendEntry label
 ]
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateTLStyleSheetLegendEntry: aTLStyleSheetLegendEntry [
+	"A line with the color and the width of the style sheet of a connection"
 
-	self flag: #TODO
+	| styleSheet |
+	styleSheet := aTLStyleSheetLegendEntry styleSheet.
+	^ self
+		  legendEntryWith: (TLBlocLegendSwatch line: styleSheet color width: ((styleSheet attributes includesKey: #width)
+					    ifTrue: [ styleSheet width ]
+					    ifFalse: [ 2 ]))
+		  label: aTLStyleSheetLegendEntry label
 ]
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateTLWidthLegendEntry: aTLWidthLegendEntry [
 
-	self flag: #TODO
+	^ self legendEntryWith: TLBlocLegendSwatch widthArrow label: aTLWidthLegendEntry label
 ]
 
 { #category : 'accessing' }
@@ -356,6 +386,15 @@ TLBlocConnector >> initialize [
 	pendingStarts := IdentityDictionary new.
 	layoutReapplied := false.
 	animationDuration := 500 milliSeconds
+]
+
+{ #category : 'generation - legend' }
+TLBlocConnector >> legendEntryWith: aSwatch label: aString [
+	"An entry of one row"
+
+	^ TLBlocLegendEntryElement new
+		  addRow: aSwatch label: aString;
+		  yourself
 ]
 
 { #category : 'accessing' }
@@ -437,7 +476,8 @@ TLBlocConnector >> removeElementnteractionFromView: element [
 { #category : 'removing - legend' }
 TLBlocConnector >> removeLegend: aTLLegend [
 
-	self flag: #TODO
+	self view removeLegend.
+	self unregisterShapeForDrawable: aTLLegend
 ]
 
 { #category : 'layout' }
@@ -552,8 +592,12 @@ TLBlocConnector >> updateInteractionsOf: aDrawable [
 
 { #category : 'updating - legend' }
 TLBlocConnector >> updateLegend: aTLLegend [
+	"The legend is made again when something asked for it, for example when the entries changed: it depends on the nodes, which an update may have changed"
 
-	self flag: #TODO
+	aTLLegend isUpdateRequired ifFalse: [ ^ self ].
+	self removeLegend: aTLLegend.
+	self generateLegend: aTLLegend.
+	aTLLegend updateDone
 ]
 
 { #category : 'updating - interaction' }
