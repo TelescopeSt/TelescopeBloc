@@ -41,10 +41,15 @@ TLBlocConnectorToolbarTest >> testExportButtonsHaveAnArrowDownNextToTheirLabel [
 { #category : 'tests' }
 TLBlocConnectorToolbarTest >> testFitButtonFitsTheVisualizationAgain [
 
-	self click: '+'.
-	self click: '+'.
+	| fitted |
 	self click: 'Fit'.
-	self assert: connector view zoom equals: 1
+	fitted := connector view zoom.
+	self assert: fitted > 1.
+	self click: '-'.
+	self click: '-'.
+	self deny: connector view zoom equals: fitted.
+	self click: 'Fit'.
+	self assert: connector view zoom equals: fitted
 ]
 
 { #category : 'tests' }
@@ -99,16 +104,22 @@ TLBlocConnectorToolbarTest >> testZoomButtonsKeepTheCenterOfTheWindowFixed [
 
 { #category : 'tests' }
 TLBlocConnectorToolbarTest >> testZoomInButtonZoomsIn [
+	"The visualization is fitted when it opens, so it may already be zoomed in as much as the zoom allows: it is zoomed out first"
 
+	| zoomedOut |
+	self click: '-'.
+	zoomedOut := connector view zoom.
 	self click: '+'.
-	self assert: connector view zoom > 1
+	self assert: connector view zoom > zoomedOut
 ]
 
 { #category : 'tests' }
 TLBlocConnectorToolbarTest >> testZoomOutButtonZoomsOut [
 
+	| zoomBefore |
+	zoomBefore := connector view zoom.
 	self click: '-'.
-	self assert: connector view zoom < 1
+	self assert: connector view zoom < zoomBefore
 ]
 
 { #category : 'tests' }

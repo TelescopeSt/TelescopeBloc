@@ -1,5 +1,5 @@
 "
-I am the Bloc element of a connection between two nodes of a Telescope visualization. I am a line from the border of the outline of the source node to the border of the outline of the target node, along the line which joins their centers (see TLBlocConnectionSegment). I am in the view, in the coordinates of which the segment is computed, and my element is the box of the segment. The connector updates me once the layouts have placed the nodes. The color, the width and the line style of the line are the ones of the style sheet of the connection: solid, dashed, dotted or double, two lines on both sides of the segment, so that a double line ends where a single one does. I draw a head at the end of the line, with the shape of the head substyle: a triangle by default, and the color of the line unless the head has its own. I show the label of the connection next to the middle of the line, above it or on its right when it is vertical, and not on it. Every curve style is drawn as a straight line. The arrows at the start and at the middle, and the interactions are not implemented yet.
+I am the Bloc element of a connection between two nodes of a Telescope visualization. I am a line from the border of the outline of the source node to the border of the outline of the target node, along the line which joins their centers (see TLBlocConnectionSegment). I am in the view, in the coordinates of which the segment is computed, and my element is the box of the segment. The connector updates me once the layouts have placed the nodes. The color, the width and the line style of the line are the ones of the style sheet of the connection: solid, dashed, dotted or double, two lines on both sides of the segment, so that a double line ends where a single one does. I draw a head at the end of the line, with the shape of the head substyle: a triangle by default, and the color of the line unless the head has its own. I show the label of the connection next to the middle of the line, above it or on its right when it is vertical, and not on it. Every curve style is drawn as a straight line. The arrows at the start and at the middle, and the interactions are not implemented yet. #customizeFromConnection: can be called again when an interaction changed the style of the connection.
 "
 Class {
 	#name : 'TLBlocNodeConnection',
@@ -59,10 +59,12 @@ TLBlocNodeConnection >> createLabelFrom: aStyleSheet [
 
 { #category : 'initialization' }
 TLBlocNodeConnection >> customizeFromConnection: aTLConnection [
-	"The color, the width and the line style of the style sheet of the connection are the ones of the line, solid by default. The head is the shape of the head substyle, a triangle when it has none, with the color of the line unless the head has its own. The label is a text at the middle of the line"
+	"The color, the width and the line style of the style sheet of the connection are the ones of the line, solid by default. The head is the shape of the head substyle, a triangle when it has none, with the color of the line unless the head has its own. The label is a text at the middle of the line. It can be called again when an interaction changed the style: the previous label is removed, and #update draws the line and the head again"
 
 	| styleSheet headStyle |
 	styleSheet := aTLConnection effectiveStyleSheet.
+	label ifNotNil: [ :previous | previous removeFromParent ].
+	label := nil.
 	lineStyle := (styleSheet attributes includesKey: #connectionLineStyle)
 		             ifTrue: [ styleSheet connectionLineStyle ]
 		             ifFalse: [ TLSolidLineStyle ].
@@ -76,6 +78,13 @@ TLBlocNodeConnection >> customizeFromConnection: aTLConnection [
 		             ifTrue: [ headStyle color ]
 		             ifFalse: [ styleSheet color ].
 	(styleSheet attributes includesKey: #connectionLabel) ifTrue: [ self createLabelFrom: styleSheet ]
+]
+
+{ #category : 'layout' }
+TLBlocNodeConnection >> encompassingRectangle [
+	"The box of the segment, in the coordinates of the view"
+
+	^ self measuredBounds position extent: self extent
 ]
 
 { #category : 'accessing' }

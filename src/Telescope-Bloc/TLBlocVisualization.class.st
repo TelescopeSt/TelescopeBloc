@@ -1,5 +1,5 @@
 "
-I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels. I move myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. The pan and zoom handlers are installed on the root of the window while I am in it. The first time I am laid out with some content I am fitted into the window: scaled down when the content is bigger than the window, never enlarged, and centered, which #fitIntoWindow does again on request. #zoomIn and #zoomOut zoom around the center of the window, and #exportAsPngTo: and #exportAsSvgTo: write me as I am shown. I put my toolbar in the root of the window while I am in it. I do not clip my children, because the window already clips me. I let the user drag the nodes, and the panning compensates the nodes which move my content, so that the other nodes stay under the mouse. The connector is told when a node moved, to join the nodes again.
+I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels. I move myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. The pan and zoom handlers are installed on the root of the window while I am in it. The first time I am laid out with some content I am fitted into the window: scaled so that the content fills the window, down or up as far as the zoom allows, and centered, which #fitIntoWindow does again on request. #zoomIn and #zoomOut zoom around the center of the window, and #exportAsPngTo: and #exportAsSvgTo: write me as I am shown. I put my toolbar in the root of the window while I am in it. I do not clip my children, because the window already clips me. I let the user drag the nodes, and the panning compensates the nodes which move my content, so that the other nodes stay under the mouse. The connector is told when a node moved, to join the nodes again.
 "
 Class {
 	#name : 'TLBlocVisualization',
@@ -103,7 +103,7 @@ TLBlocVisualization >> fitIfPendingOtherwiseKeepContentInWindow [
 
 { #category : 'fitting' }
 TLBlocVisualization >> fitIntoWindow [
-	"Scales the visualization, never above its natural size, so that all its nodes and labels are in the window, and centers it. The panning is forgotten"
+	"Scales the visualization so that all its nodes and labels fill the window, as much as the zoom allows, and centers it. The panning is forgotten"
 
 	| rectangle windowExtent ratios |
 	self space ifNil: [ ^ self ].
@@ -111,7 +111,7 @@ TLBlocVisualization >> fitIntoWindow [
 	rectangle extent isZero ifTrue: [ ^ self ].
 	windowExtent := self space extent.
 	ratios := windowExtent - (self windowMargin * 2) / (rectangle extent max: 1 @ 1).
-	zoomFactor := ((ratios x min: ratios y) min: 1) min: self class maximumZoom max: self class minimumZoom.
+	zoomFactor := (ratios x min: ratios y) min: self class maximumZoom max: self class minimumZoom.
 	self applyZoom.
 	panOffset := windowExtent - (rectangle extent * zoomFactor) / 2 - self windowMargin.
 	self fitContentToWindow

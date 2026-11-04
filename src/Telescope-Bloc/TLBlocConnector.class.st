@@ -1,5 +1,5 @@
 "
-I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, slowly at first and at the end (see TLBlocSmoothEasing), and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The visualization is fitted into its window again when a layout which is applied again moves or adds a node. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet. The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back, with the animation. The menus of Telescope open at the mouse when a node is clicked with the secondary button, as Bloc elements (see TLBlocMenu).
+I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, slowly at first and at the end (see TLBlocSmoothEasing), and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The visualization is fitted into its window again when a layout which is applied again moves or adds a node. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet. The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back, with the animation. The menus of Telescope open at the mouse when a node is clicked with the secondary button, as Bloc elements (see TLBlocMenu). When an interaction changes the style of a node or of a connection, for example to highlight it, its element is made again from the style sheet. Closing a visualization closes its window.
 "
 Class {
 	#name : 'TLBlocConnector',
@@ -90,9 +90,11 @@ TLBlocConnector >> centerOf: item [
 	^ rectangle origin + (rectangle extent / 2)
 ]
 
-{ #category : 'initialization' }
+{ #category : 'updating - shape' }
 TLBlocConnector >> closeVisualization [
-	self shouldBeImplemented
+	"Closes the window of the visualization"
+
+	view space ifNotNil: [ :space | space close ]
 ]
 
 { #category : 'view' }
@@ -491,18 +493,18 @@ TLBlocConnector >> updateConnections [
 	connections do: [ :connection | connection update ]
 ]
 
-{ #category : 'updating' }
+{ #category : 'updating - shape' }
 TLBlocConnector >> updateEdgeOf: aConnection [
-	"The element of a connection is not changed by an update yet, except for the place where it joins its nodes"
+	"An interaction changed the style of the connection, for example to highlight it: the element is made again from the style sheet, and the connections are drawn again once the update is done"
 
-	self flag: #TODO
+	(self elementFromTLDrawable: aConnection) customizeFromConnection: aConnection
 ]
 
-{ #category : 'updating' }
-TLBlocConnector >> updateElementNodeOf: aDrawable [
-	"The element of a node is not changed by an update yet"
+{ #category : 'updating - shape' }
+TLBlocConnector >> updateElementNodeOf: aNode [
+	"An interaction changed the style of the node, for example to highlight it: the element is made again from the style sheet"
 
-	self flag: #TODO
+	(self elementFromTLDrawable: aNode) customizeFromNode: aNode
 ]
 
 { #category : 'updating - interaction' }

@@ -28,6 +28,12 @@ TLBlocConnectorInteractionTest >> connectFirstNodeToTheOthersOnMouseOver [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorInteractionTest >> connectionElement [
+
+	^ self connectionElements anyOne
+]
+
+{ #category : 'tests' }
 TLBlocConnectorInteractionTest >> connectionElements [
 
 	^ connector view children select: [ :element | element class = TLBlocNodeConnection ]
@@ -70,6 +76,21 @@ TLBlocConnectorInteractionTest >> mouseLeave: aNode [
 TLBlocConnectorInteractionTest >> nodeElements [
 
 	^ connector view children select: [ :element | element class = TLBlocNodeElement ]
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> openWithHighlightOnMouseOver: aCustomizationBlock [
+	"Opens a visualization of two nodes connected one to the other, where the mouse over a node or over the connection changes the style. Answers the node 1"
+
+	| nodes connection highlight |
+	nodes := (1 to: 2) collect: [ :entity | visualization addNodeFromEntity: entity ].
+	connection := nodes first connectTo: nodes second.
+	highlight := (TLStyleCustomizationAction custom: aCustomizationBlock) onMouseOver.
+	visualization addInteraction: highlight.
+	connection addInteraction: highlight.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Interactions'.
+	connector view space settleForDuration: 1 seconds.
+	^ nodes first
 ]
 
 { #category : 'tests' }
@@ -128,6 +149,18 @@ TLBlocConnectorInteractionTest >> testClickingAnExpandedNodeCollapsesIt [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorInteractionTest >> testClosingTheVisualizationClosesItsWindow [
+
+	visualization addNodesFromEntities: #( 1 ).
+	visualization addInteraction: (TLCustomAction block: [ :node | visualization close ]) onClick.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Interactions'.
+	connector view space settleForDuration: 1 seconds.
+	self assert: connector view space isNotNil.
+	self click: visualization allNodes first.
+	self assert: connector view space isNil
+]
+
+{ #category : 'tests' }
 TLBlocConnectorInteractionTest >> testHiddenConnectionIsNotDrawnAtFirst [
 
 	self openWithTwoConnectionsAndTheirActions.
@@ -145,12 +178,63 @@ TLBlocConnectorInteractionTest >> testMouseLeavingTheNodeRemovesTheConnectionsAg
 ]
 
 { #category : 'tests' }
+TLBlocConnectorInteractionTest >> testMouseOverAConnectionChangesItsColorUntilTheMouseLeaves [
+
+	| element before |
+	self openWithHighlightOnMouseOver: [ :style | style color: Color red ].
+	element := self connectionElement.
+	before := element border paint color.
+	element dispatchEvent: BlMouseEnterEvent new.
+	connector view space settleForDuration: 500 milliSeconds.
+	self assert: element border paint color equals: Color red.
+	self assert: element head background paint color equals: Color red.
+	element dispatchEvent: BlMouseLeaveEvent new.
+	connector view space settleForDuration: 500 milliSeconds.
+	self assert: element border paint color equals: before
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testMouseOverAConnectionStillJoinsItsNodes [
+
+	| element |
+	self openWithHighlightOnMouseOver: [ :style | style color: Color red ].
+	element := self connectionElement.
+	element dispatchEvent: BlMouseEnterEvent new.
+	connector view space settleForDuration: 500 milliSeconds.
+	self deny: element start equals: element end
+]
+
+{ #category : 'tests' }
 TLBlocConnectorInteractionTest >> testMouseOverANodeAddsTheConnectionsOfTheAction [
 
 	| node |
 	node := self connectFirstNodeToTheOthersOnMouseOver.
 	self mouseEnter: node.
 	self assert: self connectionElements size equals: 2
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testMouseOverANodeChangesItsBackgroundUntilTheMouseLeaves [
+
+	| node before |
+	node := self openWithHighlightOnMouseOver: [ :style | style backgroundColor: Color green ].
+	before := (connector elementFromTLDrawable: node) background paint color.
+	self mouseEnter: node.
+	self assert: (connector elementFromTLDrawable: node) background paint color equals: Color green.
+	self mouseLeave: node.
+	self assert: (connector elementFromTLDrawable: node) background paint color equals: before
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testMouseOverANodeChangesItsBorderUntilTheMouseLeaves [
+
+	| node before |
+	node := self openWithHighlightOnMouseOver: [ :style | style borderColor: Color red ].
+	before := (connector elementFromTLDrawable: node) border paint color.
+	self mouseEnter: node.
+	self assert: (connector elementFromTLDrawable: node) border paint color equals: Color red.
+	self mouseLeave: node.
+	self assert: (connector elementFromTLDrawable: node) border paint color equals: before
 ]
 
 { #category : 'tests' }

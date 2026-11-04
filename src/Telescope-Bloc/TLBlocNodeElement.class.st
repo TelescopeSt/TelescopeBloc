@@ -45,10 +45,12 @@ TLBlocNodeElement >> asBlocElement [
 
 { #category : 'initialization' }
 TLBlocNodeElement >> customizeFromNode: aNode [
-	"The colors, the dimension and the shape of the style sheet can depend on the entity of the node: a block, or a gradient for the colors, gives the value of each node. The border is drawn with the line style of the style sheet, solid by default, half inside and half outside of the edge of the node"
+	"The colors, the dimension and the shape of the style sheet can depend on the entity of the node: a block, or a gradient for the colors, gives the value of each node. It can be called again when an interaction changed the style: the previous inner border is removed. The border is drawn with the line style of the style sheet, solid by default, half inside and half outside of the edge of the node"
 
 	| styleSheet borderStyle shape |
 	styleSheet := aNode effectiveStyleSheet.
+	innerBorder ifNotNil: [ :previous | previous removeFromParent ].
+	innerBorder := nil.
 	self beOutskirtsCentered.
 	self background: (self valueOf: #backgroundColor forNode: aNode).
 	self dimension: (self valueOf: #width forNode: aNode) @ (self valueOf: #height forNode: aNode).

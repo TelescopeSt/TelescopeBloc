@@ -70,11 +70,14 @@ TLBlocConnectorNavigationTest >> scrollUpAt: aPoint [
 
 { #category : 'running' }
 TLBlocConnectorNavigationTest >> setUp [
+	"The visualization is fitted into the window when it opens, which enlarges three small nodes: the tests start from its natural size"
 
 	super setUp.
 	visualization layout: TLLinearLayout new.
 	visualization addNodesFromEntities: (1 to: 3).
 	connector open: visualization inWindowSized: 300 @ 300 titled: 'Navigation'.
+	self settle.
+	connector view zoomBy: 1 / connector view zoom around: 0 @ 0.
 	self settle
 ]
 
