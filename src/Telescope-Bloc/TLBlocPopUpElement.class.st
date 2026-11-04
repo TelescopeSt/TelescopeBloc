@@ -1,5 +1,5 @@
 "
-I am a pop up of a Telescope visualization of Bloc: a small box with the lines of a text, shown above the window near the element of a node, for example while the mouse is over the node. I am placed outside of the node on the side of the position of the action (a TLPosition), centered on the axes where the position is at the center, and I stay inside the window. I do not take the mouse, otherwise the mouse would leave the node I am shown for. There is one of me in a window at most, and I know my owner, the element of the node.
+I am a pop up of a Telescope visualization of Bloc: a small dark rounded box with a soft shadow and the lines of a text in light letters, which fades in, shown above the window near the element of a node, for example while the mouse is over the node. I am placed outside of the node on the side of the position of the action (a TLPosition), centered on the axes where the position is at the center, and I stay inside the window. I do not take the mouse, otherwise the mouse would leave the node I am shown for. There is one of me in a window at most, and I know my owner, the element of the node.
 "
 Class {
 	#name : 'TLBlocPopUpElement',
@@ -40,6 +40,7 @@ TLBlocPopUpElement class >> showText: aString near: anElement position: aTLPosit
 		         anchoredAt: anElement boundsInSpace asRectangle position: aTLPosition;
 		         yourself.
 	root addChild: popUp.
+	popUp fadeIn.
 	^ popUp
 ]
 
@@ -60,6 +61,12 @@ TLBlocPopUpElement >> anchoredAt: aRectangle position: aTLPosition [
 	placement := aTLPosition
 ]
 
+{ #category : 'accessing' }
+TLBlocPopUpElement >> backgroundColor [
+
+	^ Color r: 0.14 g: 0.17 b: 0.24
+]
+
 { #category : 'layout' }
 TLBlocPopUpElement >> coordinateFor: aSide on: aSize between: aStart and: anEnd [
 	"The coordinate of the pop up on an axis, from its side on the node: before the start (left, top), centered, or after the end (right, bottom)"
@@ -71,6 +78,17 @@ TLBlocPopUpElement >> coordinateFor: aSide on: aSize between: aStart and: anEnd 
 	^ aStart + anEnd - aSize / 2
 ]
 
+{ #category : 'initialization' }
+TLBlocPopUpElement >> fadeIn [
+	"The pop up appears progressively once it is in the window"
+
+	self opacity: 0.
+	self addAnimation: (BlOpacityAnimation new
+			 opacity: 1;
+			 duration: 140 milliSeconds;
+			 yourself)
+]
+
 { #category : 'accessing' }
 TLBlocPopUpElement >> gap [
 	"The space in pixels between the node and the pop up, on the sides where the pop up is outside of the node"
@@ -80,7 +98,7 @@ TLBlocPopUpElement >> gap [
 
 { #category : 'initialization' }
 TLBlocPopUpElement >> initialize [
-	"A small box with some lines of text. It does not take the mouse, otherwise it would make the mouse leave the node it is shown for. It stays near the node, and in the window, once its size is known"
+	"A dark rounded box with a soft shadow and some lines of white text. It does not take the mouse, otherwise it would make the mouse leave the node it is shown for. It stays near the node, and in the window, once its size is known"
 
 	super initialize.
 	lines := #(  ).
@@ -90,13 +108,14 @@ TLBlocPopUpElement >> initialize [
 				layoutConstraints horizontal fitContent.
 				layoutConstraints vertical fitContent ];
 		padding: (BlInsets
-				 top: 4
-				 left: 8
-				 bottom: 4
-				 right: 8);
-		geometry: (BlRoundedRectangleGeometry cornerRadius: 4);
-		background: (Color r: 1 g: 1 b: 0.88);
-		border: (BlBorder paint: Color gray width: 1);
+				 top: 6
+				 left: 11
+				 bottom: 6
+				 right: 11);
+		geometry: (BlRoundedRectangleGeometry cornerRadius: 7);
+		background: self backgroundColor;
+		border: (BlBorder paint: (Color white alpha: 0.12) width: 1);
+		effect: (BlGaussianShadowEffect color: (Color black alpha: 0.35) width: 9 offset: 0 @ 3);
 		preventMeAndChildrenMouseEvents;
 		addEventHandlerOn: BlElementLayoutComputedEvent do: [ :event | self placeNearAnchor ]
 ]
@@ -143,11 +162,17 @@ TLBlocPopUpElement >> placeNearAnchor [
 
 { #category : 'initialization' }
 TLBlocPopUpElement >> text: aString [
-	"A line for each line of the text"
+	"A line of light text for each line of the text"
 
 	lines := aString lines asArray.
 	lines do: [ :line |
 			self addChild: (BlTextElement new
-					 text: (line asRopedText fontSize: 12);
+					 text: ((line asRopedText fontSize: 12) foreground: self textColor);
 					 yourself) ]
+]
+
+{ #category : 'accessing' }
+TLBlocPopUpElement >> textColor [
+
+	^ Color r: 0.94 g: 0.96 b: 0.99
 ]
