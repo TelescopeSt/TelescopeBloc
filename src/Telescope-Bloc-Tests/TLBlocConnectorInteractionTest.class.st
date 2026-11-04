@@ -34,6 +34,13 @@ TLBlocConnectorInteractionTest >> connectionElements [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorInteractionTest >> connectionTargetEntities [
+	"The entities of the nodes the connection elements go to"
+
+	^ (self connectionElements collect: [ :element | (visualization allNodes detect: [ :node | (connector elementFromTLDrawable: node) == element toNode ]) entity ] as: Array) asSortedCollection asArray
+]
+
+{ #category : 'tests' }
 TLBlocConnectorInteractionTest >> expandOnClick [
 	"Opens a visualization of the nodes 1 and 2, whose click adds a child of the entity multiplied by ten, or removes it again. Answers the first node"
 
@@ -66,12 +73,36 @@ TLBlocConnectorInteractionTest >> nodeElements [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorInteractionTest >> openWithTwoConnectionsAndTheirActions [
+	"Opens a visualization where the node 1 is connected to the node 2, and to the node 3 with a hidden connection. A click on the node 1 hides the first connection and shows the second one, a second click does the opposite. Answers the node 1"
+
+	| nodes shown hidden |
+	nodes := (1 to: 3) collect: [ :entity | visualization addNodeFromEntity: entity ].
+	shown := nodes first connectTo: nodes second.
+	hidden := nodes first connectTo: nodes third.
+	hidden hide.
+	visualization addInteractions: {
+			(TLHideAction on: shown) onClick.
+			(TLShowAction on: hidden) onClick }.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Interactions'.
+	connector view space settleForDuration: 1 seconds.
+	^ nodes first
+]
+
+{ #category : 'tests' }
 TLBlocConnectorInteractionTest >> testAddedConnectionsJoinTheirNodes [
 
 	| node |
 	node := self connectFirstNodeToTheOthersOnMouseOver.
 	self mouseEnter: node.
 	self connectionElements do: [ :element | self deny: element start equals: element end ]
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testClickShowsAHiddenConnectionAndHidesAVisibleOne [
+
+	self click: self openWithTwoConnectionsAndTheirActions.
+	self assert: self connectionTargetEntities equals: #( 3 )
 ]
 
 { #category : 'tests' }
@@ -97,6 +128,13 @@ TLBlocConnectorInteractionTest >> testClickingAnExpandedNodeCollapsesIt [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorInteractionTest >> testHiddenConnectionIsNotDrawnAtFirst [
+
+	self openWithTwoConnectionsAndTheirActions.
+	self assert: self connectionTargetEntities equals: #( 2 )
+]
+
+{ #category : 'tests' }
 TLBlocConnectorInteractionTest >> testMouseLeavingTheNodeRemovesTheConnectionsAgain [
 
 	| node |
@@ -113,6 +151,23 @@ TLBlocConnectorInteractionTest >> testMouseOverANodeAddsTheConnectionsOfTheActio
 	node := self connectFirstNodeToTheOthersOnMouseOver.
 	self mouseEnter: node.
 	self assert: self connectionElements size equals: 2
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testSecondClickDoesTheOpposite [
+
+	| node |
+	node := self openWithTwoConnectionsAndTheirActions.
+	self click: node.
+	self click: node.
+	self assert: self connectionTargetEntities equals: #( 2 )
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testShownConnectionJoinsItsNodes [
+
+	self click: self openWithTwoConnectionsAndTheirActions.
+	self connectionElements do: [ :element | self deny: element start equals: element end ]
 ]
 
 { #category : 'tests' }
