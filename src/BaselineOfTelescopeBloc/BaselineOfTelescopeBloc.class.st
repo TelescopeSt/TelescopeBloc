@@ -20,7 +20,7 @@ BaselineOfTelescopeBloc >> baseline: spec [
 			"Packages"
 			spec
 				package: 'Telescope-Bloc' with: [ spec requires: #( 'Telescope' 'Bloc' ) ];
-				package: 'Telescope-Bloc-Demo' with: [ spec requires: #( 'Telescope-Bloc' 'Telescope-Demo' ) ];
+				package: 'Telescope-Bloc-Demo' with: [ spec requires: #( 'Telescope-Bloc' 'TelescopeDemo' ) ];
 				package: 'Telescope-Bloc-Tests' with: [ spec requires: #( 'Telescope-Bloc' 'Telescope-Bloc-Demo' ) ].
 
 			"Groups"
@@ -40,6 +40,12 @@ BaselineOfTelescopeBloc >> bloc: spec [
 
 { #category : 'dependencies' }
 BaselineOfTelescopeBloc >> telescope: spec [
+	"The core of Telescope, which the connector needs"
 
-	spec baseline: 'Telescope' with: [ spec repository: 'github://TelescopeSt/Telescope:v2.x.x/src' ]
+	spec baseline: 'Telescope' with: [
+			spec
+				loads: #( 'core' );
+				repository: 'github://TelescopeSt/Telescope:v2.x.x/src' ].
+
+	spec project: 'TelescopeDemo' copyFrom: 'Telescope' with: [ spec loads: #( 'demo' ) ]
 ]
