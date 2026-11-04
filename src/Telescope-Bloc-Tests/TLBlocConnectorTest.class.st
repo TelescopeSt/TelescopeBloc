@@ -34,6 +34,21 @@ TLBlocConnectorTest >> testNodeCreationGeneratesBlocNodeElement [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorTest >> testNodeWithLabelGeneratesItsLabelText [
+
+	| visualization node |
+	visualization := TLVisualization new.
+	visualization
+		nodeCreationStrategy: TLNodeCreationStrategy default;
+		styleSheet: TLStyleSheet default;
+		generator: connector.
+	visualization styleSheet nodeLabel: #yourself.
+	node := visualization addNodeFromEntity: 'abc'.
+	visualization generateWith: connector.
+	self assert: (connector elementFromTLDrawable: node) children first text asString equals: 'abc'
+]
+
+{ #category : 'tests' }
 TLBlocConnectorTest >> testOpeningTenNodesShowsThemInAWindow [
 
 	| visualization space |
