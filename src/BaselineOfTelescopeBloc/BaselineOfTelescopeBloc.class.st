@@ -20,13 +20,15 @@ BaselineOfTelescopeBloc >> baseline: spec [
 			"Packages"
 			spec
 				package: 'Telescope-Bloc' with: [ spec requires: #( 'Telescope' 'Bloc' ) ];
-				package: 'Telescope-Bloc-Tests' with: [ spec requires: #( 'Telescope-Bloc' ) ].
+				package: 'Telescope-Bloc-Demo' with: [ spec requires: #( 'Telescope-Bloc' 'Telescope-Demo' ) ];
+				package: 'Telescope-Bloc-Tests' with: [ spec requires: #( 'Telescope-Bloc' 'Telescope-Bloc-Demo' ) ].
 
 			"Groups"
 			spec
 				group: 'all' with: #( 'default' );
 				group: 'core' with: #( 'Telescope-Bloc' );
-				group: 'default' with: #( 'core' 'tests' );
+				group: 'demo' with: #( 'Telescope-Bloc-Demo' );
+				group: 'default' with: #( 'core' 'demo' 'tests' );
 				group: 'tests' with: #( 'Telescope-Bloc-Tests' ) ]
 ]
 
