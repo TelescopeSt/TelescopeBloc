@@ -1,5 +1,5 @@
 "
-I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I open the visualization in a Bloc window. My windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions, the legends and the connections between nodes are not implemented yet.
+I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I open the visualization in a Bloc window. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. My windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions, the legends and the connections between nodes are not implemented yet.
 "
 Class {
 	#name : 'TLBlocConnector',
@@ -93,14 +93,20 @@ TLBlocConnector >> createElementNodeFromNode: aNode [
 	| blocElement styleSheet |
 	blocElement := TLBlocNodeElement new.
 	styleSheet := aNode effectiveStyleSheet.
-	blocElement customizeFrom: styleSheet.
+	blocElement customizeFromNode: aNode.
 	(styleSheet attributes includesKey: #nodeLabel) ifTrue: [ blocElement addChild: (TLBlocLabelElement forNode: aNode) ].
 	^ blocElement
 ]
 
 { #category : 'generation - group' }
 TLBlocConnector >> createGroup: aTLGroup with: anObject [
-	^ anObject 
+	"The root group stays flat in the view. The nodes of a sub-group are moved inside the element of the group, which is added to the view and placed as one node by the layout of its parent"
+
+	| group |
+	aTLGroup parent ifNil: [ ^ anObject ].
+	group := TLBlocGroup withElements: anObject.
+	self addElementNodeInView: group asBlocElement.
+	^ group
 ]
 
 { #category : 'generation - legend' }

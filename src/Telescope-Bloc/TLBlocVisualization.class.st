@@ -45,10 +45,10 @@ TLBlocVisualization >> basePosition [
 
 { #category : 'layout' }
 TLBlocVisualization >> contentTopLeft [
-	"Answers the smallest top left corner of the nodes and their labels, relative to the visualization"
+	"Answers the smallest top left corner of the nodes and their labels, relative to the visualization, whatever the depth of the groups they are in"
 
 	| corners |
-	corners := self children flatCollect: [ :node | { node position } , (node children collect: [ :label | node position + label position ]) ].
+	corners := self children flatCollect: [ :child | child cornersRelativeTo: 0 @ 0 ].
 	^ corners ifEmpty: [ 0 @ 0 ] ifNotEmpty: [ (corners collect: [ :corner | corner x ]) min @ (corners collect: [ :corner | corner y ]) min ]
 ]
 
