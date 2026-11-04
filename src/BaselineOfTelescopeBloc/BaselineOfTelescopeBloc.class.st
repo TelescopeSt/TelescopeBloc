@@ -1,5 +1,5 @@
 "
-I am a baseline of the Bloc connector for Telescope. I depend on the Bloc dev branch, which I load with Telescope. I define the packages and groups of the connector and its tests.
+I am a baseline of the Bloc connector for Telescope. I depend on the Bloc dev branch. I depend on the core of Telescope, and on its demo group only for the demo browser. I define the packages and groups of the connector, of its demo browser and of its tests.
 "
 Class {
 	#name : 'BaselineOfTelescopeBloc',

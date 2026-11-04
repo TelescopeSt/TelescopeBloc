@@ -1,5 +1,5 @@
 "
-I am a Spec browser of the demos of TLDemos rendered by the Bloc connector. I list the demos, filter them with the filters they declare, show the visualization in a Bloc canvas and the source of the demo below. When a demo fails, I show the error and a button to debug it.
+I am a Spec browser of the demos of TLDemos rendered by the Bloc connector. I list the demos, filter them with the filters they declare, show the visualization in a Bloc canvas and the source of the demo below. When a demo fails, I replace the visualization by the stack of the error and I enable a button to debug it.
 "
 Class {
 	#name : 'TLBlocDemoPresenter',

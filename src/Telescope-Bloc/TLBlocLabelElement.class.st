@@ -1,5 +1,5 @@
 "
-I display the label of a Telescope node in a Bloc visualization. My placement is a TLPosition: I place myself so that my reversed position meets the anchor of the position on my node. I can wrap my text to a maximum width or cut it with three dots, measuring the text after each layout.
+I display the label of a Telescope node in a Bloc visualization, as a vertical stack of lines, because Bloc neither breaks a text at line feeds nor wraps it. Each line is a text element, centered in me. My placement is a TLPosition: I place myself so that my reversed position meets the anchor of the position on my node, with a gap. I wrap my lines to a maximum width by moving one word at a time to the next line, or I cut my text with three dots, measuring the lines after each layout.
 "
 Class {
 	#name : 'TLBlocLabelElement',

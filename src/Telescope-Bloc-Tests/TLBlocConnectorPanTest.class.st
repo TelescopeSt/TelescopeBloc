@@ -1,58 +1,13 @@
 "
-I test the panning of a visualization in a window: dragging the background with the primary button moves the visualization. The mouse events are sent to the root of the window, so no real mouse is needed. I inherit the connector, the visualization and the window cleaning from TLBlocConnectorTest.
+I test the panning of a visualization in a window: dragging the background with the primary button moves the visualization. A press on a node does not pan, and moving the mouse without pressing does not either. I inherit the window and the mouse event helpers from TLBlocConnectorNavigationTest.
 "
 Class {
 	#name : 'TLBlocConnectorPanTest',
-	#superclass : 'TLBlocConnectorTest',
+	#superclass : 'TLBlocConnectorNavigationTest',
 	#category : 'Telescope-Bloc-Tests-Connector',
 	#package : 'Telescope-Bloc-Tests',
 	#tag : 'Connector'
 }
-
-{ #category : 'running' }
-TLBlocConnectorPanTest >> moveTo: aPoint on: anElement [
-
-	anElement dispatchEvent: (BlMouseMoveEvent new
-			 position: aPoint;
-			 screenPosition: aPoint;
-			 yourself)
-]
-
-{ #category : 'running' }
-TLBlocConnectorPanTest >> pressAt: aPoint on: anElement [
-
-	anElement dispatchEvent: (BlMouseDownEvent new
-			 position: aPoint;
-			 screenPosition: aPoint;
-			 button: BlMouseButton primary;
-			 yourself)
-]
-
-{ #category : 'running' }
-TLBlocConnectorPanTest >> releaseAt: aPoint on: anElement [
-
-	anElement dispatchEvent: (BlMouseUpEvent new
-			 position: aPoint;
-			 screenPosition: aPoint;
-			 button: BlMouseButton primary;
-			 yourself)
-]
-
-{ #category : 'running' }
-TLBlocConnectorPanTest >> setUp [
-
-	super setUp.
-	visualization layout: TLLinearLayout new.
-	visualization addNodesFromEntities: (1 to: 3).
-	connector open: visualization inWindowSized: 300 @ 300 titled: 'Panning'.
-	self settle
-]
-
-{ #category : 'running' }
-TLBlocConnectorPanTest >> settle [
-
-	connector view space settleForDuration: 1 seconds
-]
 
 { #category : 'tests' }
 TLBlocConnectorPanTest >> testDraggingANodeDoesNotPanTheVisualization [

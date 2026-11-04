@@ -1,3 +1,6 @@
+"
+I am the Bloc element of a Telescope node. My dimension, my shape, my background and my border come from the style sheet of the node. I do not clip my children, because the label of a node is drawn outside of the node.
+"
 Class {
 	#name : 'TLBlocNodeElement',
 	#superclass : 'BlElement',

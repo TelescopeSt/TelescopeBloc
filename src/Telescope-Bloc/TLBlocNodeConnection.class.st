@@ -1,3 +1,6 @@
+"
+I am the Bloc element of a connection between two nodes of a Telescope visualization. I should draw a line between the elements of the two nodes. I am a first draft that does not work yet with the current Bloc, because I use classes and messages that do not exist anymore.
+"
 Class {
 	#name : 'TLBlocNodeConnection',
 	#superclass : 'BlElement',

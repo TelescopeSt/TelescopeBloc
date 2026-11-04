@@ -1,10 +1,9 @@
+"
+I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I open the visualization in a Bloc window. The interactions, the legends and the connections between nodes are not implemented yet.
+"
 Class {
 	#name : 'TLBlocConnector',
 	#superclass : 'TLViewConnector',
-	#instVars : [
-		'blocVisualization',
-		'zoom'
-	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
 	#tag : 'Core'
@@ -13,14 +12,6 @@ Class {
 { #category : 'accessing' }
 TLBlocConnector class >> priority [
 	^ 50
-]
-
-{ #category : 'zoom' }
-TLBlocConnector >> adaptZoomFromEvent: aCharacter [
-	aCharacter = Character arrowUp
-		ifTrue: [ ^ ((1 / self zoomLevel) @ (1 / self zoomLevel)) ].
-	aCharacter = Character arrowDown
-		ifTrue: [  ^ (self zoomLevel @ self zoomLevel) ]
 ]
 
 { #category : 'view' }
@@ -313,9 +304,4 @@ TLBlocConnector >> updateShapeTrigger: aTLShapeTrigger [
 { #category : 'view' }
 TLBlocConnector >> updateViewForVisualization: aTLVisualization [
 	self shouldBeImplemented
-]
-
-{ #category : 'accessing' }
-TLBlocConnector >> zoomLevel [
-	^ 0.75
 ]

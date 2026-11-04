@@ -3,24 +3,14 @@ I pan a Telescope visualization of Bloc: I am installed on the root of the windo
 "
 Class {
 	#name : 'TLBlocPanHandler',
-	#superclass : 'BlCustomEventHandler',
+	#superclass : 'TLBlocNavigationHandler',
 	#instVars : [
-		'visualization',
-		'root',
 		'lastPosition'
 	],
-	#category : 'Telescope-Bloc-Panning',
+	#category : 'Telescope-Bloc-Navigation',
 	#package : 'Telescope-Bloc',
-	#tag : 'Panning'
+	#tag : 'Navigation'
 }
-
-{ #category : 'instance creation' }
-TLBlocPanHandler class >> on: aVisualization [
-
-	^ self new
-		  visualization: aVisualization;
-		  yourself
-]
 
 { #category : 'api - accessing' }
 TLBlocPanHandler >> eventsToHandle [
@@ -50,31 +40,4 @@ TLBlocPanHandler >> mouseMoveEvent: anEvent [
 TLBlocPanHandler >> mouseUpEvent: anEvent [
 
 	lastPosition := nil
-]
-
-{ #category : 'api - hooks' }
-TLBlocPanHandler >> onInstalledIn: anElement [
-
-	super onInstalledIn: anElement.
-	root := anElement
-]
-
-{ #category : 'api - hooks' }
-TLBlocPanHandler >> onUninstalledIn: anElement [
-
-	super onUninstalledIn: anElement.
-	root := nil
-]
-
-{ #category : 'installing' }
-TLBlocPanHandler >> uninstall [
-	"Stops listening to the window the visualization was in"
-
-	root ifNotNil: [ :element | element removeEventHandler: self ]
-]
-
-{ #category : 'accessing' }
-TLBlocPanHandler >> visualization: aVisualization [
-
-	visualization := aVisualization
 ]

@@ -1,5 +1,5 @@
 "
-I test the Bloc connector of Telescope without opening a window. I check that the connector generates the Bloc elements for the Telescope drawables of a visualization.
+I am the superclass of the tests of the Bloc connector. I create the connector and a visualization that uses it, and I close the window a test opened, whatever the outcome of the test. I am abstract: my subclasses hold the tests.
 "
 Class {
 	#name : 'TLBlocConnectorTest',
