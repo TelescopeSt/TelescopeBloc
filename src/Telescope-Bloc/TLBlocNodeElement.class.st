@@ -1,5 +1,5 @@
 "
-I am the Bloc element of a Telescope node. My dimension, my background and my border come from the style sheet of the node, the border being half inside and half outside of the edge, solid, dashed, dotted or double, the outline drawn a second time inside of the first one with a small gap: the colors can depend on the entity of the node, with a block or a gradient. My shape is my outline: a Geometry project shape (a polygon, a rectangle or an ellipse) built from the Telescope shape and my dimension, in my own coordinates. My Bloc geometry is derived from my outline, and the connections use my outline to find where they meet the border of the node. I have no outline when the node has no shape, and then only my label is drawn. The layouts of Telescope place a node by its center: #position: takes the center, but #position stays the top left corner of the element, because Bloc reads it to draw me. I do not clip my children, because the label of a node is drawn outside of the node. I know the elements of the connections which leave me and enter me, as my adjacent nodes are asked by the layouts of Telescope such as the tree layout.
+I am the Bloc element of a Telescope node. My dimension, my background and my border come from the style sheet of the node, the border being half inside and half outside of the edge, solid, dashed, dotted or double, the outline drawn a second time inside of the first one with a small gap: the colors can depend on the entity of the node, with a block or a gradient. My shape is my outline: a Geometry project shape (a polygon, a rectangle or an ellipse) built from the Telescope shape and my dimension, in my own coordinates. My Bloc geometry is derived from my outline, and the connections use my outline to find where they meet the border of the node. I have no outline when the node has no shape, and then only my label is drawn. The layouts of Telescope place a node by its center: #position: takes the center, but #position stays the top left corner of the element, because Bloc reads it to draw me. I do not clip my children, because the label of a node is drawn outside of the node. I know the elements of the connections which leave me and enter me, as my adjacent nodes are asked by the layouts of Telescope such as the tree layout. I know whether the user dragged me with the mouse, because the click which ends a drag is not a click.
 "
 Class {
 	#name : 'TLBlocNodeElement',
@@ -9,7 +9,8 @@ Class {
 		'outline',
 		'innerBorder',
 		'outgoingConnections',
-		'incomingConnections'
+		'incomingConnections',
+		'wasDragged'
 	],
 	#category : 'Telescope-Bloc-Elements',
 	#package : 'Telescope-Bloc',
@@ -206,4 +207,17 @@ TLBlocNodeElement >> valueOf: aProperty forNode: aNode [
 	"The value of a property of the style sheet of the node, evaluated for the entity of the node"
 
 	^ aNode effectiveStyleSheet obtainValue: aProperty forEntity: aNode entity inNode: aNode
+]
+
+{ #category : 'dragging' }
+TLBlocNodeElement >> wasDragged [
+	"Whether the user dragged me with the mouse since the last press on me: the click which ends a drag is not for my interactions"
+
+	^ wasDragged ifNil: [ false ]
+]
+
+{ #category : 'dragging' }
+TLBlocNodeElement >> wasDragged: aBoolean [
+
+	wasDragged := aBoolean
 ]

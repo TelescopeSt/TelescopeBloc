@@ -1,5 +1,5 @@
 "
-I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, slowly at first and at the end (see TLBlocSmoothEasing), and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The visualization is fitted into its window again when a layout which is applied again moves or adds a node. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet.
+I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, slowly at first and at the end (see TLBlocSmoothEasing), and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The visualization is fitted into its window again when a layout which is applied again moves or adds a node. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet. The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back, with the animation.
 "
 Class {
 	#name : 'TLBlocConnector',
@@ -95,10 +95,13 @@ TLBlocConnector >> closeVisualization [
 	self shouldBeImplemented
 ]
 
-{ #category : 'accessing' }
+{ #category : 'view' }
 TLBlocConnector >> configView [
+	"The connections follow the nodes the user drags"
 
 	^ TLBlocVisualization new
+		  onNodesMovedDo: [ self updateConnections ];
+		  yourself
 ]
 
 { #category : 'accessing' }
@@ -193,11 +196,13 @@ TLBlocConnector >> generateBasicInteraction: aTLInteraction onNode: aTLNode [
 
 { #category : 'generation - interaction' }
 TLBlocConnector >> generateClickInteraction: aTLClickInteraction onDrawable: aTLDrawable targetingDrawable: aTargetDrawable [
-	"The action of the interaction is executed when the element of the target is clicked"
+	"The action of the interaction is executed when the element of the target is clicked, unless the click ends the drag of the node"
 
 	| element |
 	element := self elementFromTLDrawable: aTargetDrawable.
-	element addEventHandlerOn: BlClickEvent do: [ :event | self executeAnimatingFrom: element do: [ self executeInteraction: aTLClickInteraction forDrawable: aTLDrawable ] ]
+	element
+		addEventHandlerOn: BlClickEvent
+		do: [ :event | element wasDragged ifFalse: [ self executeAnimatingFrom: element do: [ self executeInteraction: aTLClickInteraction forDrawable: aTLDrawable ] ] ]
 ]
 
 { #category : 'generation - interaction' }

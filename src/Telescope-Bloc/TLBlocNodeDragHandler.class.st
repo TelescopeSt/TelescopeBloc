@@ -1,0 +1,76 @@
+"
+I let the user drag the nodes of a Telescope visualization of Bloc with the mouse: I am installed on the root of the window, and when the primary mouse button is pressed on a node or on its label and the mouse goes further than a few pixels, I move the node by the same distance, divided by the zoom of the visualization. A press on the background is for the pan handler. The node knows it was dragged, so that the click which ends the drag does not execute its click interactions. The place of a dragged node is not kept: a layout which is applied again puts it back.
+"
+Class {
+	#name : 'TLBlocNodeDragHandler',
+	#superclass : 'TLBlocNavigationHandler',
+	#instVars : [
+		'node',
+		'lastPosition',
+		'pendingMove',
+		'dragging'
+	],
+	#category : 'Telescope-Bloc-Navigation',
+	#package : 'Telescope-Bloc',
+	#tag : 'Navigation'
+}
+
+{ #category : 'events' }
+TLBlocNodeDragHandler >> eventsToHandle [
+
+	^ {
+		  BlMouseDownEvent.
+		  BlMouseMoveEvent.
+		  BlMouseUpEvent }
+]
+
+{ #category : 'events' }
+TLBlocNodeDragHandler >> mouseDownEvent: anEvent [
+	"A press with the primary button on a node, or on its label, starts a possible drag"
+
+	anEvent button = BlMouseButton primary ifFalse: [ ^ self ].
+	node := self nodeElementOf: anEvent target.
+	node ifNil: [ ^ self ].
+	node wasDragged: false.
+	lastPosition := anEvent screenPosition.
+	pendingMove := 0 @ 0.
+	dragging := false
+]
+
+{ #category : 'events' }
+TLBlocNodeDragHandler >> mouseMoveEvent: anEvent [
+	"The node follows the mouse once the mouse went far enough: a click is not a drag. The distance is the one of the window, the visualization may be zoomed"
+
+	node ifNil: [ ^ self ].
+	pendingMove := pendingMove + (anEvent screenPosition - lastPosition).
+	lastPosition := anEvent screenPosition.
+	dragging ifFalse: [ dragging := pendingMove r >= self threshold ].
+	dragging ifFalse: [ ^ self ].
+	node wasDragged: true.
+	visualization keepPositionWhile: [ node placeAt: node placement + (pendingMove / visualization zoom) ].
+	pendingMove := 0 @ 0.
+	visualization nodesMoved
+]
+
+{ #category : 'events' }
+TLBlocNodeDragHandler >> mouseUpEvent: anEvent [
+
+	node := nil
+]
+
+{ #category : 'private' }
+TLBlocNodeDragHandler >> nodeElementOf: anElement [
+	"The node which contains the element, if any: the target of a press on a label is the label"
+
+	| current |
+	current := anElement.
+	[ current isNil or: [ current class = TLBlocNodeElement ] ] whileFalse: [ current := current parent ].
+	^ current
+]
+
+{ #category : 'private' }
+TLBlocNodeDragHandler >> threshold [
+	"The distance in pixels the mouse goes before a press becomes a drag"
+
+	^ 3
+]

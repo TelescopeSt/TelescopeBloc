@@ -1,5 +1,5 @@
 "
-I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels. I move myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. The pan and zoom handlers are installed on the root of the window while I am in it. The first time I am laid out with some content I am fitted into the window: scaled down when the content is bigger than the window, never enlarged, and centered, which #fitIntoWindow does again on request. #zoomIn and #zoomOut zoom around the center of the window, and #exportAsPngTo: and #exportAsSvgTo: write me as I am shown. I put my toolbar in the root of the window while I am in it. I do not clip my children, because the window already clips me.
+I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels. I move myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. The pan and zoom handlers are installed on the root of the window while I am in it. The first time I am laid out with some content I am fitted into the window: scaled down when the content is bigger than the window, never enlarged, and centered, which #fitIntoWindow does again on request. #zoomIn and #zoomOut zoom around the center of the window, and #exportAsPngTo: and #exportAsSvgTo: write me as I am shown. I put my toolbar in the root of the window while I am in it. I do not clip my children, because the window already clips me. I let the user drag the nodes, and the panning compensates the nodes which move my content, so that the other nodes stay under the mouse. The connector is told when a node moved, to join the nodes again.
 "
 Class {
 	#name : 'TLBlocVisualization',
@@ -10,7 +10,9 @@ Class {
 		'zoomFactor',
 		'zoomHandler',
 		'toolbar',
-		'fitPending'
+		'fitPending',
+		'dragHandler',
+		'nodesMovedAction'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -131,8 +133,10 @@ TLBlocVisualization >> initialize [
 	panOffset := 0 @ 0.
 	zoomFactor := 1.
 	fitPending := true.
+	nodesMovedAction := [ ].
 	panHandler := TLBlocPanHandler on: self.
 	zoomHandler := TLBlocZoomHandler on: self.
+	dragHandler := TLBlocNodeDragHandler on: self.
 	self addEventHandlerOn: BlElementLayoutComputedEvent do: [ :event | self fitIfPendingOtherwiseKeepContentInWindow ].
 	self addEventHandlerOn: BlElementAddedToSceneGraphEvent do: [ :event | self installNavigationHandlers ].
 	self addEventHandlerOn: BlElementRemovedFromSceneGraphEvent do: [ :event | self uninstallNavigationHandlers ]
@@ -140,12 +144,37 @@ TLBlocVisualization >> initialize [
 
 { #category : 'initialization' }
 TLBlocVisualization >> installNavigationHandlers [
-	"The mouse events of the background arrive on the root of the window, which also holds the toolbar"
+	"The mouse events of the background and of the nodes arrive on the root of the window, which also holds the toolbar"
 
 	{
 		panHandler.
-		zoomHandler } do: [ :handler | self space root addEventHandlerIfNotPresent: handler ].
+		zoomHandler.
+		dragHandler } do: [ :handler | self space root addEventHandlerIfNotPresent: handler ].
 	self toolbar hasParent ifFalse: [ self space root addChild: self toolbar ]
+]
+
+{ #category : 'dragging' }
+TLBlocVisualization >> keepPositionWhile: aBlock [
+	"The visualization stays where it is while the block moves nodes. It is anchored to the top left corner of its content, which a node dragged to the left or to the top moves: the panning compensates, so the other nodes do not move under the mouse"
+
+	| keptPosition |
+	keptPosition := self measuredBounds position.
+	aBlock value.
+	panOffset := keptPosition - self basePosition.
+	self fitContentToWindow
+]
+
+{ #category : 'dragging' }
+TLBlocVisualization >> nodesMoved [
+
+	nodesMovedAction value
+]
+
+{ #category : 'dragging' }
+TLBlocVisualization >> onNodesMovedDo: aBlock [
+	"What happens when the user moved a node with the mouse: the connector joins the nodes again"
+
+	nodesMovedAction := aBlock
 ]
 
 { #category : 'layout' }
@@ -168,7 +197,8 @@ TLBlocVisualization >> uninstallNavigationHandlers [
 
 	{
 		panHandler.
-		zoomHandler } do: [ :handler | handler uninstall ].
+		zoomHandler.
+		dragHandler } do: [ :handler | handler uninstall ].
 	toolbar ifNotNil: [ :element | element removeFromParent ]
 ]
 
