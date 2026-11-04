@@ -5,8 +5,9 @@ Class {
 		'dimension',
 		'position'
 	],
-	#category : 'Telescope-Bloc',
-	#package : 'Telescope-Bloc'
+	#category : 'Telescope-Bloc-Elements',
+	#package : 'Telescope-Bloc',
+	#tag : 'Elements'
 }
 
 { #category : 'accessing' }

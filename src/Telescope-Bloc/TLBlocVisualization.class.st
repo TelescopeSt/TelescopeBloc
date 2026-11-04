@@ -1,8 +1,13 @@
 Class {
 	#name : 'TLBlocVisualization',
 	#superclass : 'BlElement',
-	#category : 'Telescope-Bloc',
-	#package : 'Telescope-Bloc'
+	#instVars : [
+		'panOffset',
+		'panHandler'
+	],
+	#category : 'Telescope-Bloc-Core',
+	#package : 'Telescope-Bloc',
+	#tag : 'Core'
 }
 
 { #category : 'layout' }
@@ -16,11 +21,11 @@ TLBlocVisualization >> contentTopLeft [
 
 { #category : 'layout' }
 TLBlocVisualization >> fitContentToWindow [
-	"Moves the visualization so that the top left corner of the nodes and of their labels sits at the margin of the window"
+	"Moves the visualization so that the top left corner of the nodes and of their labels sits at the margin of the window, shifted by the panning"
 
 	| margin |
 	margin := 10.
-	self position: margin @ margin - self contentTopLeft
+	self position: margin @ margin - self contentTopLeft + panOffset
 ]
 
 { #category : 'initialization' }
@@ -29,5 +34,17 @@ TLBlocVisualization >> initialize [
 
 	super initialize.
 	self clipChildren: false.
-	self addEventHandlerOn: BlElementLayoutComputedEvent do: [ :event | self fitContentToWindow ]
+	panOffset := 0 @ 0.
+	panHandler := TLBlocPanHandler on: self.
+	self addEventHandlerOn: BlElementLayoutComputedEvent do: [ :event | self fitContentToWindow ].
+	self addEventHandlerOn: BlElementAddedToSceneGraphEvent do: [ :event | self space root addEventHandlerIfNotPresent: panHandler ].
+	self addEventHandlerOn: BlElementRemovedFromSceneGraphEvent do: [ :event | panHandler uninstall ]
+]
+
+{ #category : 'layout' }
+TLBlocVisualization >> panBy: aPoint [
+	"Moves the visualization by the given distance, and keeps the distance for the next layouts"
+
+	panOffset := panOffset + aPoint.
+	self fitContentToWindow
 ]

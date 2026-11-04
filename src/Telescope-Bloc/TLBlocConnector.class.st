@@ -5,8 +5,9 @@ Class {
 		'blocVisualization',
 		'zoom'
 	],
-	#category : 'Telescope-Bloc',
-	#package : 'Telescope-Bloc'
+	#category : 'Telescope-Bloc-Core',
+	#package : 'Telescope-Bloc',
+	#tag : 'Core'
 }
 
 { #category : 'accessing' }

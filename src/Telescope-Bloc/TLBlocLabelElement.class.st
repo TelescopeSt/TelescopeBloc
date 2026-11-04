@@ -9,9 +9,9 @@ Class {
 		'wrapping',
 		'maximumWidth'
 	],
-	#category : 'Telescope-Bloc-Label',
+	#category : 'Telescope-Bloc-Elements',
 	#package : 'Telescope-Bloc',
-	#tag : 'Label'
+	#tag : 'Elements'
 }
 
 { #category : 'instance creation' }

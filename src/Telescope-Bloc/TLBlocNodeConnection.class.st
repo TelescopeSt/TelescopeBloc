@@ -6,8 +6,9 @@ Class {
 		'toNode',
 		'element'
 	],
-	#category : 'Telescope-Bloc',
-	#package : 'Telescope-Bloc'
+	#category : 'Telescope-Bloc-Elements',
+	#package : 'Telescope-Bloc',
+	#tag : 'Elements'
 }
 
 { #category : 'instance creation' }
