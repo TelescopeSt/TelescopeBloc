@@ -56,7 +56,7 @@ TLBlocConnectorNodeTest >> testTenNodesAreLaidOutAtDistinctPositions [
 	| positions |
 	visualization addNodesFromEntities: (1 to: 10).
 	visualization generateWith: connector.
-	positions := connector view children collect: [ :each | each position ].
+	positions := connector view children collect: [ :each | each measuredBounds position ].
 	self assert: positions asSet size equals: 10
 ]
 

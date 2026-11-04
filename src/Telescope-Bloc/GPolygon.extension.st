@@ -6,3 +6,10 @@ GPolygon >> asBlocGeometry [
 
 	^ BlPolygonGeometry vertices: (self vertices collect: #asPoint)
 ]
+
+{ #category : '*Telescope-Bloc' }
+GPolygon >> translatedCopyBy: aPoint [
+	"A new polygon moved by the point. translateBy: moves the polygon itself, and a copy shares the points of the original"
+
+	^ GPolygon vertices: (self vertices collect: [ :vertex | vertex asPoint + aPoint ])
+]

@@ -1,5 +1,5 @@
 "
-I am the Bloc element of a connection between two nodes of a Telescope visualization. I should draw a line between the elements of the two nodes. I am a first draft that does not work yet with the current Bloc, because I use classes and messages that do not exist anymore.
+I am the Bloc element of a connection between two nodes of a Telescope visualization. I am a line from the border of the outline of the source node to the border of the outline of the target node, along the line which joins their centers (see TLBlocConnectionSegment). I am in the view, in the coordinates of which the segment is computed, and my element is the box of the segment. The connector updates me once the layouts have placed the nodes. The color and the width of the line are the ones of the style sheet of the connection. The heads, the curve styles and the labels of the connections are not implemented yet.
 "
 Class {
 	#name : 'TLBlocNodeConnection',
@@ -7,7 +7,7 @@ Class {
 	#instVars : [
 		'fromNode',
 		'toNode',
-		'element'
+		'segment'
 	],
 	#category : 'Telescope-Bloc-Elements',
 	#package : 'Telescope-Bloc',
@@ -15,64 +15,83 @@ Class {
 }
 
 { #category : 'instance creation' }
-TLBlocNodeConnection class >> createFrom: aTLBlocNodeElementFrom to: aTLBlocNodeElementTo [
+TLBlocNodeConnection class >> from: aSourceElement to: aTargetElement [
+	"The elements are the ones of two nodes, which are in the same view as the connection"
+
 	^ self new
-		fromNode: aTLBlocNodeElementFrom;
-		toNode: aTLBlocNodeElementTo;
-		yourself
+		  fromNode: aSourceElement toNode: aTargetElement;
+		  yourself
+]
+
+{ #category : 'layout' }
+TLBlocNodeConnection >> cornersRelativeTo: anOrigin [
+	"A connection is between its nodes: it does not take part in the fit of the visualization in its window"
+
+	^ #(  )
 ]
 
 { #category : 'initialization' }
-TLBlocNodeConnection >> customizeFrom: aTLStyleSheet [
-	element border: (BlBorder paint: aTLStyleSheet color width: aTLStyleSheet width).
-	"element
-		toHead:
-			(BlArrowheadTriangle new
-				background: (aTLStyleSheet > #head) color;
-				border: (BlBorder paint: (aTLStyleSheet > #head) color width: 1))"
+TLBlocNodeConnection >> customizeFromConnection: aTLConnection [
+	"The color and the width of the style sheet of the connection are the ones of the line"
+
+	| styleSheet |
+	styleSheet := aTLConnection effectiveStyleSheet.
+	self border: (BlBorder paint: styleSheet color width: styleSheet width)
 ]
 
 { #category : 'accessing' }
-TLBlocNodeConnection >> element [
-	^ element
-]
+TLBlocNodeConnection >> end [
+	"The point where the line arrives on the target node, in the coordinates of the view. Nil until the connection is updated"
 
-{ #category : 'accessing' }
-TLBlocNodeConnection >> element: anObject [
-	element := anObject
+	^ segment ifNotNil: [ :aSegment | aSegment end ]
 ]
 
 { #category : 'accessing' }
 TLBlocNodeConnection >> fromNode [
+	"The element of the source node"
+
 	^ fromNode
 ]
 
-{ #category : 'accessing' }
-TLBlocNodeConnection >> fromNode: anObject [
-	fromNode := anObject.
-	self element fromAnchor: (BlElementCenterAnchor element: anObject)
+{ #category : 'initialization' }
+TLBlocNodeConnection >> fromNode: aSourceElement toNode: aTargetElement [
+
+	fromNode := aSourceElement.
+	toNode := aTargetElement
 ]
 
-{ #category : 'initialization' }
-TLBlocNodeConnection >> initialize [
-	super initialize.
-	element := BlLineElement new
-		border:
-			(BlBorder builder
-				paint: Color gray;
-				width: 2;
-				build);
-		yourself.
-	self addChild: element
+{ #category : 'layout' }
+TLBlocNodeConnection >> placeSegment [
+	"The element is the box of the segment, at least one pixel thick, and its line goes from a corner to the opposite one"
+
+	| topLeft bottomRight |
+	topLeft := segment start min: segment end.
+	bottomRight := segment start max: segment end.
+	self position: topLeft.
+	self extent: (bottomRight - topLeft max: 1 @ 1).
+	self geometry: (BlLineGeometry from: segment start - topLeft to: segment end - topLeft)
+]
+
+{ #category : 'accessing' }
+TLBlocNodeConnection >> start [
+	"The point where the line leaves the source node, in the coordinates of the view. Nil until the connection is updated"
+
+	^ segment ifNotNil: [ :aSegment | aSegment start ]
 ]
 
 { #category : 'accessing' }
 TLBlocNodeConnection >> toNode [
+	"The element of the target node"
+
 	^ toNode
 ]
 
-{ #category : 'accessing' }
-TLBlocNodeConnection >> toNode: anObject [
-	toNode := anObject.
-	self element toAnchor: (BlElementCenterAnchor element: anObject)
+{ #category : 'layout' }
+TLBlocNodeConnection >> update [
+	"Joins the borders of the nodes, once the layouts have placed them. The connection is in the view, in the coordinates of which the segment is computed"
+
+	| view |
+	view := self parent.
+	segment := TLBlocConnectionSegment from: (fromNode outlineRelativeTo: view) to: (toNode outlineRelativeTo: view).
+	self placeSegment
 ]

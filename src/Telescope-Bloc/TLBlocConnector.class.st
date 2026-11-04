@@ -1,11 +1,12 @@
 "
-I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I open the visualization in a Bloc window. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. My windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions, the legends and the connections between nodes are not implemented yet.
+I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions, the legends and the heads of the connections are not implemented yet.
 "
 Class {
 	#name : 'TLBlocConnector',
 	#superclass : 'TLViewConnector',
 	#instVars : [
-		'host'
+		'host',
+		'connections'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -19,7 +20,9 @@ TLBlocConnector class >> priority [
 
 { #category : 'view' }
 TLBlocConnector >> addElementConnectionInView: element [
-	self view addChild: element
+
+	self view addChild: element.
+	connections add: element
 ]
 
 { #category : 'view' }
@@ -45,7 +48,9 @@ TLBlocConnector >> addElementNodeInView: element [
 
 { #category : 'layout' }
 TLBlocConnector >> applyLayoutOf: aTLGroup on: group [
-	aTLGroup layout on: group
+
+	aTLGroup layout on: group.
+	self updateConnections
 ]
 
 { #category : 'initialization' }
@@ -68,12 +73,10 @@ TLBlocConnector >> connectionHeadShapesAvailableForConnector [
 
 { #category : 'generation - connection' }
 TLBlocConnector >> createElementConnection: aTLConnection From: fromNode to: toNode [
-	| blConnection |
-	blConnection := TLBlocNodeConnection
-		createFrom: (self elementFromTLDrawable: fromNode)
-		to: (self elementFromTLDrawable: toNode).
-	blConnection customizeFrom: aTLConnection effectiveStyleSheet.
-	^ blConnection
+
+	^ (TLBlocNodeConnection from: (self elementFromTLDrawable: fromNode) to: (self elementFromTLDrawable: toNode))
+		  customizeFromConnection: aTLConnection;
+		  yourself
 ]
 
 { #category : 'generation - interaction' }
@@ -241,6 +244,13 @@ TLBlocConnector >> host: aBlHost [
 	host := aBlHost
 ]
 
+{ #category : 'initialization' }
+TLBlocConnector >> initialize [
+
+	super initialize.
+	connections := OrderedCollection new
+]
+
 { #category : 'accessing' }
 TLBlocConnector >> nodesShapesAvailableForConnector [
 	"The shapes a node can have: all but the ones that are only for connections"
@@ -319,6 +329,13 @@ TLBlocConnector >> update: shape withLabelShape: aTLLabelShape [
 { #category : 'updating - shape' }
 TLBlocConnector >> update: shape withRectangleShape: aTLRectangleShape [
 	self shouldBeImplemented
+]
+
+{ #category : 'layout' }
+TLBlocConnector >> updateConnections [
+	"The connections join the borders of their nodes, which the layouts have just placed"
+
+	connections do: [ :connection | connection update ]
 ]
 
 { #category : 'updating - connection' }

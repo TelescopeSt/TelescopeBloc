@@ -1,12 +1,11 @@
 "
-I am the Bloc element of a Telescope node. My dimension, my background and my border come from the style sheet of the node: the colors can depend on the entity of the node, with a block or a gradient. My shape is my outline: a Geometry project shape (a polygon, a rectangle or an ellipse) built from the Telescope shape and my dimension, in my own coordinates. My Bloc geometry is derived from my outline, and my outline knows its intersections with lines, which the connections need. I have no outline when the node has no shape, and then only my label is drawn. The layouts of Telescope place a node by its center: #position: takes the center and #position answers it, while the top left corner of the element is in its measured bounds. I do not clip my children, because the label of a node is drawn outside of the node.
+I am the Bloc element of a Telescope node. My dimension, my background and my border come from the style sheet of the node: the colors can depend on the entity of the node, with a block or a gradient. My shape is my outline: a Geometry project shape (a polygon, a rectangle or an ellipse) built from the Telescope shape and my dimension, in my own coordinates. My Bloc geometry is derived from my outline, and the connections use my outline to find where they meet the border of the node. I have no outline when the node has no shape, and then only my label is drawn. The layouts of Telescope place a node by its center: #position: takes the center, but #position stays the top left corner of the element, because Bloc reads it to draw me. I do not clip my children, because the label of a node is drawn outside of the node.
 "
 Class {
 	#name : 'TLBlocNodeElement',
 	#superclass : 'BlElement',
 	#instVars : [
 		'dimension',
-		'position',
 		'outline'
 	],
 	#category : 'Telescope-Bloc-Elements',
@@ -89,19 +88,31 @@ TLBlocNodeElement >> outline [
 	^ outline
 ]
 
-{ #category : 'accessing' }
-TLBlocNodeElement >> position [
-	"The center the layout of Telescope gave to the node. The top left corner of the element is in its measured bounds"
+{ #category : 'layout' }
+TLBlocNodeElement >> outlineRelativeTo: anAncestor [
+	"A copy of the outline of the node, in the coordinates of an ancestor, without moving the outline of the node. A node without a shape has the rectangle of its dimension"
 
-	^ position
+	^ (outline ifNil: [ GRectangle origin: 0 @ 0 corner: dimension ]) translatedCopyBy: (self topLeftRelativeTo: anAncestor)
 ]
 
 { #category : 'accessing' }
 TLBlocNodeElement >> position: aCenter [
-	"The layouts of Telescope place a node by its center, and Bloc places an element by its top left corner"
+	"The layouts of Telescope place a node by its center, and Bloc places an element by its top left corner. Only the setter is the one of Telescope: Bloc reads #position to draw the element, so it must keep answering the top left corner"
 
-	position := aCenter.
 	^ super position: aCenter - (dimension / 2)
+]
+
+{ #category : 'layout' }
+TLBlocNodeElement >> topLeftRelativeTo: anAncestor [
+	"The top left corner of the node, in the coordinates of an ancestor: the view, whatever the groups between them"
+
+	| topLeft current |
+	topLeft := self measuredBounds position.
+	current := self parent.
+	[ current isNotNil and: [ current ~~ anAncestor ] ] whileTrue: [
+			topLeft := topLeft + current measuredBounds position.
+			current := current parent ].
+	^ topLeft
 ]
 
 { #category : 'styling' }

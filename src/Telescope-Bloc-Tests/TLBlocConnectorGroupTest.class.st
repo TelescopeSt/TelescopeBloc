@@ -51,6 +51,22 @@ TLBlocConnectorGroupTest >> testNodeIsPlacedByItsCenter [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorGroupTest >> testNodeKeepsTheBlocMeaningOfItsPosition [
+	"Bloc reads the position of an element to draw it, so it must stay the top left corner of the element, whatever the center the layout of Telescope gave"
+
+	| node element |
+	node := visualization addNodeFromEntity: 1.
+	node styleSheet
+		width: 40;
+		height: 40.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Position'.
+	connector view space settleForDuration: 1 seconds.
+	element := connector elementFromTLDrawable: node.
+	self assert: element position equals: element bounds position.
+	self assert: element position equals: 0 @ 0
+]
+
+{ #category : 'tests' }
 TLBlocConnectorGroupTest >> testNodesOfASubGroupAreInsideTheElementOfTheGroup [
 
 	| group groupElement |
