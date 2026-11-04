@@ -211,16 +211,11 @@ TLBlocConnector >> generateTLWidthLegendEntry: aTLWidthLegendEntry [
 	self shouldBeImplemented
 ]
 
-{ #category : 'initialization' }
-TLBlocConnector >> image [ priorSource: 16841869
-]
-
 { #category : 'opening' }
 TLBlocConnector >> open: aTLVisualization inWindowSized: aDimension titled: aString [
-	self flag: #TODO. "generation of visualization should be done by abstract connector"
-	self view: TLBlocVisualization new.
-	aTLVisualization generateWith: self.	
-	self openInWindow: blocVisualization named: aString  extent: aDimension
+
+	aTLVisualization generateWith: self.
+	self openInWindow: self view named: aString extent: aDimension
 ]
 
 { #category : 'opening' }
@@ -229,20 +224,10 @@ TLBlocConnector >> openInWindow: anElement named: aTitleString extent: aPoint [
 
 	| aSpace |
 	aSpace := BlSpace new
-		extent: aPoint;
-		title: aTitleString.
+		          extent: aPoint;
+		          title: aTitleString.
 	aSpace root background: Color white.
 	aSpace root addChild: anElement.
-	aSpace root
-		addEventHandler:
-			(BlEventHandler
-				on: BlMouseWheelEvent
-				do: [ :evt | 
-					aSpace root transform
-						inherit;
-						origin: (BlAffineTransformationPositionOrigin position: evt position x @ evt position y);
-						scaleBy: (self adaptZoomFromEvent: evt direction);
-						apply ]).
 	aSpace show
 ]
 

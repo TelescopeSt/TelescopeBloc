@@ -32,3 +32,51 @@ TLBlocConnectorTest >> testNodeCreationGeneratesBlocNodeElement [
 	group generate.
 	self assert: (connector elementFromTLDrawable: node) class identicalTo: TLBlocNodeElement
 ]
+
+{ #category : 'tests' }
+TLBlocConnectorTest >> testOpeningTenNodesShowsThemInAWindow [
+
+	| visualization space |
+	visualization := TLVisualization new.
+	visualization
+		nodeCreationStrategy: TLNodeCreationStrategy default;
+		styleSheet: TLStyleSheet default;
+		layout: TLLinearLayout new;
+		generator: connector.
+	visualization addNodesFromEntities: (1 to: 10).
+	connector open: visualization inWindowSized: 400 @ 300 titled: 'Ten nodes'.
+	space := connector view space.
+	self assert: connector view children size equals: 10.
+	space close
+]
+
+{ #category : 'tests' }
+TLBlocConnectorTest >> testTenNodesAreGeneratedInTheView [
+
+	| visualization |
+	visualization := TLVisualization new.
+	visualization
+		nodeCreationStrategy: TLNodeCreationStrategy default;
+		styleSheet: TLStyleSheet default;
+		layout: TLLinearLayout new;
+		generator: connector.
+	visualization addNodesFromEntities: (1 to: 10).
+	visualization generateWith: connector.
+	self assert: connector view children size equals: 10
+]
+
+{ #category : 'tests' }
+TLBlocConnectorTest >> testTenNodesAreLaidOutAtDistinctPositions [
+
+	| visualization positions |
+	visualization := TLVisualization new.
+	visualization
+		nodeCreationStrategy: TLNodeCreationStrategy default;
+		styleSheet: TLStyleSheet default;
+		layout: TLLinearLayout new;
+		generator: connector.
+	visualization addNodesFromEntities: (1 to: 10).
+	visualization generateWith: connector.
+	positions := connector view children collect: [ :each | each position ].
+	self assert: positions asSet size equals: 10
+]
