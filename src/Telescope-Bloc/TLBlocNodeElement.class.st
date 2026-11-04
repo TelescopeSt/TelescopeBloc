@@ -1,17 +1,37 @@
 "
-I am the Bloc element of a Telescope node. My dimension, my background and my border come from the style sheet of the node: the colors can depend on the entity of the node, with a block or a gradient. My shape is my outline: a Geometry project shape (a polygon, a rectangle or an ellipse) built from the Telescope shape and my dimension, in my own coordinates. My Bloc geometry is derived from my outline, and the connections use my outline to find where they meet the border of the node. I have no outline when the node has no shape, and then only my label is drawn. The layouts of Telescope place a node by its center: #position: takes the center, but #position stays the top left corner of the element, because Bloc reads it to draw me. I do not clip my children, because the label of a node is drawn outside of the node.
+I am the Bloc element of a Telescope node. My dimension, my background and my border come from the style sheet of the node, the border being half inside and half outside of the edge, solid, dashed, dotted or double, the outline drawn a second time inside of the first one with a small gap: the colors can depend on the entity of the node, with a block or a gradient. My shape is my outline: a Geometry project shape (a polygon, a rectangle or an ellipse) built from the Telescope shape and my dimension, in my own coordinates. My Bloc geometry is derived from my outline, and the connections use my outline to find where they meet the border of the node. I have no outline when the node has no shape, and then only my label is drawn. The layouts of Telescope place a node by its center: #position: takes the center, but #position stays the top left corner of the element, because Bloc reads it to draw me. I do not clip my children, because the label of a node is drawn outside of the node.
 "
 Class {
 	#name : 'TLBlocNodeElement',
 	#superclass : 'BlElement',
 	#instVars : [
 		'dimension',
-		'outline'
+		'outline',
+		'innerBorder'
 	],
 	#category : 'Telescope-Bloc-Elements',
 	#package : 'Telescope-Bloc',
 	#tag : 'Elements'
 }
+
+{ #category : 'initialization' }
+TLBlocNodeElement >> addInnerBorderOf: aShape [
+	"A double border draws the outline a second time, smaller, in the same place. It does not change my outline, which is where the connections meet the node"
+
+	| inset innerOutline |
+	outline ifNil: [ ^ self ].
+	inset := self border width * 2.
+	innerOutline := aShape outlineOfExtent: dimension - (inset * 2).
+	innerOutline ifNil: [ ^ self ].
+	innerBorder := BlElement new
+		               position: inset @ inset;
+		               extent: dimension - (inset * 2);
+		               geometry: innerOutline asBlocGeometry;
+		               border: self border;
+		               beOutskirtsCentered;
+		               yourself.
+	self addChild: innerBorder at: 1
+]
 
 { #category : 'layout' }
 TLBlocNodeElement >> asBlocElement [
@@ -29,19 +49,24 @@ TLBlocNodeElement >> cornersRelativeTo: anOrigin [
 	^ { topLeft } , (self children collect: [ :label | topLeft + label position ])
 ]
 
-{ #category : 'styling' }
+{ #category : 'initialization' }
 TLBlocNodeElement >> customizeFromNode: aNode [
-	"The colors of the style sheet can depend on the entity of the node: a block or a gradient gives the color of each node"
+	"The colors of the style sheet can depend on the entity of the node: a block or a gradient gives the color of each node. The border is drawn with the line style of the style sheet, solid by default, half inside and half outside of the edge of the node"
 
-	| styleSheet |
+	| styleSheet borderStyle |
 	styleSheet := aNode effectiveStyleSheet.
+	self beOutskirtsCentered.
 	self background: (self valueOf: #backgroundColor forNode: aNode).
 	self dimension: styleSheet width @ styleSheet height.
 	outline := styleSheet shape outlineOfExtent: dimension.
 	self geometry: (outline
 			 ifNil: [ BlEmptyGeometry new ]
 			 ifNotNil: [ :shape | shape asBlocGeometry ]).
-	self border: (BlBorder paint: (self valueOf: #borderColor forNode: aNode) width: styleSheet borderWidth)
+	borderStyle := (styleSheet attributes includesKey: #borderStyle)
+		               ifTrue: [ styleSheet borderStyle ]
+		               ifFalse: [ TLSolidLineStyle ].
+	self border: (borderStyle blocBorderPaint: (self valueOf: #borderColor forNode: aNode) width: styleSheet borderWidth).
+	borderStyle hasParallelLineInBloc ifTrue: [ self addInnerBorderOf: styleSheet shape ]
 ]
 
 { #category : 'accessing' }
@@ -69,6 +94,13 @@ TLBlocNodeElement >> initialize [
 
 	super initialize.
 	self clipChildren: false
+]
+
+{ #category : 'initialization' }
+TLBlocNodeElement >> innerBorder [
+	"The second outline of a double border, inside of the first one, or nil for the other line styles"
+
+	^ innerBorder
 ]
 
 { #category : 'accessing' }

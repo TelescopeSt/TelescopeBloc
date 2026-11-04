@@ -19,6 +19,16 @@ TLBlocConnectorNodeStyleTest >> backgroundColorOfEntity: anEntity [
 	^ (connector elementFromTLDrawable: node) background paint color
 ]
 
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> borderStyleOfNodeStyledWith: aLineStyle [
+
+	| node |
+	node := visualization addNodeFromEntity: 1.
+	node styleSheet borderStyle: aLineStyle.
+	visualization generateWith: connector.
+	^ (connector elementFromTLDrawable: node) border style
+]
+
 { #category : 'helpers' }
 TLBlocConnectorNodeStyleTest >> colorsOfEntities: aCollection [
 	"Generates a node for each entity and answers the colors of the backgrounds of their elements"
@@ -27,6 +37,17 @@ TLBlocConnectorNodeStyleTest >> colorsOfEntities: aCollection [
 	nodes := aCollection collect: [ :entity | visualization addNodeFromEntity: entity ].
 	visualization generateWith: connector.
 	^ nodes collect: [ :node | (connector elementFromTLDrawable: node) background paint color ]
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> elementOfNodeStyledWith: aLineStyle [
+
+	| node |
+	node := visualization addNodeFromEntity: 1.
+	aLineStyle ifNotNil: [ node styleSheet borderStyle: aLineStyle ].
+	connector open: visualization inWindowSized: 200 @ 200 titled: 'Border style'.
+	connector view space settleForDuration: 1 seconds.
+	^ connector elementFromTLDrawable: node
 ]
 
 { #category : 'tests' }
@@ -66,6 +87,21 @@ TLBlocConnectorNodeStyleTest >> testBorderColorCanDependOnTheEntityToo [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testBorderIsHalfInsideAndHalfOutsideOfTheEdge [
+
+	self assert: (self elementOfNodeStyledWith: nil) outskirts class equals: BlOutskirtsCentered
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testBorderIsSolidByDefault [
+
+	| node |
+	node := visualization addNodeFromEntity: 1.
+	visualization generateWith: connector.
+	self deny: (connector elementFromTLDrawable: node) border style isDashed
+]
+
+{ #category : 'tests' }
 TLBlocConnectorNodeStyleTest >> testBorderIsTheBorderColorOfTheStyle [
 
 	| node |
@@ -76,6 +112,48 @@ TLBlocConnectorNodeStyleTest >> testBorderIsTheBorderColorOfTheStyle [
 	visualization generateWith: connector.
 	self assert: (connector elementFromTLDrawable: node) border paint color equals: Color blue.
 	self assert: (connector elementFromTLDrawable: node) border width equals: 3
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testBordersOfADoubleBorderAreOverTheirEdgesToo [
+
+	| element |
+	element := self elementOfNodeStyledWith: TLDoubleLineStyle.
+	self assert: element outskirts class equals: BlOutskirtsCentered.
+	self assert: element innerBorder outskirts class equals: BlOutskirtsCentered
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testDashedBorderIsDashed [
+
+	self assert: (self borderStyleOfNodeStyledWith: TLDashedLineStyle) isDashed
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testDottedBorderIsMadeOfSquareDotsAsWideAsTheBorder [
+
+	| element |
+	element := self elementOfNodeStyledWith: TLDottedLineStyle.
+	self assert: element border style dashArray equals: {
+			element border width.
+			element border width }
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testDoubleBorderDrawsTheOutlineASecondTimeInsideOfTheFirstOneWithAGap [
+	"Two outlines and the gap between them, each a third of the width, take the width of a solid border"
+
+	| element inner innerPosition width |
+	element := self elementOfNodeStyledWith: TLDoubleLineStyle.
+	width := visualization allNodes anyOne effectiveStyleSheet borderWidth.
+	inner := element innerBorder.
+	innerPosition := inner measuredBounds position.
+	self assert: inner isNotNil.
+	self assert: inner geometry class equals: element geometry class.
+	self assert: element border width equals: width / 3.0.
+	self assert: inner border width equals: width / 3.0.
+	self assert: innerPosition equals: (width * 2 / 3.0) asPoint.
+	self assert: innerPosition * 2 + inner extent equals: element extent
 ]
 
 { #category : 'tests' }
@@ -92,4 +170,10 @@ TLBlocConnectorNodeStyleTest >> testGradientGivesEachNodeTheColorOfItsEntity [
 	self assert: (colors at: 2) equals: (gradient value: 10).
 	self deny: (colors at: 2) equals: colors first.
 	self deny: (colors at: 2) equals: colors last
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testSolidBorderHasNoInnerBorder [
+
+	self assert: (self elementOfNodeStyledWith: TLSolidLineStyle) innerBorder isNil
 ]

@@ -9,6 +9,17 @@ Class {
 	#tag : 'Connection'
 }
 
+{ #category : 'tests - line style' }
+TLBlocConnectorConnectionTest >> elementOfConnectionStyledWith: aLineStyle [
+
+	| connection |
+	connection := (visualization addNodeFromEntity: 1) connectTo: (visualization addNodeFromEntity: 2).
+	aLineStyle ifNotNil: [ connection styleSheet connectionLineStyle: aLineStyle ].
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Line style'.
+	connector view space settleForDuration: 1 seconds.
+	^ connector elementFromTLDrawable: connection
+]
+
 { #category : 'setup' }
 TLBlocConnectorConnectionTest >> setUp [
 
@@ -44,6 +55,15 @@ TLBlocConnectorConnectionTest >> testConnectionIsAnElementOfTheView [
 	element := connector elementFromTLDrawable: connection.
 	self assert: element class equals: TLBlocNodeConnection.
 	self assert: (connector view children includes: element)
+]
+
+{ #category : 'tests - line style' }
+TLBlocConnectorConnectionTest >> testConnectionIsSolidByDefault [
+
+	| element |
+	element := self elementOfConnectionStyledWith: nil.
+	self deny: element border style isDashed.
+	self assertEmpty: element lines
 ]
 
 { #category : 'tests' }
@@ -150,6 +170,55 @@ TLBlocConnectorConnectionTest >> testConnectorOffersEveryShapeAsAConnectionHead 
 	self assert: (shapes includes: TLNoShape)
 ]
 
+{ #category : 'tests - line style' }
+TLBlocConnectorConnectionTest >> testDashedConnectionIsMadeOfSegmentsLongerThanTheirGaps [
+
+	| element dashArray |
+	element := self elementOfConnectionStyledWith: TLDashedLineStyle.
+	self assert: element border style isDashed.
+	dashArray := element border style dashArray.
+	self assert: dashArray size equals: 2.
+	self assert: dashArray first > dashArray last
+]
+
+{ #category : 'tests - line style' }
+TLBlocConnectorConnectionTest >> testDottedConnectionIsMadeOfSquareDotsAsWideAsTheLineWithGapsOfTheSameWidth [
+
+	| element |
+	element := self elementOfConnectionStyledWith: TLDottedLineStyle.
+	self assert: element border style isDashed.
+	self assert: element border style dashArray equals: {
+			element border width.
+			element border width }
+]
+
+{ #category : 'tests - line style' }
+TLBlocConnectorConnectionTest >> testDoubleConnectionIsCenteredOnTheAxisOfTheSegment [
+
+	| element centers axis |
+	element := self elementOfConnectionStyledWith: TLDoubleLineStyle.
+	centers := element lines collect: [ :line | line position + (line extent / 2) ].
+	axis := element start + element end / 2 - element measuredBounds position.
+	self assert: (centers first + centers last / 2 - axis) abs < (1 @ 1).
+	self deny: centers first equals: centers last
+]
+
+{ #category : 'tests - line style' }
+TLBlocConnectorConnectionTest >> testDoubleConnectionIsTwoThinLinesAsThickAsASolidOne [
+	"Two lines and the gap between them, each a third of the width, take the width of a solid line"
+
+	| element width centers |
+	element := self elementOfConnectionStyledWith: TLDoubleLineStyle.
+	width := visualization allConnections anyOne effectiveStyleSheet width.
+	self assert: element lines size equals: 2.
+	element lines do: [ :line |
+			self assert: line geometry class equals: BlLineGeometry.
+			self deny: line border style isDashed.
+			self assert: line border width equals: width / 3.0 ].
+	centers := element lines collect: [ :line | line position + (line extent / 2) ].
+	self assert: (centers first - centers last) r closeTo: width * 2 / 3.0
+]
+
 { #category : 'tests' }
 TLBlocConnectorConnectionTest >> testHeadFollowsTheDirectionOfADiagonalConnection [
 
@@ -193,6 +262,15 @@ TLBlocConnectorConnectionTest >> testSimpleConnectionsDemoGeneratesItsSixConnect
 	visualization generateWith: connector.
 	connections := connector view children select: [ :each | each class == TLBlocNodeConnection ].
 	self assert: connections size equals: 6
+]
+
+{ #category : 'tests - line style' }
+TLBlocConnectorConnectionTest >> testSolidConnectionIsAnUninterruptedLine [
+
+	| element |
+	element := self elementOfConnectionStyledWith: TLSolidLineStyle.
+	self deny: element border style isDashed.
+	self assertEmpty: element lines
 ]
 
 { #category : 'tests' }
