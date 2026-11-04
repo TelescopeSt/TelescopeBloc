@@ -34,7 +34,8 @@ TLBlocConnector >> addElementLegendInView: legend [
 
 { #category : 'view' }
 TLBlocConnector >> addElementLegendItemInView: legendItem [
-	self shouldBeImplemented
+
+	self flag: #TODO
 ]
 
 { #category : 'view' }
@@ -58,6 +59,13 @@ TLBlocConnector >> configView [
 	^ TLBlocVisualization new
 ]
 
+{ #category : 'accessing' }
+TLBlocConnector >> connectionHeadShapesAvailableForConnector [
+	"The connections are not implemented yet, so no shape is available for their heads"
+
+	^ #(  )
+]
+
 { #category : 'generation - connection' }
 TLBlocConnector >> createElementConnection: aTLConnection From: fromNode to: toNode [
 	| blConnection |
@@ -75,7 +83,8 @@ TLBlocConnector >> createElementFromTrigger: aTLShapeTrigger [
 
 { #category : 'generation - legend' }
 TLBlocConnector >> createElementLegendItemFrom: aTLLegendItem [
-	self shouldBeImplemented
+
+	self flag: #TODO
 ]
 
 { #category : 'generation - node' }
@@ -151,17 +160,20 @@ TLBlocConnector >> generateMultiChoiceMenuInteraction: aTLMultiChoiceMenuInterac
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateNodeBackgroundLegendEntry: aTLNodeBackgroundLegendEntry [
-	self shouldBeImplemented
+
+	self flag: #TODO
 ]
 
 { #category : 'generation-legendEntry' }
-TLBlocConnector >> generateNodeBorderLegendEntry: aLegendEntry [
-	self shouldBeImplemented
+TLBlocConnector >> generateNodeBorderColorLegendEntry: aLegendEntry [
+
+	self flag: #TODO
 ]
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateNodeShapeLegendEntry: aTLNodeShapeLegendEntry [
-	self shouldBeImplemented
+
+	self flag: #TODO
 ]
 
 { #category : 'generation - interaction' }
@@ -176,37 +188,44 @@ TLBlocConnector >> generateRightClickInteraction: aRightClickInteraction onDrawa
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateTLBorderColorLegendEntry: aTLBorderColorLegendEntry [
-	self shouldBeImplemented
+
+	self flag: #TODO
 ]
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateTLBorderShapeLegendEntry: aTLBorderShapeLegendEntry [
-	self shouldBeImplemented
+
+	self flag: #TODO
 ]
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateTLColorLegendEntry: aTLColorLegendEntry [
-	self shouldBeImplemented
+
+	self flag: #TODO
 ]
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateTLGradientLegendEntry: aTLGradientLegendEntry [
-	self shouldBeImplemented
+
+	self flag: #TODO
 ]
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateTLHeightLegendEntry: aTLHeightLegendEntry [
-	self shouldBeImplemented
+
+	self flag: #TODO
 ]
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateTLStyleSheetLegendEntry: aTLStyleSheetLegendEntry [
-	self shouldBeImplemented
+
+	self flag: #TODO
 ]
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateTLWidthLegendEntry: aTLWidthLegendEntry [
-	self shouldBeImplemented
+
+	self flag: #TODO
 ]
 
 { #category : 'accessing' }
@@ -214,6 +233,13 @@ TLBlocConnector >> host: aBlHost [
 	"The host of the windows I open, for example BlHeadlessHost default to open them without a display. When nil, the windows use the default host of Bloc"
 
 	host := aBlHost
+]
+
+{ #category : 'accessing' }
+TLBlocConnector >> nodesShapesAvailableForConnector [
+	"The shapes a node can have: all but the ones that are only for connections"
+
+	^ TLSimpleShape allSubclasses select: [ :each | each isAvailableForBlocNode ]
 ]
 
 { #category : 'opening' }
@@ -254,7 +280,8 @@ TLBlocConnector >> removeElementFromView: element associatedToDrawable: aTLDrawa
 
 { #category : 'view' }
 TLBlocConnector >> removeElementLegendItemFromView: element [
-	self shouldBeImplemented
+
+	self flag: #TODO
 ]
 
 { #category : 'view' }
@@ -264,7 +291,8 @@ TLBlocConnector >> removeElementnteractionFromView: element [
 
 { #category : 'removing - legend' }
 TLBlocConnector >> removeLegend: aTLLegend [
-	self shouldBeImplemented
+
+	self flag: #TODO
 ]
 
 { #category : 'updating - shape' }
@@ -304,7 +332,8 @@ TLBlocConnector >> updateInteractionsOf: aDrawable [
 
 { #category : 'updating - legend' }
 TLBlocConnector >> updateLegend: aTLLegend [
-	self shouldBeImplemented
+
+	self flag: #TODO
 ]
 
 { #category : 'updating - interaction' }

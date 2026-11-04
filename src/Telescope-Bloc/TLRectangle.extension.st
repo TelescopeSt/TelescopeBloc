@@ -1,7 +1,7 @@
 Extension { #name : 'TLRectangle' }
 
 { #category : '*Telescope-Bloc' }
-TLRectangle class >> obtainTLBlocShape [
+TLRectangle class >> outlineOfExtent: anExtent [
 
-	^ BlRectangleGeometry new
+	^ GRectangle origin: 0 @ 0 corner: anExtent
 ]
