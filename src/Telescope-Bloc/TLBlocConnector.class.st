@@ -90,19 +90,13 @@ TLBlocConnector >> createElementNodeFromNode: aNode [
 	blocElement := TLBlocNodeElement new.
 	styleSheet := aNode effectiveStyleSheet.
 	blocElement customizeFrom: styleSheet.
-	(styleSheet attributes includesKey: #nodeLabel) ifTrue: [ blocElement addChild: (self createLabelElementWith: (styleSheet obtainValue: #nodeLabel forEntity: aNode entity inNode: aNode) asString) ].
+	(styleSheet attributes includesKey: #nodeLabel) ifTrue: [ blocElement addChild: (TLBlocLabelElement forNode: aNode) ].
 	^ blocElement
 ]
 
 { #category : 'generation - group' }
 TLBlocConnector >> createGroup: aTLGroup with: anObject [
 	^ anObject 
-]
-
-{ #category : 'generation - node' }
-TLBlocConnector >> createLabelElementWith: aString [
-
-	^ BlTextElement new text: aString asRopedText
 ]
 
 { #category : 'generation - legend' }

@@ -29,6 +29,14 @@ TLBlocNodeElement >> dimension: aDimension [
 	self extent: aDimension
 ]
 
+{ #category : 'initialization' }
+TLBlocNodeElement >> initialize [
+	"Labels are drawn outside the node bounds, so the node must not clip its children"
+
+	super initialize.
+	self clipChildren: false
+]
+
 { #category : 'accessing' }
 TLBlocNodeElement >> isNode [
 	^ true
