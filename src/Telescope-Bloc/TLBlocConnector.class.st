@@ -1,5 +1,5 @@
 "
-I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 300 milliseconds by default, and the connections follow them. The first layout and the new nodes are not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet.
+I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 300 milliseconds by default, and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet.
 "
 Class {
 	#name : 'TLBlocConnector',
@@ -9,7 +9,8 @@ Class {
 		'connections',
 		'animationDuration',
 		'placedElements',
-		'animation'
+		'animation',
+		'animationOrigin'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -52,16 +53,17 @@ TLBlocConnector >> addElementNodeInView: element [
 
 { #category : 'layout' }
 TLBlocConnector >> animate: group from: previousCenters [
-	"A layout puts the items at their new place at once. They go back to where they were, and an animation brings them to their new place, with the connections following them. An animation in progress is replaced, the items continue from where it put them"
+	"A layout puts the items at their new place at once. They go back to where they were, and an animation brings them to their new place, with the connections following them. The new items start from the origin of the animation, if there is one, and otherwise appear at their place. An animation in progress is replaced, the items continue from where it put them"
 
 	| moves |
 	animation ifNotNil: [ :current | current stop ].
 	animation := nil.
 	moves := IdentityDictionary new.
-	previousCenters keysAndValuesDo: [ :item :previous |
-			| target |
+	group do: [ :item |
+			| target start |
 			target := self centerOf: item.
-			target = previous ifFalse: [ moves at: item put: previous -> target ] ].
+			start := previousCenters at: item ifAbsent: [ animationOrigin ].
+			(start isNotNil and: [ start ~= target ]) ifTrue: [ moves at: item put: start -> target ] ].
 	(moves isEmpty or: [ animationDuration isZero ]) ifTrue: [ ^ self ].
 	moves keysAndValuesDo: [ :item :move | item position: move key ].
 	animation := BlNumberTransition new
@@ -198,6 +200,14 @@ TLBlocConnector >> define: parentCompositeElement asParentFor: aCollectionOfChil
 	self shouldBeImplemented
 ]
 
+{ #category : 'layout' }
+TLBlocConnector >> executeAnimatingFrom: anElement do: aBlock [
+	"The nodes which the action adds appear where the element is, and slide to the place of the layout"
+
+	animationOrigin := self centerOf: anElement.
+	aBlock ensure: [ animationOrigin := nil ]
+]
+
 { #category : 'generation - interaction' }
 TLBlocConnector >> generateBasicInteraction: aTLInteraction onNode: aTLNode [
 	self shouldBeImplemented
@@ -207,7 +217,9 @@ TLBlocConnector >> generateBasicInteraction: aTLInteraction onNode: aTLNode [
 TLBlocConnector >> generateClickInteraction: aTLClickInteraction onDrawable: aTLDrawable targetingDrawable: aTargetDrawable [
 	"The action of the interaction is executed when the element of the target is clicked"
 
-	(self elementFromTLDrawable: aTargetDrawable) addEventHandlerOn: BlClickEvent do: [ :event | self executeInteraction: aTLClickInteraction forDrawable: aTLDrawable ]
+	| element |
+	element := self elementFromTLDrawable: aTargetDrawable.
+	element addEventHandlerOn: BlClickEvent do: [ :event | self executeAnimatingFrom: element do: [ self executeInteraction: aTLClickInteraction forDrawable: aTLDrawable ] ]
 ]
 
 { #category : 'generation - interaction' }
@@ -229,8 +241,10 @@ TLBlocConnector >> generateExternalTriggerInteraction: aTLMouseOverInteraction o
 TLBlocConnector >> generateMouseOverInteraction: aTLMouseOverInteraction onDrawable: aTLDrawable targetingDrawable: aTargetDrawable [
 	"The action of the interaction is executed when the mouse enters the element of the target, and reversed when it leaves it"
 
-	(self elementFromTLDrawable: aTargetDrawable)
-		addEventHandlerOn: BlMouseEnterEvent do: [ :event | self executeRegularInteraction: aTLMouseOverInteraction forDrawable: aTLDrawable ];
+	| element |
+	element := self elementFromTLDrawable: aTargetDrawable.
+	element
+		addEventHandlerOn: BlMouseEnterEvent do: [ :event | self executeAnimatingFrom: element do: [ self executeRegularInteraction: aTLMouseOverInteraction forDrawable: aTLDrawable ] ];
 		addEventHandlerOn: BlMouseLeaveEvent do: [ :event | self executeReverseInteraction: aTLMouseOverInteraction forDrawable: aTLDrawable ]
 ]
 
