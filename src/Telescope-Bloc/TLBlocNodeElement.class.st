@@ -1,5 +1,5 @@
 "
-I am the Bloc element of a Telescope node. My dimension, my background and my border come from the style sheet of the node, the border being half inside and half outside of the edge, solid, dashed, dotted or double, the outline drawn a second time inside of the first one with a small gap: the colors can depend on the entity of the node, with a block or a gradient. My shape is my outline: a Geometry project shape (a polygon, a rectangle or an ellipse) built from the Telescope shape and my dimension, in my own coordinates. My Bloc geometry is derived from my outline, and the connections use my outline to find where they meet the border of the node. I have no outline when the node has no shape, and then only my label is drawn. The layouts of Telescope place a node by its center: #position: takes the center, but #position stays the top left corner of the element, because Bloc reads it to draw me. I do not clip my children, because the label of a node is drawn outside of the node.
+I am the Bloc element of a Telescope node. My dimension, my background and my border come from the style sheet of the node, the border being half inside and half outside of the edge, solid, dashed, dotted or double, the outline drawn a second time inside of the first one with a small gap: the colors can depend on the entity of the node, with a block or a gradient. My shape is my outline: a Geometry project shape (a polygon, a rectangle or an ellipse) built from the Telescope shape and my dimension, in my own coordinates. My Bloc geometry is derived from my outline, and the connections use my outline to find where they meet the border of the node. I have no outline when the node has no shape, and then only my label is drawn. The layouts of Telescope place a node by its center: #position: takes the center, but #position stays the top left corner of the element, because Bloc reads it to draw me. I do not clip my children, because the label of a node is drawn outside of the node. I know the elements of the connections which leave me and enter me, as my adjacent nodes are asked by the layouts of Telescope such as the tree layout.
 "
 Class {
 	#name : 'TLBlocNodeElement',
@@ -7,7 +7,9 @@ Class {
 	#instVars : [
 		'dimension',
 		'outline',
-		'innerBorder'
+		'innerBorder',
+		'outgoingConnections',
+		'incomingConnections'
 	],
 	#category : 'Telescope-Bloc-Elements',
 	#package : 'Telescope-Bloc',
@@ -89,11 +91,20 @@ TLBlocNodeElement >> encompassingRectangle [
 	^ self measuredBounds position extent: dimension
 ]
 
+{ #category : 'layout' }
+TLBlocNodeElement >> incomingAdjacentNodes [
+	"The elements of the nodes connected to this node, which the layouts of Telescope ask for, such as the tree layout"
+
+	^ incomingConnections collect: #fromNode
+]
+
 { #category : 'initialization' }
 TLBlocNodeElement >> initialize [
 	"Labels are drawn outside the node bounds, so the node must not clip its children"
 
 	super initialize.
+	outgoingConnections := OrderedCollection new.
+	incomingConnections := OrderedCollection new.
 	self clipChildren: false
 ]
 
@@ -112,6 +123,13 @@ TLBlocNodeElement >> isNode [
 { #category : 'dimension' }
 TLBlocNodeElement >> occupyMaxSpace [
 	^ false
+]
+
+{ #category : 'layout' }
+TLBlocNodeElement >> outgoingAdjacentNodes [
+	"The elements of the nodes this node is connected to, which the layouts of Telescope ask for, such as the tree layout"
+
+	^ outgoingConnections collect: #toNode
 ]
 
 { #category : 'accessing' }
@@ -135,6 +153,14 @@ TLBlocNodeElement >> position: aCenter [
 	^ super position: aCenter - (dimension / 2)
 ]
 
+{ #category : 'connections' }
+TLBlocNodeElement >> registerConnection: aConnectionElement [
+	"The connection leaves this node, enters it, or both when it is a loop"
+
+	aConnectionElement fromNode == self ifTrue: [ outgoingConnections add: aConnectionElement ].
+	aConnectionElement toNode == self ifTrue: [ incomingConnections add: aConnectionElement ]
+]
+
 { #category : 'layout' }
 TLBlocNodeElement >> topLeftRelativeTo: anAncestor [
 	"The top left corner of the node, in the coordinates of an ancestor: the view, whatever the groups between them"
@@ -146,6 +172,12 @@ TLBlocNodeElement >> topLeftRelativeTo: anAncestor [
 			topLeft := topLeft + current measuredBounds position.
 			current := current parent ].
 	^ topLeft
+]
+
+{ #category : 'connections' }
+TLBlocNodeElement >> unregisterConnection: aConnectionElement [
+	outgoingConnections remove: aConnectionElement ifAbsent: [  ].
+	incomingConnections remove: aConnectionElement ifAbsent: [  ]
 ]
 
 { #category : 'styling' }

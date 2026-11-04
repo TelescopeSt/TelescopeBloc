@@ -253,6 +253,37 @@ TLBlocConnectorConnectionTest >> testHeadHasTheColorOfTheConnectionUnlessItHasIt
 	self assert: (connector elementFromTLDrawable: colored) head background paint color equals: Color blue
 ]
 
+{ #category : 'tests - adjacency' }
+TLBlocConnectorConnectionTest >> testNodesKnowTheirAdjacentNodesForTheLayouts [
+
+	| source target |
+	source := visualization addNodeFromEntity: 1.
+	target := visualization addNodeFromEntity: 2.
+	source connectTo: target.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Adjacency'.
+	connector view space settleForDuration: 1 seconds.
+	self assert: (connector elementFromTLDrawable: source) outgoingAdjacentNodes asArray equals: { (connector elementFromTLDrawable: target) }.
+	self assert: (connector elementFromTLDrawable: target) incomingAdjacentNodes asArray equals: { (connector elementFromTLDrawable: source) }.
+	self assertEmpty: (connector elementFromTLDrawable: source) incomingAdjacentNodes.
+	self assertEmpty: (connector elementFromTLDrawable: target) outgoingAdjacentNodes
+]
+
+{ #category : 'tests - adjacency' }
+TLBlocConnectorConnectionTest >> testRemovedConnectionIsForgottenByItsNodes [
+
+	| source target connection |
+	source := visualization addNodeFromEntity: 1.
+	target := visualization addNodeFromEntity: 2.
+	connection := source connectTo: target.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Adjacency'.
+	connector view space settleForDuration: 1 seconds.
+	connection removed.
+	visualization update.
+	connector view space settleForDuration: 1 seconds.
+	self assertEmpty: (connector elementFromTLDrawable: source) outgoingAdjacentNodes.
+	self assertEmpty: (connector elementFromTLDrawable: target) incomingAdjacentNodes
+]
+
 { #category : 'tests' }
 TLBlocConnectorConnectionTest >> testSimpleConnectionsDemoGeneratesItsSixConnections [
 
@@ -271,6 +302,21 @@ TLBlocConnectorConnectionTest >> testSolidConnectionIsAnUninterruptedLine [
 	element := self elementOfConnectionStyledWith: TLSolidLineStyle.
 	self deny: element border style isDashed.
 	self assertEmpty: element lines
+]
+
+{ #category : 'tests - adjacency' }
+TLBlocConnectorConnectionTest >> testTreeLayoutPlacesTheTargetBelowTheSource [
+
+	| source target |
+	source := visualization addNodeFromEntity: 1.
+	target := visualization addNodeFromEntity: 2.
+	source connectTo: target.
+	visualization layout: (TLTreeLayout new
+			 useOutgoingLinks;
+			 yourself).
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Tree'.
+	connector view space settleForDuration: 1 seconds.
+	self assert: (connector elementFromTLDrawable: target) measuredBounds position y > (connector elementFromTLDrawable: source) measuredBounds position y
 ]
 
 { #category : 'tests' }

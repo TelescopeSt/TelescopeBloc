@@ -1,5 +1,5 @@
 "
-I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now only the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections. The other interactions and the legends are not implemented yet.
+I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet.
 "
 Class {
 	#name : 'TLBlocConnector',
@@ -18,11 +18,12 @@ TLBlocConnector class >> priority [
 	^ 50
 ]
 
-{ #category : 'view' }
+{ #category : 'generation - connection' }
 TLBlocConnector >> addElementConnectionInView: element [
-
 	self view addChild: element.
-	connections add: element
+	connections add: element.
+	element fromNode registerConnection: element.
+	element toNode registerConnection: element
 ]
 
 { #category : 'view' }
@@ -138,8 +139,10 @@ TLBlocConnector >> generateBasicInteraction: aTLInteraction onNode: aTLNode [
 ]
 
 { #category : 'generation - interaction' }
-TLBlocConnector >> generateClickInteraction: aClickInteraction onDrawable: aTLDrawable targetingDrawable: anObject [
-	self shouldBeImplemented
+TLBlocConnector >> generateClickInteraction: aTLClickInteraction onDrawable: aTLDrawable targetingDrawable: aTargetDrawable [
+	"The action of the interaction is executed when the element of the target is clicked"
+
+	(self elementFromTLDrawable: aTargetDrawable) addEventHandlerOn: BlClickEvent do: [ :event | self executeInteraction: aTLClickInteraction forDrawable: aTLDrawable ]
 ]
 
 { #category : 'generation - interaction' }
@@ -157,7 +160,7 @@ TLBlocConnector >> generateExternalTriggerInteraction: aTLMouseOverInteraction o
 	self shouldBeImplemented
 ]
 
-{ #category : 'interactions' }
+{ #category : 'generation - interaction' }
 TLBlocConnector >> generateMouseOverInteraction: aTLMouseOverInteraction onDrawable: aTLDrawable targetingDrawable: aTargetDrawable [
 	"The action of the interaction is executed when the mouse enters the element of the target, and reversed when it leaves it"
 
@@ -295,8 +298,9 @@ TLBlocConnector >> placeElement: anAssociation correspondingToTrigger: aTLShapeT
 
 { #category : 'updating' }
 TLBlocConnector >> removeElementConnectionFromView: element [
-
-	connections remove: element ifAbsent: [ ].
+	connections remove: element ifAbsent: [  ].
+	element fromNode unregisterConnection: element.
+	element toNode unregisterConnection: element.
 	element removeFromParent
 ]
 
@@ -364,7 +368,7 @@ TLBlocConnector >> updateElementNodeOf: aDrawable [
 	self flag: #TODO
 ]
 
-{ #category : 'updating' }
+{ #category : 'updating - interaction' }
 TLBlocConnector >> updateInteractionsOf: aDrawable [
 	"The handlers of the interactions are added when the element is generated"
 
