@@ -1,0 +1,46 @@
+name: CI
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_NAME: TelescopeBloc-${{ matrix.smalltalk }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    strategy:
+      fail-fast: false
+      matrix:
+        smalltalk: [ Pharo64-14, Pharo64-15 ]
+    name: ${{ matrix.smalltalk }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hpi-swa/setup-smalltalkCI@v1
+        with:
+          smalltalk-image: ${{ matrix.smalltalk }}
+
+      - name: Run tests
+        run: smalltalkci -s ${{ matrix.smalltalk }}
+        shell: bash
+        timeout-minutes: 30
+
+      # Here we zip the result of the build to be able to keep the artefacts
+      - name: package
+        if: github.event_name == 'push' && github.ref == 'refs/heads/development'
+        run: |
+          mv /home/runner/.smalltalkCI/_builds/* .
+          mv TravisCI.image $PROJECT_NAME.image
+          mv TravisCI.changes $PROJECT_NAME.changes
+          echo "${{ matrix.smalltalk }}" | sed -e 's/^Pharo64-//' > pharo.version
+          zip -r $PROJECT_NAME.zip $PROJECT_NAME.image $PROJECT_NAME.changes *.sources pharo.version
+          ls
+
+      # Save the artefact of the build under "continuous" tag
+      - name: Update release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/development'
+        uses: johnwbyrd/update-release@v1.0.0
+        with:
+          release: 'continuous'
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: ${{ env.PROJECT_NAME }}.zip

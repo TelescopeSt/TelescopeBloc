@@ -1,0 +1,9 @@
+SmalltalkCISpec {
+  #loading : [
+    SCIMetacelloLoadSpec {
+      #baseline : 'TelescopeBloc',
+      #directory : 'src',
+      #platforms : [ #pharo ]
+    }
+  ]
+}
