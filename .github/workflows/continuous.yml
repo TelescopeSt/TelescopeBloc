@@ -32,8 +32,7 @@ jobs:
           mv /home/runner/.smalltalkCI/_builds/* .
           mv TravisCI.image $PROJECT_NAME.image
           mv TravisCI.changes $PROJECT_NAME.changes
-          echo "${{ matrix.smalltalk }}" | sed -e 's/^Pharo64-//' > pharo.version
-          zip -r $PROJECT_NAME.zip $PROJECT_NAME.image $PROJECT_NAME.changes *.sources pharo.version
+          zip -r $PROJECT_NAME.zip $PROJECT_NAME.image $PROJECT_NAME.changes *.sources
           ls
 
       # Save the artefact of the build under "continuous" tag
