@@ -10,6 +10,42 @@ Class {
 }
 
 { #category : 'tests' }
+TLBlocConnectorGroupTest >> clickNodeOfEntity: anEntity [
+
+	(connector elementFromTLDrawable: (self nodeOfEntity: anEntity)) dispatchEvent: BlClickEvent new.
+	connector view space settleForDuration: 1500 milliSeconds
+]
+
+{ #category : 'tests' }
+TLBlocConnectorGroupTest >> groupElement: aName [
+
+	^ (connector elementFromTLDrawable: visualization > aName) element
+]
+
+{ #category : 'tests' }
+TLBlocConnectorGroupTest >> nodeOfEntity: anEntity [
+
+	^ visualization allNodes detect: [ :node | node entity = anEntity ]
+]
+
+{ #category : 'tests' }
+TLBlocConnectorGroupTest >> openGroupsWithMovingNodes [
+	"The demo of the nodes which move to the other group when they are clicked: a to d in the first group, e to h in the second one"
+
+	(visualization > #group1)
+		layout: TLLinearLayout topToBottom;
+		addNodesFromEntities: ($a to: $d);
+		addInteraction: (TLMoveConnectableAction destination: visualization > #group2) onClick.
+	(visualization > #group2)
+		layout: TLLinearLayout topToBottom;
+		addNodesFromEntities: ($e to: $h);
+		addInteraction: (TLMoveConnectableAction destination: visualization > #group1) onClick.
+	visualization layout: TLLinearLayout leftToRight.
+	connector open: visualization inWindowSized: 500 @ 400 titled: 'Groups'.
+	connector view space settleForDuration: 1 seconds
+]
+
+{ #category : 'tests' }
 TLBlocConnectorGroupTest >> rectangleOfGroup: aName [
 
 	^ (connector elementFromTLDrawable: visualization > aName) encompassingRectangle
@@ -41,6 +77,14 @@ TLBlocConnectorGroupTest >> testGroupHasTheDimensionOfItsNodes [
 	visualization generateWith: connector.
 	"Three nodes of 15 pixels with a gap of 15 between them"
 	self assert: (connector elementFromTLDrawable: group) dimension equals: 75 @ 15
+]
+
+{ #category : 'tests' }
+TLBlocConnectorGroupTest >> testGroupsDoNotOverlapAfterANodeMoved [
+
+	self openGroupsWithMovingNodes.
+	self clickNodeOfEntity: $a.
+	self deny: ((connector elementFromTLDrawable: visualization > #group1) encompassingRectangle intersects: (connector elementFromTLDrawable: visualization > #group2) encompassingRectangle)
 ]
 
 { #category : 'tests' }
@@ -103,6 +147,54 @@ TLBlocConnectorGroupTest >> testNodeKeepsTheBlocMeaningOfItsPosition [
 	element := connector elementFromTLDrawable: node.
 	self assert: element position equals: element bounds position.
 	self assert: element position equals: 0 @ 0
+]
+
+{ #category : 'tests' }
+TLBlocConnectorGroupTest >> testNodeMovedToAnotherGroupIsInsideTheElementOfThatGroup [
+
+	self openGroupsWithMovingNodes.
+	self clickNodeOfEntity: $a.
+	self assert: (connector elementFromTLDrawable: (self nodeOfEntity: $a)) parent identicalTo: (self groupElement: #group2).
+	self assert: (self groupElement: #group1) children size equals: 3.
+	self assert: (self groupElement: #group2) children size equals: 5
+]
+
+{ #category : 'tests' }
+TLBlocConnectorGroupTest >> testNodeMovedToAnotherGroupIsLaidOutWithTheNodesOfThatGroup [
+
+	| moved other |
+	self openGroupsWithMovingNodes.
+	self clickNodeOfEntity: $a.
+	moved := (connector elementFromTLDrawable: (self nodeOfEntity: $a)) measuredBounds.
+	other := (connector elementFromTLDrawable: (self nodeOfEntity: $e)) measuredBounds.
+	self assert: (moved position x - other position x) abs < 0.01.
+	self assert: (moved position y - other position y) abs > 1
+]
+
+{ #category : 'tests' }
+TLBlocConnectorGroupTest >> testNodeMovedToAnotherGroupStartsFromWhereItWasWithAnimation [
+
+	| element start |
+	connector animationDuration: 2 seconds.
+	self openGroupsWithMovingNodes.
+	element := connector elementFromTLDrawable: (self nodeOfEntity: $a).
+	start := element boundsInSpace center.
+	(connector elementFromTLDrawable: (self nodeOfEntity: $a)) dispatchEvent: BlClickEvent new.
+	connector view space settleForDuration: 100 milliSeconds.
+	self assert: (element boundsInSpace center - start) r < 40
+]
+
+{ #category : 'tests' }
+TLBlocConnectorGroupTest >> testNodesMovedBackAndForthEndInTheirGroups [
+
+	self openGroupsWithMovingNodes.
+	self clickNodeOfEntity: $a.
+	self clickNodeOfEntity: $e.
+	self clickNodeOfEntity: $a.
+	self assert: (connector elementFromTLDrawable: (self nodeOfEntity: $a)) parent identicalTo: (self groupElement: #group1).
+	self assert: (connector elementFromTLDrawable: (self nodeOfEntity: $e)) parent identicalTo: (self groupElement: #group1).
+	self assert: (self groupElement: #group1) children size equals: 5.
+	self assert: (self groupElement: #group2) children size equals: 3
 ]
 
 { #category : 'tests' }

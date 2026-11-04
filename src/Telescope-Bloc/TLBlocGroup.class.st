@@ -1,5 +1,5 @@
 "
-I am a sub-group of a Telescope visualization, seen by the layouts of Telescope. I am a collection of the nodes and of the sub-groups of the group, and, like a node, I know my dimension and I am placed by my center, so that a layout can place a group as one node. My nodes are inside my TLBlocGroupElement, in its coordinates, so they move with it.
+I am a sub-group of a Telescope visualization, seen by the layouts of Telescope. I am a collection of the nodes and of the sub-groups of the group, and, like a node, I know my dimension and I am placed by my center, so that a layout can place a group as one node. My nodes are inside my TLBlocGroupElement, in its coordinates, so they move with it. A node which an update moves into the group, for example because an action moved it from another group, has its element moved inside my element too, and keeps its place in the view so that the layout and the animation start from there.
 "
 Class {
 	#name : 'TLBlocGroup',
@@ -29,6 +29,16 @@ TLBlocGroup class >> withElements: aCollection [
 	group := self new.
 	aCollection do: [ :each | group addElement: each ].
 	^ group
+]
+
+{ #category : 'adding' }
+TLBlocGroup >> addAllFirstUnlessAlreadyPresent: someNodesOrGroups [
+	"Telescope adds to a group the nodes which an update put in it, for example a node which moved from another group. Like #addElement:, this moves their Bloc element inside the element of the group, otherwise the node would stay in the element of its old group, and be placed in the coordinates of the old group"
+
+	| newItems |
+	newItems := someNodesOrGroups reject: [ :item | self includes: item ].
+	newItems do: [ :item | self moveInsideElement: item ].
+	self addAllFirst: newItems
 ]
 
 { #category : 'adding' }
@@ -92,6 +102,18 @@ TLBlocGroup >> localRectangle [
 	^ self ifEmpty: [ 0 @ 0 corner: 0 @ 0 ] ifNotEmpty: [ Rectangle merging: (self collect: #encompassingRectangle as: Array) ]
 ]
 
+{ #category : 'adding' }
+TLBlocGroup >> moveInsideElement: aNodeOrGroup [
+	"The element stays at the same place in the view, which is not the same place in the new element: the layout then moves it, and the animation starts from where it was"
+
+	| itemElement topLeftInView |
+	itemElement := aNodeOrGroup asBlocElement.
+	topLeftInView := self topLeftInViewOf: itemElement.
+	itemElement removeFromParent.
+	element addChild: itemElement.
+	aNodeOrGroup placeAt: topLeftInView - (self topLeftInViewOf: element)
+]
+
 { #category : 'accessing' }
 TLBlocGroup >> occupyMaxSpace [
 
@@ -131,4 +153,17 @@ TLBlocGroup >> position: aCenter [
 	"A layout places the group by its center, as a node: the element moves so that the rectangle of the group is centered on it"
 
 	element position: aCenter - self localRectangle center
+]
+
+{ #category : 'adding' }
+TLBlocGroup >> topLeftInViewOf: anElement [
+	"The top left corner of the element, in the coordinates of the view, whatever the groups between them"
+
+	| topLeft current |
+	topLeft := 0 @ 0.
+	current := anElement.
+	[ current isNil or: [ current class = TLBlocVisualization ] ] whileFalse: [
+			topLeft := topLeft + current measuredBounds position.
+			current := current parent ].
+	^ topLeft
 ]
