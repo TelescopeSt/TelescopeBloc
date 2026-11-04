@@ -23,17 +23,17 @@ TLBlocPanHandler >> eventsToHandle [
 
 { #category : 'events' }
 TLBlocPanHandler >> mouseDownEvent: anEvent [
-	"Panning starts only on the background: a press on a node is not for me"
+	"Panning starts only on the background: a press on a node is not for me. The positions are the ones in the window, not the ones on the desktop"
 
-	(anEvent button = BlMouseButton primary and: [ anEvent target == anEvent currentTarget ]) ifTrue: [ lastPosition := anEvent screenPosition ]
+	(anEvent button = BlMouseButton primary and: [ anEvent target == anEvent currentTarget ]) ifTrue: [ lastPosition := anEvent position ]
 ]
 
 { #category : 'events' }
 TLBlocPanHandler >> mouseMoveEvent: anEvent [
 
 	lastPosition ifNotNil: [ :previousPosition |
-			visualization panBy: anEvent screenPosition - previousPosition.
-			lastPosition := anEvent screenPosition ]
+			visualization panBy: anEvent position - previousPosition.
+			lastPosition := anEvent position ]
 ]
 
 { #category : 'events' }

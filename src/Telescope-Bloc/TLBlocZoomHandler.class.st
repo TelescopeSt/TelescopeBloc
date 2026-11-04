@@ -17,12 +17,13 @@ TLBlocZoomHandler >> eventsToHandle [
 
 { #category : 'events' }
 TLBlocZoomHandler >> mouseWheelEvent: anEvent [
+	"The zoom keeps the point under the mouse fixed. The position of the event is the one in the window, the screen position is the one on the desktop"
 
 	visualization
 		zoomBy: (anEvent isScrollUp
 				 ifTrue: [ self zoomStep ]
 				 ifFalse: [ self zoomStep reciprocal ])
-		around: anEvent screenPosition
+		around: anEvent position
 ]
 
 { #category : 'accessing' }

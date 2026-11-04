@@ -15,42 +15,43 @@ TLBlocConnectorNavigationTest class >> isAbstract [
 	^ self == TLBlocConnectorNavigationTest
 ]
 
-{ #category : 'running' }
+{ #category : 'events' }
 TLBlocConnectorNavigationTest >> moveTo: aPoint on: anElement [
 
 	anElement fireEvent: (BlMouseMoveEvent new
 			 position: aPoint;
-			 screenPosition: aPoint;
+			 screenPosition: aPoint * 2 + (700 @ 500);
 			 yourself)
 ]
 
-{ #category : 'running' }
+{ #category : 'events' }
 TLBlocConnectorNavigationTest >> pressAt: aPoint on: anElement [
-	"fireEvent: sends the event up to the root of the window like a real mouse, dispatchEvent: would stop at the element"
+	"fireEvent: sends the event up to the root of the window like a real mouse, dispatchEvent: would stop at the element. The position is the one in the window, as Bloc gives it. The screen position is the one on the desktop, which is not the same, for example on a display with a scale"
 
 	anElement fireEvent: (BlMouseDownEvent new
 			 position: aPoint;
-			 screenPosition: aPoint;
+			 screenPosition: aPoint * 2 + (700 @ 500);
 			 button: BlMouseButton primary;
 			 yourself)
 ]
 
-{ #category : 'running' }
+{ #category : 'events' }
 TLBlocConnectorNavigationTest >> releaseAt: aPoint on: anElement [
 
 	anElement fireEvent: (BlMouseUpEvent new
 			 position: aPoint;
-			 screenPosition: aPoint;
+			 screenPosition: aPoint * 2 + (700 @ 500);
 			 button: BlMouseButton primary;
 			 yourself)
 ]
 
-{ #category : 'running' }
+{ #category : 'events' }
 TLBlocConnectorNavigationTest >> scroll: aVector at: aPoint [
+	"The position is the one in the window, as Bloc gives it. The screen position is the one on the desktop, which is not the same"
 
 	connector view space root fireEvent: (BlMouseWheelEvent new
 			 position: aPoint;
-			 screenPosition: aPoint;
+			 screenPosition: aPoint + (700 @ 500);
 			 vector: aVector;
 			 yourself)
 ]

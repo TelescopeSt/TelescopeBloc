@@ -26,13 +26,13 @@ TLBlocNodeDragHandler >> eventsToHandle [
 
 { #category : 'events' }
 TLBlocNodeDragHandler >> mouseDownEvent: anEvent [
-	"A press with the primary button on a node, or on its label, starts a possible drag"
+	"A press with the primary button on a node, or on its label, starts a possible drag. The positions are the ones in the window, not the ones on the desktop"
 
 	anEvent button = BlMouseButton primary ifFalse: [ ^ self ].
 	node := self nodeElementOf: anEvent target.
 	node ifNil: [ ^ self ].
 	node wasDragged: false.
-	lastPosition := anEvent screenPosition.
+	lastPosition := anEvent position.
 	pendingMove := 0 @ 0.
 	dragging := false
 ]
@@ -42,8 +42,8 @@ TLBlocNodeDragHandler >> mouseMoveEvent: anEvent [
 	"The node follows the mouse once the mouse went far enough: a click is not a drag. The distance is the one of the window, the visualization may be zoomed"
 
 	node ifNil: [ ^ self ].
-	pendingMove := pendingMove + (anEvent screenPosition - lastPosition).
-	lastPosition := anEvent screenPosition.
+	pendingMove := pendingMove + (anEvent position - lastPosition).
+	lastPosition := anEvent position.
 	dragging ifFalse: [ dragging := pendingMove r >= self threshold ].
 	dragging ifFalse: [ ^ self ].
 	node wasDragged: true.

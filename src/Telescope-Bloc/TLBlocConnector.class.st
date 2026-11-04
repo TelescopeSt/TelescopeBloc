@@ -1,5 +1,5 @@
 "
-I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, slowly at first and at the end (see TLBlocSmoothEasing), and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The visualization is fitted into its window again when a layout which is applied again moves or adds a node. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet. The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back, with the animation.
+I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, slowly at first and at the end (see TLBlocSmoothEasing), and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The visualization is fitted into its window again when a layout which is applied again moves or adds a node. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet. The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back, with the animation. The menus of Telescope open at the mouse when a node is clicked with the secondary button, as Bloc elements (see TLBlocMenu).
 "
 Class {
 	#name : 'TLBlocConnector',
@@ -164,7 +164,13 @@ TLBlocConnector >> createLegendFrom: legendItems [
 
 { #category : 'generation - interaction' }
 TLBlocConnector >> createMenuFor: aTLDrawable [
-	self shouldBeImplemented
+	"The menu of a drawable opens at the mouse when its element is clicked with the secondary button. The position of the event is the one in the window, where the menu is placed. Telescope fills the menu with the entries of the menu interactions of the drawable"
+
+	| menu element |
+	menu := TLBlocMenu new.
+	element := self elementFromTLDrawable: aTLDrawable.
+	element addEventHandlerOn: BlMouseDownEvent do: [ :event | (event button = BlMouseButton secondary and: [ menu isEmpty not ]) ifTrue: [ menu openIn: element space at: event position ] ].
+	^ menu
 ]
 
 { #category : 'generation - node' }
@@ -237,8 +243,16 @@ TLBlocConnector >> generateMovedInteraction: aTLNodeMovedInteraction onDrawable:
 ]
 
 { #category : 'generation - interaction' }
-TLBlocConnector >> generateMultiChoiceMenuInteraction: aTLMultiChoiceMenuInteraction onDrawable: aTLDrawable targeting: anotherDrawable [
-	self shouldBeImplemented
+TLBlocConnector >> generateMultiChoiceMenuInteraction: aTLMultiChoiceMenuInteraction onDrawable: aTLDrawable targeting: aTargetDrawable [
+	"An entry of the menu of the drawable opens a submenu with the choices of the interaction. Choosing one executes the action with the target and the choice"
+
+	| menu |
+	menu := self menuInteractionByDrawable at: aTLDrawable ifAbsentPut: [ self createMenuFor: aTLDrawable ].
+	menu
+		add: aTLMultiChoiceMenuInteraction title
+		choices: [ aTLMultiChoiceMenuInteraction choicesListForDrawable: aTargetDrawable ]
+		display: [ :choice | aTLMultiChoiceMenuInteraction displayBlock value: choice ]
+		chosen: [ :index | self executeChoice: index interaction: aTLMultiChoiceMenuInteraction forDrawable: aTargetDrawable ]
 ]
 
 { #category : 'generation-legendEntry' }
