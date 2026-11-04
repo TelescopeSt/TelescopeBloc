@@ -137,6 +137,27 @@ TLBlocNodeElement >> outlineRelativeTo: anAncestor [
 	^ (outline ifNil: [ GRectangle origin: 0 @ 0 corner: dimension ]) translatedCopyBy: (self topLeftRelativeTo: anAncestor)
 ]
 
+{ #category : 'layout' }
+TLBlocNodeElement >> placeAt: aTopLeft [
+	"Places the element by its top left corner, as Bloc does, where #position: places it by its center, as the layouts of Telescope do"
+
+	super position: aTopLeft
+]
+
+{ #category : 'layout' }
+TLBlocNodeElement >> placement [
+	"The top left corner of the element, as it was last asked, in the coordinates of its parent"
+
+	^ self measuredBounds position
+]
+
+{ #category : 'layout' }
+TLBlocNodeElement >> placementCenteredAt: aCenter [
+	"The top left corner the element has when it is centered on the given point"
+
+	^ aCenter - (dimension / 2)
+]
+
 { #category : 'accessing' }
 TLBlocNodeElement >> position: aCenter [
 	"The layouts of Telescope place a node by its center, and Bloc places an element by its top left corner. Only the setter is the one of Telescope: Bloc reads #position to draw the element, so it must keep answering the top left corner"

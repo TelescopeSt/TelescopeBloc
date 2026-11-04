@@ -99,6 +99,27 @@ TLBlocGroup >> occupyMaxSpace [
 ]
 
 { #category : 'layout' }
+TLBlocGroup >> placeAt: aTopLeft [
+	"Places the element of the group by its top left corner"
+
+	element position: aTopLeft
+]
+
+{ #category : 'layout' }
+TLBlocGroup >> placement [
+	"The top left corner of the element of the group, as it was last asked, in the coordinates of its parent. It does not depend on the nodes inside, which move with the element"
+
+	^ element measuredBounds position
+]
+
+{ #category : 'layout' }
+TLBlocGroup >> placementCenteredAt: aCenter [
+	"The top left corner the element of the group has when the rectangle of the group is centered on the given point"
+
+	^ aCenter - self localRectangle center
+]
+
+{ #category : 'layout' }
 TLBlocGroup >> position [
 	"The center of the group, as the position of a node"
 

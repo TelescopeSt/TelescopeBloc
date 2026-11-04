@@ -7,6 +7,14 @@ Class {
 }
 
 { #category : 'tests' }
+TLBlocConnectorFitTest >> assertEveryNodeIsInTheWindow [
+
+	| window |
+	window := (0 @ 0 extent: connector view space extent) expandBy: 1.
+	self nodeBoundsInWindow do: [ :rectangle | self assert: (window containsRect: rectangle) ]
+]
+
+{ #category : 'tests' }
 TLBlocConnectorFitTest >> contentCenterInWindow [
 
 	| rectangle |
@@ -34,6 +42,34 @@ TLBlocConnectorFitTest >> openNodes: aNumber [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorFitTest >> testChangingTheLayoutFitsTheVisualizationAgain [
+
+	self openNodes: 3.
+	self assert: connector view zoom equals: 1.
+	visualization layout: ((TLLinearLayout perLine: 3)
+			 gap: 400;
+			 yourself).
+	visualization update.
+	connector view space settleForDuration: 1 seconds.
+	self assert: connector view zoom < 1.
+	self assertEveryNodeIsInTheWindow
+]
+
+{ #category : 'tests' }
+TLBlocConnectorFitTest >> testChangingTheLayoutFitsTheVisualizationAgainOnceTheAnimationIsDone [
+
+	connector animationDuration: 300 milliSeconds.
+	self openNodes: 3.
+	visualization layout: ((TLLinearLayout perLine: 3)
+			 gap: 400;
+			 yourself).
+	visualization update.
+	connector view space settleForDuration: 1500 milliSeconds.
+	self assert: connector view zoom < 1.
+	self assertEveryNodeIsInTheWindow
+]
+
+{ #category : 'tests' }
 TLBlocConnectorFitTest >> testFitCanBeRequestedAgainAfterZoomingAndPanning [
 
 	self openNodes: 200.
@@ -53,6 +89,21 @@ TLBlocConnectorFitTest >> testFitCentersTheContentInTheWindow [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorFitTest >> testFitForgetsThePanningAndTheZoomWhenTheLayoutIsApplied [
+
+	self openNodes: 3.
+	connector view zoomBy: 3 around: 150 @ 150.
+	connector view panBy: 100 @ 100.
+	visualization layout: ((TLLinearLayout perLine: 2)
+			 gap: 30;
+			 yourself).
+	visualization update.
+	connector view space settleForDuration: 1 seconds.
+	self assert: connector view zoom equals: 1.
+	self assert: (self contentCenterInWindow - (connector view space extent / 2)) abs < (2 @ 2)
+]
+
+{ #category : 'tests' }
 TLBlocConnectorFitTest >> testLargeVisualizationFitsTheWindowWhenItOpens [
 
 	| window |
@@ -67,4 +118,14 @@ TLBlocConnectorFitTest >> testSmallVisualizationIsNotEnlarged [
 
 	self openNodes: 3.
 	self assert: connector view zoom equals: 1
+]
+
+{ #category : 'tests' }
+TLBlocConnectorFitTest >> testUpdatingWithoutApplyingTheLayoutKeepsTheZoom [
+
+	self openNodes: 3.
+	connector view zoomBy: 2 around: 150 @ 150.
+	visualization update.
+	connector view space settleForDuration: 500 milliSeconds.
+	self assert: connector view zoom equals: 2
 ]

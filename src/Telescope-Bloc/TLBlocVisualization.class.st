@@ -115,6 +115,13 @@ TLBlocVisualization >> fitIntoWindow [
 	self fitContentToWindow
 ]
 
+{ #category : 'fitting' }
+TLBlocVisualization >> fitOnNextLayout [
+	"The next time I am laid out, once the nodes and their labels are measured, I am fitted into the window"
+
+	fitPending := true
+]
+
 { #category : 'initialization' }
 TLBlocVisualization >> initialize [
 	"The window already clips the visualization, so nodes and labels placed outside the default extent must still be drawn. The visualization is fitted into the window the first time it is laid out"

@@ -10,6 +10,12 @@ Class {
 }
 
 { #category : 'tests' }
+TLBlocConnectorGroupTest >> rectangleOfGroup: aName [
+
+	^ (connector elementFromTLDrawable: visualization > aName) encompassingRectangle
+]
+
+{ #category : 'tests' }
 TLBlocConnectorGroupTest >> testGradientDemoGeneratesItsTwoGroupsWithTheirColors [
 
 	| colorElements grayElements |
@@ -35,6 +41,39 @@ TLBlocConnectorGroupTest >> testGroupHasTheDimensionOfItsNodes [
 	visualization generateWith: connector.
 	"Three nodes of 15 pixels with a gap of 15 between them"
 	self assert: (connector elementFromTLDrawable: group) dimension equals: 75 @ 15
+]
+
+{ #category : 'tests' }
+TLBlocConnectorGroupTest >> testGroupsStayNextToEachOtherWhenTheLayoutOfOneChangesWithAnimation [
+
+	| layouts |
+	connector animationDuration: 300 milliSeconds.
+	layouts := {
+		           (TLLinearLayout angle: 90).
+		           (TLTreeLayout angle: 180).
+		           TLCircularLayout new }.
+	(visualization > #group1)
+		layout: TLLinearLayout topToBottom;
+		addNodesFromEntities: layouts;
+		addInteraction: (TLCustomAction block: [ :node | visualization > #group2 layout: node entity ]) onClick.
+	(visualization > #group1) styleSheet
+		width: 200;
+		height: 50.
+	(visualization > #group2)
+		addNodesFromEntities: (1 to: 30);
+		layout: TLCircularLayout.
+	visualization layout: TLLinearLayout leftToRight.
+	connector open: visualization inWindowSized: 800 @ 600 titled: 'Groups'.
+	connector view space settleForDuration: 1 seconds.
+	(visualization > #group1) allNodes do: [ :node |
+			| left right |
+			(connector elementFromTLDrawable: node) dispatchEvent: BlClickEvent new.
+			connector view space settleForDuration: 1500 milliSeconds.
+			left := self rectangleOfGroup: #group1.
+			right := self rectangleOfGroup: #group2.
+			self deny: (left intersects: right).
+			self assert: right left - left right < 20.
+			self assert: (left center y - right center y) abs < 5 ]
 ]
 
 { #category : 'tests' }

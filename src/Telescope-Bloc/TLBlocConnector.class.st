@@ -1,5 +1,5 @@
 "
-I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 300 milliseconds by default, and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet.
+I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, slowly at first and at the end (see TLBlocSmoothEasing), and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The visualization is fitted into its window again when a layout which is applied again moves or adds a node. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet.
 "
 Class {
 	#name : 'TLBlocConnector',
@@ -10,7 +10,10 @@ Class {
 		'animationDuration',
 		'placedElements',
 		'animation',
-		'animationOrigin'
+		'animationOrigin',
+		'pendingStarts',
+		'runningMoves',
+		'layoutReapplied'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -51,32 +54,6 @@ TLBlocConnector >> addElementNodeInView: element [
 	self view addChild: element
 ]
 
-{ #category : 'layout' }
-TLBlocConnector >> animate: group from: previousCenters [
-	"A layout puts the items at their new place at once. They go back to where they were, and an animation brings them to their new place, with the connections following them. The new items start from the origin of the animation, if there is one, and otherwise appear at their place. An animation in progress is replaced, the items continue from where it put them"
-
-	| moves |
-	animation ifNotNil: [ :current | current stop ].
-	animation := nil.
-	moves := IdentityDictionary new.
-	group do: [ :item |
-			| target start |
-			target := self centerOf: item.
-			start := previousCenters at: item ifAbsent: [ animationOrigin ].
-			(start isNotNil and: [ start ~= target ]) ifTrue: [ moves at: item put: start -> target ] ].
-	(moves isEmpty or: [ animationDuration isZero ]) ifTrue: [ ^ self ].
-	moves keysAndValuesDo: [ :item :move | item position: move key ].
-	animation := BlNumberTransition new
-		             from: 0;
-		             to: 1;
-		             duration: animationDuration;
-		             onStepDo: [ :progress |
-				             moves keysAndValuesDo: [ :item :move | item position: move key + (move value - move key * progress) ].
-				             self updateConnections ];
-		             yourself.
-	view addAnimation: animation
-]
-
 { #category : 'accessing' }
 TLBlocConnector >> animationDuration [
 	"The time the elements take to move to the place a layout gives them, when a layout is applied again. A zero duration places them at once"
@@ -92,13 +69,15 @@ TLBlocConnector >> animationDuration: aDuration [
 
 { #category : 'layout' }
 TLBlocConnector >> applyLayoutOf: aTLGroup on: group [
-	"The items which were already placed move to their new place, the new ones appear at theirs. An item is a node element or a TLBlocGroup"
+	"The layouts of an update, one per group, work on the final places: the groups need the real size of what they contain. Where the items were is remembered, and #startPendingAnimation moves them once the update is done. An item is a node element or a TLBlocGroup. A layout which is applied again, and which moves or adds an item, makes the update fit the visualization into its window"
 
-	| previousCenters |
-	previousCenters := self centersOfPlacedItemsIn: group.
+	| previousPlacements |
+	self settleAnimation.
+	previousPlacements := self placementsOfPlacedItemsIn: group.
 	aTLGroup layout on: group.
 	group do: [ :item | placedElements add: item ].
-	self animate: group from: previousCenters.
+	(previousPlacements isNotEmpty and: [ group anySatisfy: [ :item | (previousPlacements at: item ifAbsent: [ nil ]) ~= item placement ] ]) ifTrue: [ layoutReapplied := true ].
+	self rememberStartsOf: group from: previousPlacements.
 	self updateConnections
 ]
 
@@ -109,16 +88,6 @@ TLBlocConnector >> centerOf: item [
 	| rectangle |
 	rectangle := item encompassingRectangle.
 	^ rectangle origin + (rectangle extent / 2)
-]
-
-{ #category : 'layout' }
-TLBlocConnector >> centersOfPlacedItemsIn: group [
-	"Where the items are before a layout moves them: the last center asked for, which is where an animation in progress has put them"
-
-	| centers |
-	centers := IdentityDictionary new.
-	group do: [ :item | (placedElements includes: item) ifTrue: [ centers at: item put: (self centerOf: item) ] ].
-	^ centers
 ]
 
 { #category : 'initialization' }
@@ -206,6 +175,15 @@ TLBlocConnector >> executeAnimatingFrom: anElement do: aBlock [
 
 	animationOrigin := self centerOf: anElement.
 	aBlock ensure: [ animationOrigin := nil ]
+]
+
+{ #category : 'layout' }
+TLBlocConnector >> fitAgainWhenTheNodesAreMeasured [
+	"The new nodes have no labels measured yet when the visualization is first fitted. It is fitted again when they are: at the next layout of the view, or when the animation is done, because the nodes are not at their final place before"
+
+	animation
+		ifNil: [ view fitOnNextLayout ]
+		ifNotNil: [ :current | current onFinishedDo: [ view fitIntoWindow ] ]
 ]
 
 { #category : 'generation - interaction' }
@@ -341,7 +319,9 @@ TLBlocConnector >> initialize [
 	super initialize.
 	connections := OrderedCollection new.
 	placedElements := IdentitySet new.
-	animationDuration := 300 milliSeconds
+	pendingStarts := IdentityDictionary new.
+	layoutReapplied := false.
+	animationDuration := 500 milliSeconds
 ]
 
 { #category : 'accessing' }
@@ -377,6 +357,24 @@ TLBlocConnector >> placeElement: anAssociation correspondingToTrigger: aTLShapeT
 	self shouldBeImplemented
 ]
 
+{ #category : 'layout' }
+TLBlocConnector >> placementsOfPlacedItemsIn: group [
+	"Where the items are before a layout moves them: the last place asked for, which is where an animation in progress has put them"
+
+	| placements |
+	placements := IdentityDictionary new.
+	group do: [ :item | (placedElements includes: item) ifTrue: [ placements at: item put: item placement ] ].
+	^ placements
+]
+
+{ #category : 'layout' }
+TLBlocConnector >> rememberStartsOf: group from: previousPlacements [
+	"The place where an item was before the update, or the origin of the animation for a new item, which appears centered on it. An item which a layout moves several times in an update keeps the first one"
+
+	group do: [ :item |
+		(previousPlacements at: item ifAbsent: [ animationOrigin ifNotNil: [ :origin | item placementCenteredAt: origin ] ]) ifNotNil: [ :start | pendingStarts at: item ifAbsentPut: [ start ] ] ]
+]
+
 { #category : 'updating' }
 TLBlocConnector >> removeElementConnectionFromView: element [
 	connections remove: element ifAbsent: [  ].
@@ -406,6 +404,45 @@ TLBlocConnector >> removeElementnteractionFromView: element [
 TLBlocConnector >> removeLegend: aTLLegend [
 
 	self flag: #TODO
+]
+
+{ #category : 'layout' }
+TLBlocConnector >> settleAnimation [
+	"A layout starts while an animation is in progress: the items go to the place the animation was bringing them to, and where they were is remembered"
+
+	animation ifNil: [ ^ self ].
+	animation stop.
+	animation := nil.
+	runningMoves keysAndValuesDo: [ :item :move |
+			pendingStarts at: item ifAbsentPut: [ item placement ].
+			item placeAt: move value ].
+	runningMoves := nil
+]
+
+{ #category : 'layout' }
+TLBlocConnector >> startPendingAnimation [
+	"The update is done and the items are at their final place. They go back to where they were, and an animation brings them to their place, slowly at first and at the end, with the connections following them. The new items start from the origin of the animation, if there is one. The places are the top left corners of the elements, so that the nodes of a group, which move with it, do not change where the group goes"
+
+	| moves |
+	moves := IdentityDictionary new.
+	pendingStarts keysAndValuesDo: [ :item :start |
+			| target |
+			target := item placement.
+			target = start ifFalse: [ moves at: item put: start -> target ] ].
+	pendingStarts := IdentityDictionary new.
+	(moves isEmpty or: [ animationDuration isZero ]) ifTrue: [ ^ self ].
+	moves keysAndValuesDo: [ :item :move | item placeAt: move key ].
+	runningMoves := moves.
+	animation := BlNumberTransition new
+		             from: 0;
+		             to: 1;
+		             duration: animationDuration;
+		             easing: TLBlocSmoothEasing new;
+		             onStepDo: [ :progress |
+				             moves keysAndValuesDo: [ :item :move | item placeAt: move key + (move value - move key * progress) ].
+				             self updateConnections ];
+		             yourself.
+	view addAnimation: animation
 ]
 
 { #category : 'updating - shape' }
@@ -469,7 +506,13 @@ TLBlocConnector >> updateShapeTrigger: aTLShapeTrigger [
 
 { #category : 'updating' }
 TLBlocConnector >> updateViewForVisualization: aTLVisualization [
-	"The elements are updated one by one, but the connections have to join the nodes again: some were added or removed, and the nodes may have moved"
+	"The elements are updated one by one, and the layouts have put them at their final place. The visualization is fitted into its window if a layout was applied again, then the items which moved are animated, and the connections have to join the nodes again: some were added or removed, and the nodes have moved"
 
+	| reapplied |
+	reapplied := layoutReapplied.
+	layoutReapplied := false.
+	reapplied ifTrue: [ view fitIntoWindow ].
+	self startPendingAnimation.
+	reapplied ifTrue: [ self fitAgainWhenTheNodesAreMeasured ].
 	self updateConnections
 ]
