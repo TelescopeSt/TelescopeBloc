@@ -66,13 +66,31 @@ TLBlocLabelElement >> fractionFor: aSymbol [
 ]
 
 { #category : 'placement' }
+TLBlocLabelElement >> gapFromNode [
+	"Gap in pixels between a label and its node. Not named padding, which BlElement already uses for its insets"
+
+	^ 5.0
+]
+
+{ #category : 'placement' }
+TLBlocLabelElement >> gapVector [
+	"Answers the gap between the label and its node, in the direction the label is placed"
+
+	placement vertical = #top ifTrue: [ ^ 0 @ self gapFromNode negated ].
+	placement vertical = #bottom ifTrue: [ ^ 0 @ self gapFromNode ].
+	placement horizontal = #left ifTrue: [ ^ self gapFromNode negated @ 0 ].
+	placement horizontal = #right ifTrue: [ ^ self gapFromNode @ 0 ].
+	^ 0 @ 0
+]
+
+{ #category : 'placement' }
 TLBlocLabelElement >> offsetForNodeExtent: aNodeExtent [
-	"The label is placed so that its reversed position meets the node anchor of the position"
+	"The label is placed so that its reversed position meets the node anchor of the position, then pushed away from the node"
 
 	| nodeAnchor labelAnchor |
 	nodeAnchor := (self fractionFor: placement horizontal) @ (self fractionFor: placement vertical).
 	labelAnchor := placement reversed.
-	^ aNodeExtent * nodeAnchor - (self extent * ((self fractionFor: labelAnchor horizontal) @ (self fractionFor: labelAnchor vertical)))
+	^ aNodeExtent * nodeAnchor - (self extent * ((self fractionFor: labelAnchor horizontal) @ (self fractionFor: labelAnchor vertical))) + self gapVector
 ]
 
 { #category : 'initialization' }
@@ -85,8 +103,9 @@ TLBlocLabelElement >> onLayoutComputed [
 
 { #category : 'placement' }
 TLBlocLabelElement >> placeOutsideNode [
+	"Compares with the measured position, the one Bloc uses to avoid requesting the same layout again. Comparing the laid out bounds never matches, which makes an endless layout loop"
 
 	| offset |
 	offset := self offsetForNodeExtent: self parent extent.
-	self position = offset ifFalse: [ self position: offset ]
+	self measuredBounds position = offset ifFalse: [ self position: offset ]
 ]

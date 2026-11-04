@@ -57,3 +57,22 @@ TLBlocConnectorLabelTest >> testTopLabelIsAboveItsNode [
 	label := (connector elementFromTLDrawable: node) children first.
 	self assert: label position y < 0
 ]
+
+{ #category : 'tests' }
+TLBlocConnectorLabelTest >> testTopLabelIsSeparatedFromItsNodeByPadding [
+
+	| visualization node label |
+	visualization := TLVisualization new.
+	visualization
+		nodeCreationStrategy: TLNodeCreationStrategy default;
+		styleSheet: TLStyleSheet default;
+		generator: connector.
+	visualization styleSheet
+		nodeLabel: #yourself;
+		nodeLabelPosition: #top.
+	node := visualization addNodeFromEntity: 'abc'.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Top label padding'.
+	connector view space settleForDuration: 1 seconds.
+	label := (connector elementFromTLDrawable: node) children first.
+	self assert: label position y + label extent y closeTo: -5
+]
