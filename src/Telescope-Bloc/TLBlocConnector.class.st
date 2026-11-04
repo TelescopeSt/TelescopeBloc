@@ -1,5 +1,5 @@
 "
-I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions and the legends are not implemented yet.
+I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now only the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections. The other interactions and the legends are not implemented yet.
 "
 Class {
 	#name : 'TLBlocConnector',
@@ -157,9 +157,13 @@ TLBlocConnector >> generateExternalTriggerInteraction: aTLMouseOverInteraction o
 	self shouldBeImplemented
 ]
 
-{ #category : 'generation - interaction' }
-TLBlocConnector >> generateMouseOverInteraction: aTLMouseOverInteraction onDrawable: aTLDrawable targetingDrawable: anObject [
-	self shouldBeImplemented
+{ #category : 'interactions' }
+TLBlocConnector >> generateMouseOverInteraction: aTLMouseOverInteraction onDrawable: aTLDrawable targetingDrawable: aTargetDrawable [
+	"The action of the interaction is executed when the mouse enters the element of the target, and reversed when it leaves it"
+
+	(self elementFromTLDrawable: aTargetDrawable)
+		addEventHandlerOn: BlMouseEnterEvent do: [ :event | self executeRegularInteraction: aTLMouseOverInteraction forDrawable: aTLDrawable ];
+		addEventHandlerOn: BlMouseLeaveEvent do: [ :event | self executeReverseInteraction: aTLMouseOverInteraction forDrawable: aTLDrawable ]
 ]
 
 { #category : 'generation - interaction' }
@@ -289,14 +293,17 @@ TLBlocConnector >> placeElement: anAssociation correspondingToTrigger: aTLShapeT
 	self shouldBeImplemented
 ]
 
-{ #category : 'view' }
+{ #category : 'updating' }
 TLBlocConnector >> removeElementConnectionFromView: element [
-	self shouldBeImplemented
+
+	connections remove: element ifAbsent: [ ].
+	element removeFromParent
 ]
 
-{ #category : 'drawing - removing' }
+{ #category : 'updating' }
 TLBlocConnector >> removeElementFromView: element associatedToDrawable: aTLDrawable [
-	self shouldBeImplemented
+
+	element removeFromParent
 ]
 
 { #category : 'view' }
@@ -343,19 +350,25 @@ TLBlocConnector >> updateConnections [
 	connections do: [ :connection | connection update ]
 ]
 
-{ #category : 'updating - connection' }
+{ #category : 'updating' }
 TLBlocConnector >> updateEdgeOf: aConnection [
-	self shouldBeImplemented
+	"The element of a connection is not changed by an update yet, except for the place where it joins its nodes"
+
+	self flag: #TODO
 ]
 
-{ #category : 'updating - node' }
+{ #category : 'updating' }
 TLBlocConnector >> updateElementNodeOf: aDrawable [
-	self shouldBeImplemented
+	"The element of a node is not changed by an update yet"
+
+	self flag: #TODO
 ]
 
-{ #category : 'updating - interaction' }
+{ #category : 'updating' }
 TLBlocConnector >> updateInteractionsOf: aDrawable [
-	self shouldBeImplemented
+	"The handlers of the interactions are added when the element is generated"
+
+	self flag: #TODO
 ]
 
 { #category : 'updating - legend' }
@@ -369,7 +382,9 @@ TLBlocConnector >> updateShapeTrigger: aTLShapeTrigger [
 	self shouldBeImplemented
 ]
 
-{ #category : 'view' }
+{ #category : 'updating' }
 TLBlocConnector >> updateViewForVisualization: aTLVisualization [
-	self shouldBeImplemented
+	"The elements are updated one by one, but the connections have to join the nodes again: some were added or removed, and the nodes may have moved"
+
+	self updateConnections
 ]
