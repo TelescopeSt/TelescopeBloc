@@ -51,22 +51,23 @@ TLBlocNodeElement >> cornersRelativeTo: anOrigin [
 
 { #category : 'initialization' }
 TLBlocNodeElement >> customizeFromNode: aNode [
-	"The colors of the style sheet can depend on the entity of the node: a block or a gradient gives the color of each node. The border is drawn with the line style of the style sheet, solid by default, half inside and half outside of the edge of the node"
+	"The colors, the dimension and the shape of the style sheet can depend on the entity of the node: a block, or a gradient for the colors, gives the value of each node. The border is drawn with the line style of the style sheet, solid by default, half inside and half outside of the edge of the node"
 
-	| styleSheet borderStyle |
+	| styleSheet borderStyle shape |
 	styleSheet := aNode effectiveStyleSheet.
 	self beOutskirtsCentered.
 	self background: (self valueOf: #backgroundColor forNode: aNode).
-	self dimension: styleSheet width @ styleSheet height.
-	outline := styleSheet shape outlineOfExtent: dimension.
+	self dimension: (self valueOf: #width forNode: aNode) @ (self valueOf: #height forNode: aNode).
+	shape := self valueOf: #shape forNode: aNode.
+	outline := shape outlineOfExtent: dimension.
 	self geometry: (outline
 			 ifNil: [ BlEmptyGeometry new ]
-			 ifNotNil: [ :shape | shape asBlocGeometry ]).
+			 ifNotNil: #asBlocGeometry).
 	borderStyle := (styleSheet attributes includesKey: #borderStyle)
 		               ifTrue: [ styleSheet borderStyle ]
 		               ifFalse: [ TLSolidLineStyle ].
 	self border: (borderStyle blocBorderPaint: (self valueOf: #borderColor forNode: aNode) width: styleSheet borderWidth).
-	borderStyle hasParallelLineInBloc ifTrue: [ self addInnerBorderOf: styleSheet shape ]
+	borderStyle hasParallelLineInBloc ifTrue: [ self addInnerBorderOf: shape ]
 ]
 
 { #category : 'accessing' }

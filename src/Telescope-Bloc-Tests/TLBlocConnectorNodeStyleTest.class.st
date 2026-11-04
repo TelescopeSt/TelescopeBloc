@@ -173,7 +173,36 @@ TLBlocConnectorNodeStyleTest >> testGradientGivesEachNodeTheColorOfItsEntity [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testShapeCanDependOnTheEntity [
+
+	| rectangle ellipse |
+	visualization styleSheet shape: [ :entity |
+			entity even
+				ifTrue: [ TLRectangle ]
+				ifFalse: [ TLEllipse ] ].
+	rectangle := visualization addNodeFromEntity: 2.
+	ellipse := visualization addNodeFromEntity: 3.
+	visualization generateWith: connector.
+	self assert: (connector elementFromTLDrawable: rectangle) outline class equals: GRectangle.
+	self assert: (connector elementFromTLDrawable: ellipse) outline class equals: GEllipse
+]
+
+{ #category : 'tests' }
 TLBlocConnectorNodeStyleTest >> testSolidBorderHasNoInnerBorder [
 
 	self assert: (self elementOfNodeStyledWith: TLSolidLineStyle) innerBorder isNil
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testWidthAndHeightCanDependOnTheEntity [
+
+	| small big |
+	visualization styleSheet
+		width: [ :entity | entity * 10 ];
+		height: [ :entity | entity * 5 ].
+	small := visualization addNodeFromEntity: 2.
+	big := visualization addNodeFromEntity: 6.
+	visualization generateWith: connector.
+	self assert: (connector elementFromTLDrawable: small) dimension equals: 20 @ 10.
+	self assert: (connector elementFromTLDrawable: big) dimension equals: 60 @ 30
 ]
