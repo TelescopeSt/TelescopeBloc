@@ -18,7 +18,7 @@ TLBlocConnectorNavigationTest class >> isAbstract [
 { #category : 'running' }
 TLBlocConnectorNavigationTest >> moveTo: aPoint on: anElement [
 
-	anElement dispatchEvent: (BlMouseMoveEvent new
+	anElement fireEvent: (BlMouseMoveEvent new
 			 position: aPoint;
 			 screenPosition: aPoint;
 			 yourself)
@@ -26,8 +26,9 @@ TLBlocConnectorNavigationTest >> moveTo: aPoint on: anElement [
 
 { #category : 'running' }
 TLBlocConnectorNavigationTest >> pressAt: aPoint on: anElement [
+	"fireEvent: sends the event up to the root of the window like a real mouse, dispatchEvent: would stop at the element"
 
-	anElement dispatchEvent: (BlMouseDownEvent new
+	anElement fireEvent: (BlMouseDownEvent new
 			 position: aPoint;
 			 screenPosition: aPoint;
 			 button: BlMouseButton primary;
@@ -37,7 +38,7 @@ TLBlocConnectorNavigationTest >> pressAt: aPoint on: anElement [
 { #category : 'running' }
 TLBlocConnectorNavigationTest >> releaseAt: aPoint on: anElement [
 
-	anElement dispatchEvent: (BlMouseUpEvent new
+	anElement fireEvent: (BlMouseUpEvent new
 			 position: aPoint;
 			 screenPosition: aPoint;
 			 button: BlMouseButton primary;
@@ -47,7 +48,7 @@ TLBlocConnectorNavigationTest >> releaseAt: aPoint on: anElement [
 { #category : 'running' }
 TLBlocConnectorNavigationTest >> scroll: aVector at: aPoint [
 
-	connector view space root dispatchEvent: (BlMouseWheelEvent new
+	connector view space root fireEvent: (BlMouseWheelEvent new
 			 position: aPoint;
 			 screenPosition: aPoint;
 			 vector: aVector;

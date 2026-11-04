@@ -25,6 +25,7 @@ TLBlocConnectorTest >> setUp [
 
 	super setUp.
 	connector := TLBlocConnector new.
+	connector host: BlHeadlessHost default.
 	visualization := TLVisualization new.
 	visualization
 		nodeCreationStrategy: TLNodeCreationStrategy default;
@@ -36,6 +37,8 @@ TLBlocConnectorTest >> setUp [
 TLBlocConnectorTest >> tearDown [
 	"Closes the window opened by a test, whatever the outcome of the test"
 
-	connector view space ifNotNil: [ :space | space close ].
+	connector view space ifNotNil: [ :space |
+			space close.
+			space settleForDuration: 1 seconds ].
 	super tearDown
 ]

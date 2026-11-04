@@ -34,6 +34,15 @@ TLBlocConnectorNodeTest >> testOpeningTenNodesShowsThemInAWindow [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorNodeTest >> testOpeningUsesTheHostOfTheConnector [
+
+	connector host: BlHeadlessHost default.
+	visualization addNodesFromEntities: (1 to: 3).
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Host'.
+	self assert: connector view space host identicalTo: BlHeadlessHost default
+]
+
+{ #category : 'tests' }
 TLBlocConnectorNodeTest >> testTenNodesAreGeneratedInTheView [
 
 	visualization addNodesFromEntities: (1 to: 10).

@@ -1,9 +1,12 @@
 "
-I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I open the visualization in a Bloc window. The interactions, the legends and the connections between nodes are not implemented yet.
+I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I open the visualization in a Bloc window. My windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions, the legends and the connections between nodes are not implemented yet.
 "
 Class {
 	#name : 'TLBlocConnector',
 	#superclass : 'TLViewConnector',
+	#instVars : [
+		'host'
+	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
 	#tag : 'Core'
@@ -206,6 +209,13 @@ TLBlocConnector >> generateTLWidthLegendEntry: aTLWidthLegendEntry [
 	self shouldBeImplemented
 ]
 
+{ #category : 'accessing' }
+TLBlocConnector >> host: aBlHost [
+	"The host of the windows I open, for example BlHeadlessHost default to open them without a display. When nil, the windows use the default host of Bloc"
+
+	host := aBlHost
+]
+
 { #category : 'opening' }
 TLBlocConnector >> open: aTLVisualization inWindowSized: aDimension titled: aString [
 
@@ -221,6 +231,7 @@ TLBlocConnector >> openInWindow: anElement named: aTitleString extent: aPoint [
 	aSpace := BlSpace new
 		          extent: aPoint;
 		          title: aTitleString.
+	host ifNotNil: [ aSpace host: host ].
 	aSpace root background: Color white.
 	aSpace root addChild: anElement.
 	aSpace show
