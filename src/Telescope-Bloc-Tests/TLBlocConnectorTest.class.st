@@ -26,6 +26,7 @@ TLBlocConnectorTest >> setUp [
 	super setUp.
 	connector := TLBlocConnector new.
 	connector host: BlHeadlessHost default.
+	connector animationDuration: 0 seconds.
 	visualization := TLVisualization new.
 	visualization
 		nodeCreationStrategy: TLNodeCreationStrategy default;

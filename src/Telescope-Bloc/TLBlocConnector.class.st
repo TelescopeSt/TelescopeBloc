@@ -1,12 +1,15 @@
 "
-I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet.
+I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 300 milliseconds by default, and the connections follow them. The first layout and the new nodes are not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet.
 "
 Class {
 	#name : 'TLBlocConnector',
 	#superclass : 'TLViewConnector',
 	#instVars : [
 		'host',
-		'connections'
+		'connections',
+		'animationDuration',
+		'placedElements',
+		'animation'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -48,10 +51,72 @@ TLBlocConnector >> addElementNodeInView: element [
 ]
 
 { #category : 'layout' }
-TLBlocConnector >> applyLayoutOf: aTLGroup on: group [
+TLBlocConnector >> animate: group from: previousCenters [
+	"A layout puts the items at their new place at once. They go back to where they were, and an animation brings them to their new place, with the connections following them. An animation in progress is replaced, the items continue from where it put them"
 
+	| moves |
+	animation ifNotNil: [ :current | current stop ].
+	animation := nil.
+	moves := IdentityDictionary new.
+	previousCenters keysAndValuesDo: [ :item :previous |
+			| target |
+			target := self centerOf: item.
+			target = previous ifFalse: [ moves at: item put: previous -> target ] ].
+	(moves isEmpty or: [ animationDuration isZero ]) ifTrue: [ ^ self ].
+	moves keysAndValuesDo: [ :item :move | item position: move key ].
+	animation := BlNumberTransition new
+		             from: 0;
+		             to: 1;
+		             duration: animationDuration;
+		             onStepDo: [ :progress |
+				             moves keysAndValuesDo: [ :item :move | item position: move key + (move value - move key * progress) ].
+				             self updateConnections ];
+		             yourself.
+	view addAnimation: animation
+]
+
+{ #category : 'accessing' }
+TLBlocConnector >> animationDuration [
+	"The time the elements take to move to the place a layout gives them, when a layout is applied again. A zero duration places them at once"
+
+	^ animationDuration
+]
+
+{ #category : 'accessing' }
+TLBlocConnector >> animationDuration: aDuration [
+
+	animationDuration := aDuration
+]
+
+{ #category : 'layout' }
+TLBlocConnector >> applyLayoutOf: aTLGroup on: group [
+	"The items which were already placed move to their new place, the new ones appear at theirs. An item is a node element or a TLBlocGroup"
+
+	| previousCenters |
+	previousCenters := self centersOfPlacedItemsIn: group.
 	aTLGroup layout on: group.
+	group do: [ :item | placedElements add: item ].
+	self animate: group from: previousCenters.
 	self updateConnections
+]
+
+{ #category : 'layout' }
+TLBlocConnector >> centerOf: item [
+	"The center of a node element or of a TLBlocGroup, where the layouts of Telescope place it. It is not #center of the rectangle, which rounds it to whole pixels"
+
+	| rectangle |
+	rectangle := item encompassingRectangle.
+	^ rectangle origin + (rectangle extent / 2)
+]
+
+{ #category : 'layout' }
+TLBlocConnector >> centersOfPlacedItemsIn: group [
+	"Where the items are before a layout moves them: the last center asked for, which is where an animation in progress has put them"
+
+	| centers |
+	centers := IdentityDictionary new.
+	group do: [ :item | (placedElements includes: item) ifTrue: [ centers at: item put: (self centerOf: item) ] ].
+	^ centers
 ]
 
 { #category : 'initialization' }
@@ -260,7 +325,9 @@ TLBlocConnector >> host: aBlHost [
 TLBlocConnector >> initialize [
 
 	super initialize.
-	connections := OrderedCollection new
+	connections := OrderedCollection new.
+	placedElements := IdentitySet new.
+	animationDuration := 300 milliSeconds
 ]
 
 { #category : 'accessing' }
