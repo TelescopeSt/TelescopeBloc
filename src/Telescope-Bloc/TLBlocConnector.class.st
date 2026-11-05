@@ -1,5 +1,5 @@
 "
-I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, slowly at first and at the end (see TLBlocSmoothEasing), and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The visualization is fitted into its window again when a layout which is applied again moves or adds a node. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet. The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back, with the animation. The menus of Telescope open at the mouse when a node is clicked with the secondary button, as Bloc elements (see TLBlocMenu). When an interaction changes the style of a node or of a connection, for example to highlight it, its element is made again from the style sheet. Closing a visualization closes its window. The pop up action, which Telescope leaves to its connectors, shows its text in a TLBlocPopUpElement near the node, while the mouse is over it or after a click. The legend of a visualization is made of the entries of Telescope, static or dynamic, as TLBlocLegendElement. The right click interaction executes its action when a node is pressed with the secondary button, and the menu of that node then does not open. The handlers of the interactions of a drawable are remembered: when its interactions change, for example because the node moved to another group, they are made again. The children of a composite node are the group of its node: #define:asParentFor: puts the element of the group inside of the element of the node, and the node is as big as its children each time their layout is applied. Collapsing a composite removes the group of its children. A node has no label element when its style says TLNoNodeLabel. A click, a right click or a menu is for the innermost node under the pointer, and a click which ends the drag of a node is not a click: a composite node does not get the clicks of its children. The moved interaction is executed with the center of the node when the user drops it. The first update after the generation does not apply the layouts again, so it does not put back the nodes which the user dragged. The connections which join the same two nodes are spread on both sides of the line between them (#spreadParallelConnections), so that the Bezier curves do not overlap.
+I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, slowly at first and at the end (see TLBlocSmoothEasing), and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The visualization is fitted into its window again when a layout which is applied again moves or adds a node. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet. The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back, with the animation. The menus of Telescope open at the mouse when a node is clicked with the secondary button, as Bloc elements (see TLBlocMenu). When an interaction changes the style of a node or of a connection, for example to highlight it, its element is made again from the style sheet. Closing a visualization closes its window. The pop up action, which Telescope leaves to its connectors, shows its text in a TLBlocPopUpElement near the node, while the mouse is over it or after a click. The legend of a visualization is made of the entries of Telescope, static or dynamic, as TLBlocLegendElement. The right click interaction executes its action when a node is pressed with the secondary button, and the menu of that node then does not open. The handlers of the interactions of a drawable are remembered: when its interactions change, for example because the node moved to another group, they are made again. The children of a composite node are the group of its node: #define:asParentFor: puts the element of the group inside of the element of the node, and the node is as big as its children each time their layout is applied. Collapsing a composite removes the group of its children. A node has no label element when its style says TLNoNodeLabel. A click, a right click or a menu is for the innermost node under the pointer, and a click which ends the drag of a node is not a click: a composite node does not get the clicks of its children. The moved interaction is executed with the center of the node when the user drops it. The first update after the generation does not apply the layouts again, so it does not put back the nodes which the user dragged. The connections which join the same two nodes are spread on both sides of the line between them (#spreadParallelConnections), so that the Bezier curves do not overlap. The double click is handled like the click, by the innermost node. The drop interaction is executed on the node under the pointer when another node is dropped, with the dropped node as the parameter: the dropped node and the nodes which contain it or which it contains are not a target. The external trigger interactions are executed by #triggerExternal:, given the interaction or its id: something outside of the visualization, such as a button of the application, calls it.
 "
 Class {
 	#name : 'TLBlocConnector',
@@ -15,7 +15,8 @@ Class {
 		'runningMoves',
 		'layoutReapplied',
 		'interactionHandlers',
-		'generatedInteractions'
+		'generatedInteractions',
+		'externalInteractions'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -299,18 +300,34 @@ TLBlocConnector >> generateClickInteraction: aTLClickInteraction onDrawable: aTL
 ]
 
 { #category : 'generation - interaction' }
-TLBlocConnector >> generateDoubleClickInteraction: aDoubleClickInteraction onDrawable: aTLDrawable targetingDrawable: anObject [
-	self shouldBeImplemented
-]
+TLBlocConnector >> generateDoubleClickInteraction: aTLDoubleClickInteraction onDrawable: aTLDrawable targetingDrawable: aTargetDrawable [
+	"The action of the interaction is executed when the element of the target is double clicked. The double click is for the innermost node under the pointer, like the click"
 
-{ #category : 'generation - interactions' }
-TLBlocConnector >> generateDropInteraction: aTLDropInteraction onDrawable: aTLSimpleNode targetingDrawable: aTLSimpleNode3 [
-	self shouldBeImplemented
+	| element |
+	element := self elementFromTLDrawable: aTargetDrawable.
+	self
+		addHandlerOn: BlDoubleClickEvent
+		to: element
+		for: aTargetDrawable
+		do: [ :event | (self event: event isForElement: element) ifTrue: [ self executeAnimatingFrom: element do: [ self executeInteraction: aTLDoubleClickInteraction forDrawable: aTLDrawable ] ] ]
 ]
 
 { #category : 'generation - interaction' }
-TLBlocConnector >> generateExternalTriggerInteraction: aTLMouseOverInteraction onDrawable: aTLDrawable targetingDrawable: anObject [
-	self shouldBeImplemented
+TLBlocConnector >> generateDropInteraction: aTLDropInteraction onDrawable: aTLDrawable targetingDrawable: aTargetDrawable [
+	"The action of the interaction is executed with the node which the user dropped on the element of the target, as the parameter"
+
+	self
+		addHandlerOn: TLBlocNodeDropEvent
+		to: (self elementFromTLDrawable: aTargetDrawable)
+		for: aTargetDrawable
+		do: [ :event | self executeInteraction: aTLDropInteraction parameter: (self tlDrawableFromElement: event dropped) forDrawable: aTLDrawable ]
+]
+
+{ #category : 'generation - interaction' }
+TLBlocConnector >> generateExternalTriggerInteraction: anExternalTriggerInteraction onDrawable: aTLDrawable targetingDrawable: aTargetDrawable [
+	"The interaction does not wait for an event of the window: something outside of the visualization, such as a button, asks for it with #triggerExternal:. It is remembered with the drawable it is for"
+
+	(externalInteractions at: aTLDrawable ifAbsentPut: [ OrderedCollection new ]) add: anExternalTriggerInteraction
 ]
 
 { #category : 'generation - interaction' }
@@ -484,6 +501,7 @@ TLBlocConnector >> initialize [
 	pendingStarts := IdentityDictionary new.
 	interactionHandlers := IdentityDictionary new.
 	generatedInteractions := IdentityDictionary new.
+	externalInteractions := IdentityDictionary new.
 	layoutReapplied := false.
 	animationDuration := 500 milliSeconds
 ]
@@ -614,6 +632,7 @@ TLBlocConnector >> removeGroup: aTLGroup [
 TLBlocConnector >> removeInteractionHandlersOf: aTLDrawable [
 
 	(interactionHandlers removeKey: aTLDrawable ifAbsent: [ #(  ) ]) do: [ :association | association key removeEventHandler: association value ].
+	externalInteractions removeKey: aTLDrawable ifAbsent: [ ].
 	self menuInteractionByDrawable removeKey: aTLDrawable ifAbsent: [ ]
 ]
 
@@ -702,6 +721,24 @@ TLBlocConnector >> togglePopUpOf: aPopUpAction for: aTLDrawable [
 				popUp owner == element
 					ifTrue: [ popUp removeFromParent ]
 					ifFalse: [ self showPopUpOf: aPopUpAction for: aTLDrawable ] ]
+]
+
+{ #category : 'interactions' }
+TLBlocConnector >> triggerExternal: anInteractionOrItsId [
+	"Executes the action of the external trigger interactions, given or found by their id, on all the drawables they are for. The visualization is updated once, after all the actions. Something outside of the visualization, such as a button of the application, calls it"
+
+	| id groups visualization |
+	id := anInteractionOrItsId isString
+		      ifTrue: [ anInteractionOrItsId ]
+		      ifFalse: [ anInteractionOrItsId triggerId ].
+	groups := IdentityDictionary new.
+	externalInteractions keysAndValuesDo: [ :drawable :interactions |
+		interactions do: [ :interaction | interaction triggerId = id ifTrue: [ (groups at: interaction ifAbsentPut: [ OrderedCollection new ]) add: drawable ] ] ].
+	groups ifEmpty: [ ^ self ].
+	groups keysAndValuesDo: [ :interaction :drawables |
+			visualization := drawables first visualization.
+			drawables do: [ :drawable | interaction actionOn: drawable ] ].
+	visualization update
 ]
 
 { #category : 'updating - shape' }

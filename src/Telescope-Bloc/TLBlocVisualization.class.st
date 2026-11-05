@@ -1,5 +1,5 @@
 "
-I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels. I move myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. The pan and zoom handlers are installed on the root of the window while I am in it. The first time I am laid out with some content I am fitted into the window: scaled so that the content fills the window, down or up as far as the zoom allows, and centered, which #fitIntoWindow does again on request. #zoomIn and #zoomOut zoom around the center of the window, and #exportAsPngTo: and #exportAsSvgTo: write me as I am shown. I put my toolbar in the root of the window while I am in it. I do not clip my children, because the window already clips me. I let the user drag the nodes, and the panning compensates the nodes which move my content, so that the other nodes stay under the mouse. The connector is told when a node moved, to join the nodes again. I keep the legend, and I fit my content in what is at its right. After a fit, I fit myself again when my content changes, until the user pans, zooms or drags, because the content is only known after a few layouts.
+I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels. I move myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. The pan and zoom handlers are installed on the root of the window while I am in it. The first time I am laid out with some content I am fitted into the window: scaled so that the content fills the window, down or up as far as the zoom allows, and centered, which #fitIntoWindow does again on request. #zoomIn and #zoomOut zoom around the center of the window, and #exportAsPngTo: and #exportAsSvgTo: write me as I am shown. I put my toolbar in the root of the window while I am in it. I do not clip my children, because the window already clips me. I let the user drag the nodes, and the panning compensates the nodes which move my content, so that the other nodes stay under the mouse. The connector is told when a node moved, to join the nodes again. I keep the legend, and I fit my content in what is at its right. After a fit, I fit myself again when my content changes, until the user pans, zooms or drags, because the content is only known after a few layouts. It finds the node under the point where a node was dropped (#dropTargetOf:at:).
 "
 Class {
 	#name : 'TLBlocVisualization',
@@ -64,6 +64,36 @@ TLBlocVisualization >> contentTopLeft [
 	"Answers the smallest top left corner of the nodes and their labels, relative to the visualization, whatever the depth of the groups they are in"
 
 	^ self contentRectangle origin
+]
+
+{ #category : 'dragging' }
+TLBlocVisualization >> dropTargetOf: aNodeElement at: aPoint [
+	"The node under the point of the window, where the user dropped the node, or nil. The nodes which contain the dropped one, such as its composite, and the ones it contains are not a target: moving a node inside its composite is not dropping it on it"
+
+	| found |
+	found := nil.
+	self
+		nodeElementsOf: self
+		do: [ :candidate | ((candidate boundsInSpace asRectangle containsPoint: aPoint) and: [ (self element: candidate isRelatedTo: aNodeElement) not ]) ifTrue: [ found := candidate ] ].
+	^ found
+]
+
+{ #category : 'dragging' }
+TLBlocVisualization >> element: anElement isInside: anAncestor [
+
+	| current |
+	current := anElement parent.
+	[ current isNotNil ] whileTrue: [
+			current == anAncestor ifTrue: [ ^ true ].
+			current := current parent ].
+	^ false
+]
+
+{ #category : 'dragging' }
+TLBlocVisualization >> element: anElement isRelatedTo: anotherElement [
+	"Whether they are the same, or one is inside of the other"
+
+	^ anElement == anotherElement or: [ (self element: anElement isInside: anotherElement) or: [ self element: anotherElement isInside: anElement ] ]
 ]
 
 { #category : 'export' }
@@ -196,6 +226,15 @@ TLBlocVisualization >> legendReservedWidth [
 
 	(legend isNil or: [ legend hasParent not ]) ifTrue: [ ^ 0 ].
 	^ legend extent x + (legend windowMargin * 2)
+]
+
+{ #category : 'dragging' }
+TLBlocVisualization >> nodeElementsOf: anElement do: aBlock [
+	"The node elements inside of the element, at any depth, each one before the nodes it contains: the last one under a point is the one drawn above the others"
+
+	anElement children do: [ :child |
+			child class = TLBlocNodeElement ifTrue: [ aBlock value: child ].
+			self nodeElementsOf: child do: aBlock ]
 ]
 
 { #category : 'dragging' }

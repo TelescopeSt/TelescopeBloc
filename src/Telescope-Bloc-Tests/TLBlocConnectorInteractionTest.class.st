@@ -47,6 +47,13 @@ TLBlocConnectorInteractionTest >> connectionTargetEntities [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorInteractionTest >> counterAction: aCounter [
+	"An action which increments the first element of the array"
+
+	^ TLCustomAction block: [ :node | aCounter at: 1 put: (aCounter at: 1) + 1 ]
+]
+
+{ #category : 'tests' }
 TLBlocConnectorInteractionTest >> expandOnClick [
 	"Opens a visualization of the nodes 1 and 2, whose click adds a child of the entity multiplied by ten, or removes it again. Answers the first node"
 
@@ -76,6 +83,16 @@ TLBlocConnectorInteractionTest >> mouseLeave: aNode [
 TLBlocConnectorInteractionTest >> nodeElements [
 
 	^ connector view children select: [ :element | element class = TLBlocNodeElement ]
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> openNodesWith: someInteractions [
+	"Opens a visualization of the nodes 1, 2 and 3 which has the interactions"
+
+	visualization addNodesFromEntities: (1 to: 3).
+	visualization addInteractions: someInteractions.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Interactions'.
+	connector view space settleForDuration: 1 seconds
 ]
 
 { #category : 'tests' }
@@ -261,6 +278,99 @@ TLBlocConnectorInteractionTest >> testClosingTheVisualizationClosesItsWindow [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorInteractionTest >> testDoubleClickExecutesTheActionOfTheNode [
+
+	| counter |
+	counter := Array with: 0.
+	self openNodesWith: { (self counterAction: counter) onDoubleClick }.
+	(connector elementFromTLDrawable: visualization allNodes first) dispatchEvent: BlDoubleClickEvent new.
+	self assert: counter first equals: 1
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testDoubleClickIsNotAClick [
+
+	| counter |
+	counter := Array with: 0.
+	self openNodesWith: { (self counterAction: counter) onClick }.
+	(connector elementFromTLDrawable: visualization allNodes first) dispatchEvent: BlDoubleClickEvent new.
+	self assert: counter first equals: 0
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testDoubleClickOnlyConcernsTheNodeWhichWasClicked [
+
+	| counter |
+	counter := Array with: 0.
+	self openNodesWith: { (self counterAction: counter) onDoubleClick }.
+	(connector elementFromTLDrawable: visualization allNodes last) dispatchEvent: BlDoubleClickEvent new.
+	self assert: counter first equals: 1
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testExternalTriggerCanBeFoundByItsId [
+
+	| counter interaction |
+	counter := Array with: 0.
+	interaction := (self counterAction: counter) onExternalTrigger.
+	self openNodesWith: { interaction }.
+	connector triggerExternal: interaction triggerId.
+	self assert: counter first equals: 3
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testExternalTriggerDoesNotExecuteTheOtherTriggers [
+
+	| counters first second |
+	counters := {
+		            (Array with: 0).
+		            (Array with: 0) }.
+	first := (self counterAction: counters first) onExternalTrigger.
+	second := (self counterAction: counters last) onExternalTrigger.
+	self openNodesWith: {
+			first.
+			second }.
+	connector triggerExternal: second.
+	self assert: counters first first equals: 0.
+	self assert: counters last first equals: 3
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testExternalTriggerExecutesTheActionOnEveryNode [
+	"The interaction is inherited by all the nodes: the trigger executes its action for each of them"
+
+	| counter interaction |
+	counter := Array with: 0.
+	interaction := (self counterAction: counter) onExternalTrigger.
+	self openNodesWith: { interaction }.
+	self assert: counter first equals: 0.
+	connector triggerExternal: interaction.
+	self assert: counter first equals: 3
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testExternalTriggerOfAnUnknownIdDoesNothing [
+
+	| counter |
+	counter := Array with: 0.
+	self openNodesWith: { (self counterAction: counter) onExternalTrigger }.
+	connector triggerExternal: 'unknown'.
+	self assert: counter first equals: 0
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testExternalTriggerShowsTheChangedStyleOnAllNodes [
+	"The visualization is updated after the actions of all the nodes"
+
+	| interaction |
+	interaction := (TLStyleCustomizationAction custom: [ :style | style borderColor: Color red ]) onExternalTrigger.
+	self openNodesWith: { interaction }.
+	connector triggerExternal: interaction.
+	connector view space settleForDuration: 500 milliSeconds.
+	visualization allNodes do: [ :node | self assert: (connector elementFromTLDrawable: node) border paint color equals: Color red ]
+]
+
+{ #category : 'tests' }
 TLBlocConnectorInteractionTest >> testHiddenConnectionIsNotDrawnAtFirst [
 
 	self openWithTwoConnectionsAndTheirActions.
@@ -433,6 +543,16 @@ TLBlocConnectorInteractionTest >> testShownConnectionJoinsItsNodes [
 
 	self click: self openWithTwoConnectionsAndTheirActions.
 	self connectionElements do: [ :element | self deny: element start equals: element end ]
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testSimpleClickIsNotADoubleClick [
+
+	| counter |
+	counter := Array with: 0.
+	self openNodesWith: { (self counterAction: counter) onDoubleClick }.
+	(connector elementFromTLDrawable: visualization allNodes first) dispatchEvent: BlClickEvent new.
+	self assert: counter first equals: 0
 ]
 
 { #category : 'tests' }

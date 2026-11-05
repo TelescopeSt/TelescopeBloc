@@ -64,6 +64,18 @@ TLBlocConnectorCompositeTest >> nodeOfEntity: anEntity [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorCompositeTest >> openCompositeAndASiblingWithDropRecorder: aCollection [
+	"The composite node 30 and the node 7 are in the visualization, and the composite is the only one which has a drop interaction, which records the entity of the dropped node"
+
+	self prepareComposites.
+	visualization styleSheet compositeExpandedByDefault: true.
+	(visualization addNodeFromEntity: 30) addInteraction: (TLCustomWithParameterAction block: [ :target :dropped | aCollection add: dropped entity ]) onDrop.
+	visualization addNodeFromEntity: 7.
+	connector open: visualization inWindowSized: 800 @ 500 titled: 'Composite'.
+	connector view space settleForDuration: 1 seconds
+]
+
+{ #category : 'tests' }
 TLBlocConnectorCompositeTest >> openWithComposite: anEntity expanded: aBoolean [
 
 	self prepareComposites.
@@ -288,6 +300,84 @@ TLBlocConnectorCompositeTest >> testDraggingACompositeMovesItsChildren [
 	before := self rectangleOfEntity: 2.
 	self dragFrom: (self elementOfEntity: 6) at: 3 @ 3 by: 40 @ 30.
 	self assert: ((self rectangleOfEntity: 2) origin - before origin - (40 @ 30)) abs < (1 @ 1)
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testMovingAChildInsideItsCompositeIsNotADropOnTheComposite [
+
+	| drops |
+	drops := OrderedCollection new.
+	self openCompositeAndASiblingWithDropRecorder: drops.
+	self dragFrom: (self elementOfEntity: 2) at: 3 @ 3 by: 10 @ 10.
+	self assertEmpty: drops
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testNodeDroppedOnAChildIsNotGivenToTheComposite [
+	"The innermost node under the pointer is the target"
+
+	| drops sibling root start target child |
+	drops := OrderedCollection new.
+	self openCompositeAndASiblingWithDropRecorder: drops.
+	sibling := visualization nodes detect: [ :node | node entity = 7 ].
+	child := self elementOfEntity: 2.
+	root := connector view space root.
+	start := (connector elementFromTLDrawable: sibling) boundsInSpace center.
+	target := child boundsInSpace center.
+	(connector elementFromTLDrawable: sibling) fireEvent: (BlMouseDownEvent new
+			 position: start;
+			 screenPosition: start;
+			 button: BlMouseButton primary;
+			 yourself).
+	root fireEvent: (BlMouseMoveEvent new
+			 position: start + target / 2;
+			 screenPosition: start + target / 2;
+			 yourself).
+	root fireEvent: (BlMouseMoveEvent new
+			 position: target;
+			 screenPosition: target;
+			 yourself).
+	root fireEvent: (BlMouseUpEvent new
+			 position: target;
+			 screenPosition: target;
+			 button: BlMouseButton primary;
+			 yourself).
+	connector view space settleForDuration: 500 milliSeconds.
+	self assertEmpty: drops
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testNodeDroppedOnTheAreaOfACompositeIsGivenToTheComposite [
+	"The pointer is over the composite, and not over one of its children"
+
+	| drops sibling root start target composite |
+	drops := OrderedCollection new.
+	self openCompositeAndASiblingWithDropRecorder: drops.
+	sibling := visualization nodes detect: [ :node | node entity = 7 ].
+	composite := connector elementFromTLDrawable: (visualization nodes detect: [ :node | node entity = 30 ]).
+	root := connector view space root.
+	start := (connector elementFromTLDrawable: sibling) boundsInSpace center.
+	target := composite boundsInSpace origin + (3 @ 3).
+	(connector elementFromTLDrawable: sibling) fireEvent: (BlMouseDownEvent new
+			 position: start;
+			 screenPosition: start;
+			 button: BlMouseButton primary;
+			 yourself).
+	root fireEvent: (BlMouseMoveEvent new
+			 position: start + target / 2;
+			 screenPosition: start + target / 2;
+			 yourself).
+	root fireEvent: (BlMouseMoveEvent new
+			 position: target;
+			 screenPosition: target;
+			 yourself).
+	root fireEvent: (BlMouseUpEvent new
+			 position: target;
+			 screenPosition: target;
+			 button: BlMouseButton primary;
+			 yourself).
+	connector view space settleForDuration: 500 milliSeconds.
+	self assert: drops asArray equals: #( 7 )
 ]
 
 { #category : 'tests' }

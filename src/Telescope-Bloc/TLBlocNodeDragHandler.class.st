@@ -1,5 +1,5 @@
 "
-I let the user drag the nodes of a Telescope visualization of Bloc with the mouse: I am installed on the root of the window, and when the primary mouse button is pressed on a node or on its label and the mouse goes further than a few pixels, I move the node by the same distance, divided by the zoom of the visualization. A press on the background is for the pan handler. The node knows it was dragged, so that the click which ends the drag does not execute its click interactions. The place of a dragged node is not kept: a layout which is applied again puts it back. When a dragged node is dropped it receives a TLBlocNodeMovedEvent.
+I let the user drag the nodes of a Telescope visualization of Bloc with the mouse: I am installed on the root of the window, and when the primary mouse button is pressed on a node or on its label and the mouse goes further than a few pixels, I move the node by the same distance, divided by the zoom of the visualization. A press on the background is for the pan handler. The node knows it was dragged, so that the click which ends the drag does not execute its click interactions. The place of a dragged node is not kept: a layout which is applied again puts it back. When a dragged node is dropped it receives a TLBlocNodeMovedEvent. The node under the pointer is told that a node was dropped on it with a TLBlocNodeDropEvent.
 "
 Class {
 	#name : 'TLBlocNodeDragHandler',
@@ -54,12 +54,18 @@ TLBlocNodeDragHandler >> mouseMoveEvent: anEvent [
 
 { #category : 'events' }
 TLBlocNodeDragHandler >> mouseUpEvent: anEvent [
-	"The node was dropped when it was dragged: it is told where, for the moved interactions of Telescope"
+	"The node was dropped when it was dragged: it is told where, for the moved interactions of Telescope, and the node under the pointer is told which node was dropped on it, for its drop interactions"
 
+	| target |
 	(node isNotNil and: [ dragging == true ]) ifTrue: [
 			node dispatchEvent: (TLBlocNodeMovedEvent new
 					 position: node placement + (node dimension / 2);
-					 yourself) ].
+					 yourself).
+			target := visualization dropTargetOf: node at: anEvent position.
+			target ifNotNil: [
+					target dispatchEvent: (TLBlocNodeDropEvent new
+							 dropped: node;
+							 yourself) ] ].
 	node := nil
 ]
 
