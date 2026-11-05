@@ -7,6 +7,14 @@ Class {
 }
 
 { #category : 'tests' }
+TLBlocConnectorDragTest >> centerOfNode: aNode [
+
+	| element |
+	element := connector elementFromTLDrawable: aNode.
+	^ element measuredBounds position + (element dimension / 2)
+]
+
+{ #category : 'tests' }
 TLBlocConnectorDragTest >> drag: anElement by: aVector [
 	"Presses on the element, moves the mouse in two steps, and releases it, like a user"
 
@@ -25,6 +33,29 @@ TLBlocConnectorDragTest >> nodeElement [
 	"The first node of the visualization"
 
 	^ connector elementFromTLDrawable: visualization allNodes first
+]
+
+{ #category : 'tests' }
+TLBlocConnectorDragTest >> openWithInteractions: someInteractions [
+	"Opens again, with a visualization of the nodes 1, 2 and 3 which has the interactions, at their natural size"
+
+	connector view space close.
+	connector := TLBlocConnector new.
+	connector host: BlHeadlessHost default.
+	connector animationDuration: 0 seconds.
+	visualization := TLVisualization new.
+	visualization
+		nodeCreationStrategy: TLNodeCreationStrategy default;
+		styleSheet: TLStyleSheet default;
+		generator: connector.
+	visualization styleSheet nodeLabel: #asString position: #top.
+	visualization layout: TLLinearLayout new.
+	visualization addNodesFromEntities: (1 to: 3).
+	visualization addInteractions: someInteractions.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Navigation'.
+	self settle.
+	connector view zoomBy: 1 / connector view zoom around: 0 @ 0.
+	self settle
 ]
 
 { #category : 'tests' }
@@ -100,6 +131,67 @@ TLBlocConnectorDragTest >> testDraggingANodeMovesIt [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorDragTest >> testLabelFollowsTheEntityWhichTheMovedInteractionChanges [
+	"The demo puts the position of the node in its entity, and the label shows the entity"
+
+	| node |
+	self openWithInteractions: { (TLCustomWithParameterAction block: [ :each :position | each entity: position x asInteger @ position y asInteger ]) onMove }.
+	node := visualization allNodes first.
+	self drag: (connector elementFromTLDrawable: node) by: 40 @ 30.
+	self assert: (connector elementFromTLDrawable: node) children first labelText equals: node entity asString.
+	self assert: node entity isPoint
+]
+
+{ #category : 'tests' }
+TLBlocConnectorDragTest >> testMemorizedPositionIsKeptWhenTheLayoutIsApplied [
+
+	| node dropped |
+	self openWithInteractions: { TLMemorizeNodePositionAction onMove }.
+	node := visualization allNodes first.
+	self drag: (connector elementFromTLDrawable: node) by: 60 @ 40.
+	dropped := self centerOfNode: node.
+	visualization layout: TLLinearLayout new.
+	visualization update.
+	self settle.
+	self assert: (self centerOfNode: node) equals: dropped
+]
+
+{ #category : 'tests' }
+TLBlocConnectorDragTest >> testMovedInteractionIsExecutedWithTheNewCenterWhenTheNodeIsDropped [
+
+	| positions node |
+	positions := OrderedCollection new.
+	self openWithInteractions: { (TLCustomWithParameterAction block: [ :each :position | positions add: each entity -> position ]) onMove }.
+	node := visualization allNodes first.
+	self drag: (connector elementFromTLDrawable: node) by: 40 @ 30.
+	self assert: positions size equals: 1.
+	self assert: positions first key equals: 1.
+	self assert: (positions first value - (self centerOfNode: node)) abs < (0.01 @ 0.01)
+]
+
+{ #category : 'tests' }
+TLBlocConnectorDragTest >> testMovedInteractionIsNotExecutedWithoutADrag [
+
+	| positions node |
+	positions := OrderedCollection new.
+	self openWithInteractions: { (TLCustomWithParameterAction block: [ :each :position | positions add: position ]) onMove }.
+	node := visualization allNodes first.
+	self pressAt: 5 @ 5 on: (connector elementFromTLDrawable: node).
+	self releaseAt: 5 @ 5 on: connector view space root.
+	self assertEmpty: positions
+]
+
+{ #category : 'tests' }
+TLBlocConnectorDragTest >> testMovedInteractionOfAnotherNodeIsNotExecuted [
+
+	| positions |
+	positions := OrderedCollection new.
+	self openWithInteractions: { (TLCustomWithParameterAction block: [ :each :position | positions add: each entity ]) onMove }.
+	self drag: (connector elementFromTLDrawable: visualization allNodes last) by: 40 @ 30.
+	self assert: positions asArray equals: #( 3 )
+]
+
+{ #category : 'tests' }
 TLBlocConnectorDragTest >> testNodeDoesNotMoveAfterTheMouseIsReleased [
 
 	| node before root |
@@ -139,6 +231,20 @@ TLBlocConnectorDragTest >> testOtherNodesDoNotMove [
 	before := other measuredBounds position.
 	self drag: self nodeElement by: 60 @ 40.
 	self assert: other measuredBounds position equals: before
+]
+
+{ #category : 'tests' }
+TLBlocConnectorDragTest >> testPositionIsNotKeptWithoutTheMemorizeAction [
+
+	| node dropped |
+	self openWithInteractions: #(  ).
+	node := visualization allNodes first.
+	self drag: (connector elementFromTLDrawable: node) by: 60 @ 40.
+	dropped := self centerOfNode: node.
+	visualization layout: TLLinearLayout new.
+	visualization update.
+	self settle.
+	self deny: (self centerOfNode: node) equals: dropped
 ]
 
 { #category : 'tests' }

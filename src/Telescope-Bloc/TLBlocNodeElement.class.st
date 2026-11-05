@@ -1,5 +1,5 @@
 "
-I am the Bloc element of a Telescope node. My dimension, my background and my border come from the style sheet of the node, the border being half inside and half outside of the edge, solid, dashed, dotted or double, the outline drawn a second time inside of the first one with a small gap: the colors can depend on the entity of the node, with a block or a gradient. My shape is my outline: a Geometry project shape (a polygon, a rectangle or an ellipse) built from the Telescope shape and my dimension, in my own coordinates. My Bloc geometry is derived from my outline, and the connections use my outline to find where they meet the border of the node. I have no outline when the node has no shape, and then only my label is drawn. The layouts of Telescope place a node by its center: #position: takes the center, but #position stays the top left corner of the element, because Bloc reads it to draw me. I do not clip my children, because the label of a node is drawn outside of the node. I know the elements of the connections which leave me and enter me, as my adjacent nodes are asked by the layouts of Telescope such as the tree layout. I know whether the user dragged me with the mouse, because the click which ends a drag is not a click. A composite node has its children in a group: the element of the group is inside of me, at my padding from my border, and I am as big as it and the padding (#fitToChildren). Without child, or when I am collapsed, I have the dimension of my style again. A dimension of 0 gives an outline of at least one pixel.
+I am the Bloc element of a Telescope node. My dimension, my background and my border come from the style sheet of the node, the border being half inside and half outside of the edge, solid, dashed, dotted or double, the outline drawn a second time inside of the first one with a small gap: the colors can depend on the entity of the node, with a block or a gradient. My shape is my outline: a Geometry project shape (a polygon, a rectangle or an ellipse) built from the Telescope shape and my dimension, in my own coordinates. My Bloc geometry is derived from my outline, and the connections use my outline to find where they meet the border of the node. I have no outline when the node has no shape, and then only my label is drawn. The layouts of Telescope place a node by its center: #position: takes the center, but #position stays the top left corner of the element, because Bloc reads it to draw me. I do not clip my children, because the label of a node is drawn outside of the node. I know the elements of the connections which leave me and enter me, as my adjacent nodes are asked by the layouts of Telescope such as the tree layout. I know whether the user dragged me with the mouse, because the click which ends a drag is not a click. A composite node has its children in a group: the element of the group is inside of me, at my padding from my border, and I am as big as it and the padding (#fitToChildren). Without child, or when I am collapsed, I have the dimension of my style again. A dimension of 0 gives an outline of at least one pixel. A node can have a fixed center, which a layout does not change (#defineFixedRelativePosition:): this is what the action which memorizes the position of a node does. My label is made again when the entity of the node changes.
 "
 Class {
 	#name : 'TLBlocNodeElement',
@@ -14,7 +14,8 @@ Class {
 		'childrenGroup',
 		'ownDimension',
 		'shape',
-		'borderStyle'
+		'borderStyle',
+		'fixedCenter'
 	],
 	#category : 'Telescope-Bloc-Elements',
 	#package : 'Telescope-Bloc',
@@ -88,6 +89,14 @@ TLBlocNodeElement >> customizeFromNode: aNode [
 	self dimension: ownDimension.
 	self updateOutline.
 	self fitToChildren
+]
+
+{ #category : 'layout' }
+TLBlocNodeElement >> defineFixedRelativePosition: aCenter [
+	"The node keeps this center, in the coordinates of its parent, whatever the layouts do"
+
+	fixedCenter := aCenter.
+	self position: aCenter
 ]
 
 { #category : 'accessing' }
@@ -198,11 +207,11 @@ TLBlocNodeElement >> placementCenteredAt: aCenter [
 	^ aCenter - (dimension / 2)
 ]
 
-{ #category : 'accessing' }
+{ #category : 'layout' }
 TLBlocNodeElement >> position: aCenter [
-	"The layouts of Telescope place a node by its center, and Bloc places an element by its top left corner. Only the setter is the one of Telescope: Bloc reads #position to draw the element, so it must keep answering the top left corner"
+	"The layouts of Telescope place a node by its center, and Bloc places an element by its top left corner. Only the setter is the one of Telescope: Bloc reads #position to draw the element, so it must keep answering the top left corner. A node with a fixed position stays there: the layout counts it to place the others, but does not move it"
 
-	^ super position: aCenter - (dimension / 2)
+	^ super position: (fixedCenter ifNil: [ aCenter ]) - (dimension / 2)
 ]
 
 { #category : 'layout' }
@@ -229,6 +238,19 @@ TLBlocNodeElement >> releaseChildren [
 	childrenGroup ifNotNil: [ :group | group element removeFromParent ].
 	childrenGroup := nil.
 	self resizeTo: ownDimension
+]
+
+{ #category : 'initialization' }
+TLBlocNodeElement >> replaceLabelWith: aLabelElementOrNil [
+	"The label of the node changed with its entity. The same text is kept as it is: a style change, such as a highlight, does not make the label again"
+
+	| current |
+	current := self children
+		           detect: [ :child | child class = TLBlocLabelElement ]
+		           ifNone: [ nil ].
+	(current isNotNil and: [ aLabelElementOrNil isNotNil and: [ current labelText = aLabelElementOrNil labelText ] ]) ifTrue: [ ^ self ].
+	current ifNotNil: #removeFromParent.
+	aLabelElementOrNil ifNotNil: [ :label | self addChild: label ]
 ]
 
 { #category : 'composite' }

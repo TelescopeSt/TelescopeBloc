@@ -1,5 +1,5 @@
 "
-I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, slowly at first and at the end (see TLBlocSmoothEasing), and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The visualization is fitted into its window again when a layout which is applied again moves or adds a node. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet. The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back, with the animation. The menus of Telescope open at the mouse when a node is clicked with the secondary button, as Bloc elements (see TLBlocMenu). When an interaction changes the style of a node or of a connection, for example to highlight it, its element is made again from the style sheet. Closing a visualization closes its window. The pop up action, which Telescope leaves to its connectors, shows its text in a TLBlocPopUpElement near the node, while the mouse is over it or after a click. The legend of a visualization is made of the entries of Telescope, static or dynamic, as TLBlocLegendElement. The right click interaction executes its action when a node is pressed with the secondary button, and the menu of that node then does not open. The handlers of the interactions of a drawable are remembered: when its interactions change, for example because the node moved to another group, they are made again. The children of a composite node are the group of its node: #define:asParentFor: puts the element of the group inside of the element of the node, and the node is as big as its children each time their layout is applied. Collapsing a composite removes the group of its children. A node has no label element when its style says TLNoNodeLabel. A click, a right click or a menu is for the innermost node under the pointer, and a click which ends the drag of a node is not a click: a composite node does not get the clicks of its children.
+I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, slowly at first and at the end (see TLBlocSmoothEasing), and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The visualization is fitted into its window again when a layout which is applied again moves or adds a node. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet. The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back, with the animation. The menus of Telescope open at the mouse when a node is clicked with the secondary button, as Bloc elements (see TLBlocMenu). When an interaction changes the style of a node or of a connection, for example to highlight it, its element is made again from the style sheet. Closing a visualization closes its window. The pop up action, which Telescope leaves to its connectors, shows its text in a TLBlocPopUpElement near the node, while the mouse is over it or after a click. The legend of a visualization is made of the entries of Telescope, static or dynamic, as TLBlocLegendElement. The right click interaction executes its action when a node is pressed with the secondary button, and the menu of that node then does not open. The handlers of the interactions of a drawable are remembered: when its interactions change, for example because the node moved to another group, they are made again. The children of a composite node are the group of its node: #define:asParentFor: puts the element of the group inside of the element of the node, and the node is as big as its children each time their layout is applied. Collapsing a composite removes the group of its children. A node has no label element when its style says TLNoNodeLabel. A click, a right click or a menu is for the innermost node under the pointer, and a click which ends the drag of a node is not a click: a composite node does not get the clicks of its children. The moved interaction is executed with the center of the node when the user drops it. The first update after the generation does not apply the layouts again, so it does not put back the nodes which the user dragged.
 "
 Class {
 	#name : 'TLBlocConnector',
@@ -83,12 +83,13 @@ TLBlocConnector >> animationDuration: aDuration [
 
 { #category : 'layout' }
 TLBlocConnector >> applyLayoutOf: aTLGroup on: group [
-	"The layouts of an update, one per group, work on the final places: the groups need the real size of what they contain. Where the items were is remembered, and #startPendingAnimation moves them once the update is done. An item is a node element or a TLBlocGroup. A layout which is applied again, and which moves or adds an item, makes the update fit the visualization into its window. The children of a composite node are in a group: its node is as big as them once they are placed"
+	"The layouts of an update, one per group, work on the final places: the groups need the real size of what they contain. Where the items were is remembered, and #startPendingAnimation moves them once the update is done. An item is a node element or a TLBlocGroup. A layout which is applied again, and which moves or adds an item, makes the update fit the visualization into its window. The children of a composite node are in a group: its node is as big as them once they are placed. The group is told that its layout is applied, otherwise the first update after the generation applies it again and puts back the nodes which the user dragged"
 
 	| previousPlacements |
 	self settleAnimation.
 	previousPlacements := self placementsOfPlacedItemsIn: group.
 	aTLGroup layout on: group.
+	aTLGroup layoutApplicationDone.
 	group do: [ :item | placedElements add: item ].
 	(previousPlacements isNotEmpty and: [ group anySatisfy: [ :item | (previousPlacements at: item ifAbsent: [ nil ]) ~= item placement ] ]) ifTrue: [ layoutReapplied := true ].
 	self rememberStartsOf: group from: previousPlacements.
@@ -171,14 +172,12 @@ TLBlocConnector >> createElementLegendItemFrom: aTLLegendItem [
 
 { #category : 'generation - node' }
 TLBlocConnector >> createElementNodeFromNode: aNode [
-	"The node has a label unless its style gives none: Telescope says so with the class TLNoNodeLabel, which is not a text to draw"
+	"The node has a label unless its style gives none"
 
-	| blocElement styleSheet |
+	| blocElement |
 	blocElement := TLBlocNodeElement new.
-	styleSheet := aNode effectiveStyleSheet.
 	blocElement customizeFromNode: aNode.
-	((styleSheet attributes includesKey: #nodeLabel) and: [ (styleSheet obtainValue: #nodeLabel forEntity: aNode entity inNode: aNode) ~~ TLNoNodeLabel ]) ifTrue: [
-		blocElement addChild: (TLBlocLabelElement forNode: aNode) ].
+	(self labelElementOf: aNode) ifNotNil: [ :label | blocElement addChild: label ].
 	^ blocElement
 ]
 
@@ -352,8 +351,14 @@ TLBlocConnector >> generateMouseOverInteraction: aTLMouseOverInteraction onDrawa
 ]
 
 { #category : 'generation - interaction' }
-TLBlocConnector >> generateMovedInteraction: aTLNodeMovedInteraction onDrawable: aDrawable targetingDrawable: aTargetDrawable [
-	self shouldBeImplemented
+TLBlocConnector >> generateMovedInteraction: aTLNodeMovedInteraction onDrawable: aTLDrawable targetingDrawable: aTargetDrawable [
+	"The action of the interaction is executed with the center of the node when the user drops it after dragging it"
+
+	self
+		addHandlerOn: TLBlocNodeMovedEvent
+		to: (self elementFromTLDrawable: aTargetDrawable)
+		for: aTargetDrawable
+		do: [ :event | self executeInteraction: aTLNodeMovedInteraction parameter: event position forDrawable: aTLDrawable ]
 ]
 
 { #category : 'generation - interaction' }
@@ -481,6 +486,15 @@ TLBlocConnector >> initialize [
 	generatedInteractions := IdentityDictionary new.
 	layoutReapplied := false.
 	animationDuration := 500 milliSeconds
+]
+
+{ #category : 'generation - node' }
+TLBlocConnector >> labelElementOf: aNode [
+	"The label of the node, or nil when its style gives none: Telescope says so with the class TLNoNodeLabel, which is not a text to draw"
+
+	| styleSheet |
+	styleSheet := aNode effectiveStyleSheet.
+	^ ((styleSheet attributes includesKey: #nodeLabel) and: [ (styleSheet obtainValue: #nodeLabel forEntity: aNode entity inNode: aNode) ~~ TLNoNodeLabel ]) ifTrue: [ TLBlocLabelElement forNode: aNode ]
 ]
 
 { #category : 'generation - legend' }
@@ -692,9 +706,12 @@ TLBlocConnector >> updateEdgeOf: aConnection [
 
 { #category : 'updating - shape' }
 TLBlocConnector >> updateElementNodeOf: aNode [
-	"An interaction changed the style of the node, for example to highlight it: the element is made again from the style sheet"
+	"An interaction changed the style or the entity of the node, for example to highlight it or to move it: the element is made again from the style sheet, and its label follows the entity"
 
-	(self elementFromTLDrawable: aNode) customizeFromNode: aNode
+	| element |
+	element := self elementFromTLDrawable: aNode.
+	element customizeFromNode: aNode.
+	element replaceLabelWith: (self labelElementOf: aNode)
 ]
 
 { #category : 'updating - interaction' }
