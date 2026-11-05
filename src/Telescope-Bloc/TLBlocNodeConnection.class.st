@@ -1,5 +1,5 @@
 "
-I am the Bloc element of a connection between two nodes of a Telescope visualization. I am a line from the border of the outline of the source node to the border of the outline of the target node, along the line which joins their centers (see TLBlocConnectionSegment). I am in the view, in the coordinates of which the segment is computed, and my element is the box of the segment. The connector updates me once the layouts have placed the nodes. The color, the width and the line style of the line are the ones of the style sheet of the connection: solid, dashed, dotted or double, two lines on both sides of the segment, so that a double line ends where a single one does. I draw a head at the end of the line, with the shape of the head substyle: a triangle by default, and the color of the line unless the head has its own. I show the label of the connection next to the middle of the line, above it or on its right when it is vertical, and not on it. The line is the route of the curve style of the style sheet: a straight line, an arc when other connections join the same nodes (Bezier, the default of Telescope), or segments with right angles. The arrows at the start and at the middle, and the interactions are not implemented yet. #customizeFromConnection: can be called again when an interaction changed the style of the connection.
+I am the Bloc element of a connection between two nodes of a Telescope visualization. I am a line from the border of the outline of the source node to the border of the outline of the target node, along the line which joins their centers (see TLBlocConnectionSegment). I am in the view, in the coordinates of which the segment is computed, and my element is the box of the segment. The connector updates me once the layouts have placed the nodes. The color, the width and the line style of the line are the ones of the style sheet of the connection: solid, dashed, dotted or double, two lines on both sides of the segment, so that a double line ends where a single one does. I draw a head at the end of the line, with the shape of the head substyle: a triangle by default, and the color of the line unless the head has its own. I show the label of the connection next to the middle of the line, above it or on its right when it is vertical, and not on it. The line is the route of the curve style of the style sheet: a straight line, an arc when other connections join the same nodes (Bezier, the default of Telescope), or segments with right angles. The arrows at the start and at the middle, and the interactions are not implemented yet. #customizeFromConnection: can be called again when an interaction changed the style of the connection. A connection from a node to itself is a loop above the node (see TLBlocConnectionLoop), whatever its curve style: the loops of the same node are turned around it so that they do not overlap.
 "
 Class {
 	#name : 'TLBlocNodeConnection',
@@ -275,13 +275,15 @@ TLBlocNodeConnection >> topLeftOf: somePoints [
 	^ (somePoints collect: #x) min @ (somePoints collect: #y) min
 ]
 
-{ #category : 'layout' }
+{ #category : 'updating' }
 TLBlocNodeConnection >> update [
-	"Joins the borders of the nodes, once the layouts have placed them. The connection is in the view, in the coordinates of which the route is computed. The route is the one of the curve style: a straight line, an arc when other connections join the same nodes, or segments with right angles"
+	"Joins the borders of the nodes, once the layouts have placed them. The connection is in the view, in the coordinates of which the route is computed. The route is the one of the curve style: a straight line, an arc when other connections join the same nodes, or segments with right angles. A connection from a node to itself is a loop, whatever its curve style"
 
 	| view |
 	view := self parent.
-	segment := curveStyle blocRouteFrom: (fromNode outlineRelativeTo: view) to: (toNode outlineRelativeTo: view) offset: parallelOffset.
+	segment := fromNode == toNode
+		           ifTrue: [ TLBlocConnectionLoop around: (fromNode outlineRelativeTo: view) offset: parallelOffset ]
+		           ifFalse: [ curveStyle blocRouteFrom: (fromNode outlineRelativeTo: view) to: (toNode outlineRelativeTo: view) offset: parallelOffset ].
 	self placeSegment.
 	self updateHead.
 	self centerLabel

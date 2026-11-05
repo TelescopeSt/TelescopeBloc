@@ -19,6 +19,21 @@ TLBlocConnectionCurveTest >> assertPoint: aPoint isCloseTo: anExpectedPoint [
 ]
 
 { #category : 'tests' }
+TLBlocConnectionCurveTest >> circle: aTopLeft [
+	"A circle of 40 pixels of diameter"
+
+	| center |
+	center := aTopLeft + (20 @ 20).
+	^ GEllipse center: center asGPoint vertex: (center + (20 @ 0)) asGPoint coVertex: (center - (0 @ 20)) asGPoint
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> loopAround: aTopLeft offset: anOffset [
+
+	^ TLBlocConnectionLoop around: (self square: aTopLeft) offset: anOffset
+]
+
+{ #category : 'tests' }
 TLBlocConnectionCurveTest >> square: aTopLeft [
 	"A square of 40 pixels"
 
@@ -107,6 +122,93 @@ TLBlocConnectionCurveTest >> testCurveStylesGiveTheirRoute [
 	self assert: (TLBezierCurve blocRouteFrom: source to: target offset: 30) class equals: TLBlocConnectionArc.
 	self assert: (TLDirectCurve blocRouteFrom: source to: target offset: 30) class equals: TLBlocConnectionSegment.
 	self assert: (TLSegmentsCurve blocRouteFrom: source to: target offset: 30) class equals: TLBlocConnectionTaxi
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testLoopArrivesOnTheNodeFromAbove [
+
+	| loop |
+	loop := self loopAround: 100 @ 100 offset: 0.
+	self assert: loop endDirection y > 0
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testLoopControlPointIsAwayFromTheNodeAbove [
+
+	| loop |
+	loop := self loopAround: 100 @ 100 offset: 0.
+	self assert: loop control y < 70.
+	self assertPoint: loop control isCloseTo: 120 @ loop control y
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testLoopGeometryIsABezierCurve [
+
+	self assert: ((self loopAround: 100 @ 100 offset: 0) geometryRelativeTo: 0 @ 0) class equals: BlBezierCurveGeometry
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testLoopLabelIsOutsideOfTheNodeAboveTheLoop [
+
+	| loop label |
+	loop := self loopAround: 100 @ 100 offset: 0.
+	label := loop labelCenterFor: 30 @ 10 gap: 3.
+	self assert: label y + 5 < loop middlePoint y.
+	self assert: label x closeTo: loop middlePoint x
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testLoopOfACircleStartsOnItsBorder [
+
+	| loop |
+	loop := TLBlocConnectionLoop around: (self circle: 100 @ 100) offset: 0.
+	self assert: (loop start distanceTo: 120 @ 120) closeTo: 20.
+	self assert: (loop end distanceTo: 120 @ 120) closeTo: 20
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testLoopOffsetTurnsTheLoopAroundTheNode [
+	"A second loop on the same node is somewhere else, so that they do not overlap"
+
+	| first second |
+	first := self loopAround: 100 @ 100 offset: 0.
+	second := self loopAround: 100 @ 100 offset: 20.
+	self deny: (first control closeTo: second control).
+	self assert: second control x > first control x
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testLoopOppositeOffsetsTurnTheLoopOnOppositeSides [
+
+	| left right |
+	left := self loopAround: 100 @ 100 offset: -20.
+	right := self loopAround: 100 @ 100 offset: 20.
+	self assert: left control x < 120.
+	self assert: right control x > 120
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testLoopPointsAreTheEndsAndTheControlPoint [
+
+	| loop |
+	loop := self loopAround: 100 @ 100 offset: 0.
+	self assert: loop points equals: {
+			loop start.
+			loop control.
+			loop end }
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testLoopStartsAndEndsOnTheBorderOfTheNodeAbove [
+	"The square goes from 100@100 to 140@140, its top border is at 100"
+
+	| loop |
+	loop := self loopAround: 100 @ 100 offset: 0.
+	self assert: loop start y closeTo: 100.
+	self assert: loop end y closeTo: 100.
+	self assert: loop start x < loop end x.
+	self assert: loop start x > 100.
+	self assert: loop end x < 140
 ]
 
 { #category : 'tests' }
@@ -214,4 +316,15 @@ TLBlocConnectionCurveTest >> testTranslatedArcMovesAllItsPoints [
 	arc := self arcFrom: 0 @ 0 to: 100 @ 0 offset: 40.
 	moved := arc translatedBy: 5 @ 7.
 	moved points with: arc points do: [ :point :original | self assertPoint: point isCloseTo: original + (5 @ 7) ]
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testTranslatedLoopMovesAllItsPoints [
+
+	| loop moved |
+	loop := self loopAround: 100 @ 100 offset: 0.
+	moved := loop translatedBy: 5 @ 7.
+	self assertPoint: moved control isCloseTo: loop control + (5 @ 7).
+	self assertPoint: moved start isCloseTo: loop start + (5 @ 7).
+	self assertPoint: moved end isCloseTo: loop end + (5 @ 7)
 ]

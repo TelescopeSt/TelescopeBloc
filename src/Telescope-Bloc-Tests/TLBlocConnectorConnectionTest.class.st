@@ -42,6 +42,19 @@ TLBlocConnectorConnectionTest >> openDemo: aDemo [
 	connector view space settleForDuration: 2 seconds
 ]
 
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> openSelfConnections: aCount [
+	"Opens a visualization of a node with the given number of connections from itself to itself and answers their elements"
+
+	| node connections |
+	node := visualization addNodeFromEntity: 1.
+	visualization addNodeFromEntity: 2.
+	connections := (1 to: aCount) collect: [ :index | node connectTo: node ].
+	connector open: visualization inWindowSized: 400 @ 300 titled: 'Self'.
+	connector view space settleForDuration: 1 seconds.
+	^ connections collect: [ :connection | connector elementFromTLDrawable: connection ]
+]
+
 { #category : 'setup' }
 TLBlocConnectorConnectionTest >> setUp [
 
@@ -442,14 +455,104 @@ TLBlocConnectorConnectionTest >> testSegmentsCurveIsAPolyline [
 ]
 
 { #category : 'tests' }
-TLBlocConnectorConnectionTest >> testSimpleConnectionsDemoGeneratesItsNineConnections [
+TLBlocConnectorConnectionTest >> testSelfConnectionHasAHeadAtTheEndOfTheLoop [
+
+	| element |
+	element := (self openSelfConnections: 1) first.
+	self assert: element head isNotNil
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testSelfConnectionIsALoopOutsideOfItsNode [
+
+	| element node |
+	element := (self openSelfConnections: 1) first.
+	node := element fromNode.
+	self assert: element route class equals: TLBlocConnectionLoop.
+	self assert: element extent > (1 @ 1).
+	self assert: element boundsInSpace top < node boundsInSpace top
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testSelfConnectionIsInsideTheWindowAfterTheFit [
+
+	| element window |
+	element := (self openSelfConnections: 1) first.
+	window := 0 @ 0 extent: connector view space extent.
+	self assert: (window containsRect: element boundsInSpace asRectangle)
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testSelfConnectionLabelIsAwayFromTheNode [
+
+	| node connection element label |
+	node := visualization addNodeFromEntity: 1.
+	connection := node connectTo: node.
+	connection styleSheet
+		connectionLabel: [ 'link' ];
+		connectionLabelSize: 12.
+	connector open: visualization inWindowSized: 400 @ 300 titled: 'Self'.
+	connector view space settleForDuration: 1 seconds.
+	element := connector elementFromTLDrawable: connection.
+	label := element label.
+	self assert: label isNotNil.
+	self assert: element measuredBounds position y + label measuredBounds position y + label extent y <= element fromNode measuredBounds position y
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testSelfConnectionOfEveryCurveStyleIsALoop [
+
+	| elements |
+	elements := #( 1 2 3 )
+		            with: {
+				            TLBezierCurve.
+				            TLDirectCurve.
+				            TLSegmentsCurve }
+		            collect: [ :entity :curve |
+				            | node connection |
+				            node := visualization addNodeFromEntity: entity.
+				            connection := node connectTo: node.
+				            connection styleSheet curveStyle: curve.
+				            connection ].
+	connector open: visualization inWindowSized: 600 @ 300 titled: 'Self'.
+	connector view space settleForDuration: 1 seconds.
+	elements do: [ :connection | self assert: (connector elementFromTLDrawable: connection) route class equals: TLBlocConnectionLoop ]
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testSelfConnectionStartsAndEndsOnTheBorderOfItsNode [
+
+	| element nodeBounds |
+	element := (self openSelfConnections: 1) first.
+	nodeBounds := element fromNode boundsInSpace asRectangle expandBy: 2.
+	self assert: (nodeBounds containsPoint: element route start + element parent positionInSpace).
+	self assert: (nodeBounds containsPoint: element route end + element parent positionInSpace)
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testSelfConnectionsOfTheSameNodeDoNotOverlap [
+
+	| elements |
+	elements := self openSelfConnections: 3.
+	self assert: (elements collect: [ :element | element route control ] as: Set) size equals: 3
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testSimpleConnectionsDemoGeneratesItsTenConnections [
 
 	| connections |
 	visualization := TLDemos exampleSimpleConnections.
 	visualization generator: connector.
 	visualization generateWith: connector.
 	connections := connector view children select: [ :each | each class == TLBlocNodeConnection ].
-	self assert: connections size equals: 9
+	self assert: connections size equals: 10
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testSimpleConnectionsDemoHasALoopOnItsFirstNode [
+
+	self openDemo: TLDemos exampleSimpleConnections.
+	self assert: (connector connections count: [ :connection | connection route class == TLBlocConnectionLoop ]) equals: 1
 ]
 
 { #category : 'tests - curves' }
@@ -483,12 +586,12 @@ TLBlocConnectorConnectionTest >> testSimpleConnectionsDemoShowsTheThreeCurveStyl
 	self assert: (geometries includes: BlLineGeometry)
 ]
 
-{ #category : 'tests - curves' }
+{ #category : 'tests' }
 TLBlocConnectorConnectionTest >> testSimpleConnectionsDemoSpreadsTheTwoConnectionsBetweenTheSameNodes [
 
 	| arcs |
 	self openDemo: TLDemos exampleSimpleConnections.
-	arcs := connector connections select: [ :connection | connection geometry class = BlBezierCurveGeometry ].
+	arcs := connector connections select: [ :connection | connection route class == TLBlocConnectionArc ].
 	self assert: arcs size equals: 2.
 	self assert: (arcs first route middlePoint - arcs last route middlePoint) r > 10
 ]

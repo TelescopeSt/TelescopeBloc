@@ -178,7 +178,7 @@ TLBlocConnectorToolbarTest >> testTooltipIsNeverShownWhenTheMouseLeavesBeforeASe
 TLBlocConnectorToolbarTest >> testTooltipIsNotShownBeforeTheMouseStayedOverTheButtonForASecond [
 
 	(self toolbar buttonLabeled: 'Auto') dispatchEvent: BlMouseEnterEvent new.
-	connector view space settleForDuration: 500 milliSeconds.
+	connector view space settleForDuration: 200 milliSeconds.
 	self assert: self popUpShown isNil
 ]
 
