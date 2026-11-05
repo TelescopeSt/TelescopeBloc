@@ -94,6 +94,19 @@ TLBlocConnectorInteractionTest >> openWithHighlightOnMouseOver: aCustomizationBl
 ]
 
 { #category : 'tests' }
+TLBlocConnectorInteractionTest >> openWithRightClickCounter [
+	"Opens a visualization of a node whose right click increments a counter, and answers the counter in an array"
+
+	| counter |
+	counter := Array with: 0.
+	visualization addNodesFromEntities: #( 1 ).
+	visualization addInteraction: (TLCustomAction block: [ :node | counter at: 1 put: (counter at: 1) + 1 ]) onRightClick.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Interactions'.
+	connector view space settleForDuration: 1 seconds.
+	^ counter
+]
+
+{ #category : 'tests' }
 TLBlocConnectorInteractionTest >> openWithTwoConnectionsAndTheirActions [
 	"Opens a visualization where the node 1 is connected to the node 2, and to the node 3 with a hidden connection. A click on the node 1 hides the first connection and shows the second one, a second click does the opposite. Answers the node 1"
 
@@ -108,6 +121,17 @@ TLBlocConnectorInteractionTest >> openWithTwoConnectionsAndTheirActions [
 	connector open: visualization inWindowSized: 300 @ 300 titled: 'Interactions'.
 	connector view space settleForDuration: 1 seconds.
 	^ nodes first
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> pressOn: anElement button: aButton [
+
+	anElement fireEvent: (BlMouseDownEvent new
+			 position: 5 @ 5;
+			 screenPosition: 905 @ 505;
+			 button: aButton;
+			 yourself).
+	connector view space settleForDuration: 300 milliSeconds
 ]
 
 { #category : 'tests' }
@@ -165,6 +189,26 @@ TLBlocConnectorInteractionTest >> testHiddenConnectionIsNotDrawnAtFirst [
 
 	self openWithTwoConnectionsAndTheirActions.
 	self assert: self connectionTargetEntities equals: #( 2 )
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testInteractionsAreNotAddedAgainByUpdates [
+	"An update which changes the style, as the highlight of the mouse over does, does not change the interactions: the click is executed once"
+
+	| count node |
+	count := Array with: 0.
+	node := visualization addNodeFromEntity: 1.
+	visualization addInteractions: {
+			(TLCustomAction block: [ :each | count at: 1 put: (count at: 1) + 1 ]) onClick.
+			(TLStyleCustomizationAction custom: [ :style | style borderColor: Color red ]) onMouseOver }.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Interactions'.
+	connector view space settleForDuration: 1 seconds.
+	self mouseEnter: node.
+	self mouseLeave: node.
+	self mouseEnter: node.
+	self mouseLeave: node.
+	(connector elementFromTLDrawable: node) dispatchEvent: BlClickEvent new.
+	self assert: count first equals: 1
 ]
 
 { #category : 'tests' }
@@ -235,6 +279,67 @@ TLBlocConnectorInteractionTest >> testMouseOverANodeChangesItsBorderUntilTheMous
 	self assert: (connector elementFromTLDrawable: node) border paint color equals: Color red.
 	self mouseLeave: node.
 	self assert: (connector elementFromTLDrawable: node) border paint color equals: before
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testNodeMovedToAnotherGroupGetsTheInteractionsOfThatGroup [
+
+	| counters moved element |
+	counters := Array with: 0 with: 0.
+	(visualization > #group1)
+		addNodesFromEntities: #( 1 2 );
+		addInteraction: (TLCustomAction block: [ :node | counters at: 1 put: (counters at: 1) + 1 ]) onClick.
+	(visualization > #group2)
+		addNodesFromEntities: #( 3 );
+		addInteraction: (TLCustomAction block: [ :node | counters at: 2 put: (counters at: 2) + 1 ]) onClick.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Interactions'.
+	connector view space settleForDuration: 1 seconds.
+	moved := visualization allNodes detect: [ :node | node entity = 1 ].
+	moved moveToGroup: visualization > #group2.
+	visualization update.
+	connector view space settleForDuration: 1 seconds.
+	element := connector elementFromTLDrawable: moved.
+	element dispatchEvent: BlClickEvent new.
+	self assert: counters asArray equals: #( 0 1 )
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testPrimaryButtonDoesNotExecuteTheRightClickAction [
+
+	| counter element |
+	counter := self openWithRightClickCounter.
+	element := connector elementFromTLDrawable: visualization allNodes first.
+	self pressOn: element button: BlMouseButton primary.
+	self assert: counter first equals: 0
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testRightClickActionHasPriorityOverTheMenuOfTheNode [
+	"The menu only reminds that a right click does something: opening it on a node the action may have removed would be wrong"
+
+	| counter action element |
+	counter := Array with: 0.
+	visualization addNodesFromEntities: #( 1 ).
+	action := TLCustomAction block: [ :node | counter at: 1 put: (counter at: 1) + 1 ].
+	visualization addInteractions: {
+			action onRightClick.
+			(action withMenu: 'Do it (Right Click)') }.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Interactions'.
+	connector view space settleForDuration: 1 seconds.
+	element := connector elementFromTLDrawable: visualization allNodes first.
+	self pressOn: element button: BlMouseButton secondary.
+	self assert: counter first equals: 1.
+	self assert: (connector view space root children noneSatisfy: [ :child | child class = TLBlocMenuPopup ])
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testRightClickExecutesTheActionOfTheNode [
+
+	| counter element |
+	counter := self openWithRightClickCounter.
+	element := connector elementFromTLDrawable: visualization allNodes first.
+	self pressOn: element button: BlMouseButton secondary.
+	self assert: counter first equals: 1
 ]
 
 { #category : 'tests' }

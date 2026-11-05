@@ -29,6 +29,13 @@ TLBlocConnectorFitTest >> contentRectangleInWindow [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorFitTest >> labelBoundsInWindow [
+	"The rectangles of the labels of the nodes in the window"
+
+	^ visualization allNodes collect: [ :node | (connector elementFromTLDrawable: node) children first boundsInSpace asRectangle ]
+]
+
+{ #category : 'tests' }
 TLBlocConnectorFitTest >> nodeBoundsInWindow [
 	"The rectangles of the node elements in the window, whatever the zoom and the panning"
 
@@ -148,6 +155,42 @@ TLBlocConnectorFitTest >> testFitWithoutLegendUsesTheWholeWindow [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorFitTest >> testLabelsAboveTheNodesAreInTheWindowAfterTheFit [
+	"The labels are placed once they are measured, after the first layout"
+
+	| window |
+	visualization styleSheet nodeLabel: #asString position: #top.
+	visualization layout: (TLLinearLayout topToBottom
+			 gap: 20;
+			 yourself).
+	visualization addNodesFromEntities: (1 to: 15).
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Fit'.
+	connector view space settleForDuration: 2 seconds.
+	window := (0 @ 0 extent: connector view space extent) expandBy: 1.
+	self labelBoundsInWindow do: [ :rectangle | self assert: (window containsRect: rectangle) ].
+	self assertEveryNodeIsInTheWindow
+]
+
+{ #category : 'tests' }
+TLBlocConnectorFitTest >> testLabelsAddedByAnUpdateAreInTheWindowAfterTheFit [
+
+	| window |
+	visualization styleSheet nodeLabel: #asString position: #top.
+	visualization layout: (TLLinearLayout topToBottom
+			 gap: 20;
+			 yourself).
+	visualization addNodesFromEntities: (1 to: 3).
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Fit'.
+	connector view space settleForDuration: 1 seconds.
+	visualization addNodesFromEntities: (4 to: 15).
+	visualization update.
+	connector view space settleForDuration: 2 seconds.
+	window := (0 @ 0 extent: connector view space extent) expandBy: 1.
+	self labelBoundsInWindow do: [ :rectangle | self assert: (window containsRect: rectangle) ].
+	self assertEveryNodeIsInTheWindow
+]
+
+{ #category : 'tests' }
 TLBlocConnectorFitTest >> testLargeVisualizationFitsTheWindowWhenItOpens [
 
 	| window |
@@ -155,6 +198,29 @@ TLBlocConnectorFitTest >> testLargeVisualizationFitsTheWindowWhenItOpens [
 	window := (0 @ 0 extent: connector view space extent) expandBy: 1.
 	self assert: connector view zoom < 1.
 	self nodeBoundsInWindow do: [ :rectangle | self assert: (window containsRect: rectangle) ]
+]
+
+{ #category : 'tests' }
+TLBlocConnectorFitTest >> testPathBuilderIsFittedAfterItsOriginIsClicked [
+	"The nodes it adds are in groups, and their labels are above them: the content is only known once the labels are placed"
+
+	| builder window |
+	builder := TLPathBuilder new
+		           origin: 42;
+		           incomingBlock: [ :aNumber | aNumber to: aNumber + 10 ];
+		           outgoingBlock: [ :aNumber | aNumber - 11 to: aNumber - 1 ];
+		           yourself.
+	builder generator: connector.
+	connector open: builder inWindowSized: 900 @ 600 titled: 'Path builder'.
+	connector view space settleForDuration: 1 seconds.
+	(connector elementFromTLDrawable: builder allNodes first) dispatchEvent: BlClickEvent new.
+	connector view space settleForDuration: 2 seconds.
+	window := (0 @ 0 extent: connector view space extent) expandBy: 1.
+	builder allNodes do: [ :node |
+			| element |
+			element := connector elementFromTLDrawable: node.
+			self assert: (window containsRect: element boundsInSpace asRectangle).
+			self assert: (window containsRect: element children first boundsInSpace asRectangle) ]
 ]
 
 { #category : 'tests' }

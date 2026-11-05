@@ -1,5 +1,5 @@
 "
-I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, slowly at first and at the end (see TLBlocSmoothEasing), and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The visualization is fitted into its window again when a layout which is applied again moves or adds a node. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet. The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back, with the animation. The menus of Telescope open at the mouse when a node is clicked with the secondary button, as Bloc elements (see TLBlocMenu). When an interaction changes the style of a node or of a connection, for example to highlight it, its element is made again from the style sheet. Closing a visualization closes its window. The pop up action, which Telescope leaves to its connectors, shows its text in a TLBlocPopUpElement near the node, while the mouse is over it or after a click. The legend of a visualization is made of the entries of Telescope, static or dynamic, as TLBlocLegendElement.
+I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, slowly at first and at the end (see TLBlocSmoothEasing), and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The visualization is fitted into its window again when a layout which is applied again moves or adds a node. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet. The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back, with the animation. The menus of Telescope open at the mouse when a node is clicked with the secondary button, as Bloc elements (see TLBlocMenu). When an interaction changes the style of a node or of a connection, for example to highlight it, its element is made again from the style sheet. Closing a visualization closes its window. The pop up action, which Telescope leaves to its connectors, shows its text in a TLBlocPopUpElement near the node, while the mouse is over it or after a click. The legend of a visualization is made of the entries of Telescope, static or dynamic, as TLBlocLegendElement. The right click interaction executes its action when a node is pressed with the secondary button, and the menu of that node then does not open. The handlers of the interactions of a drawable are remembered: when its interactions change, for example because the node moved to another group, they are made again.
 "
 Class {
 	#name : 'TLBlocConnector',
@@ -13,7 +13,9 @@ Class {
 		'animationOrigin',
 		'pendingStarts',
 		'runningMoves',
-		'layoutReapplied'
+		'layoutReapplied',
+		'interactionHandlers',
+		'generatedInteractions'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -54,6 +56,16 @@ TLBlocConnector >> addElementLegendItemInView: legendItem [
 { #category : 'view' }
 TLBlocConnector >> addElementNodeInView: element [
 	self view addChild: element
+]
+
+{ #category : 'generation - interaction' }
+TLBlocConnector >> addHandlerOn: anEventClass to: anElement for: aTLDrawable do: aBlock [
+	"The handlers of the interactions of a drawable are remembered, to remove them when its interactions change"
+
+	| handler |
+	handler := anElement addEventHandlerOn: anEventClass do: aBlock.
+	(interactionHandlers at: aTLDrawable ifAbsentPut: [ OrderedCollection new ]) add: anElement -> handler.
+	^ handler
 ]
 
 { #category : 'accessing' }
@@ -179,12 +191,18 @@ TLBlocConnector >> createLegendFrom: legendItems [
 
 { #category : 'generation - interaction' }
 TLBlocConnector >> createMenuFor: aTLDrawable [
-	"The menu of a drawable opens at the mouse when its element is clicked with the secondary button. The position of the event is the one in the window, where the menu is placed. Telescope fills the menu with the entries of the menu interactions of the drawable"
+	"The menu of a drawable opens at the mouse when its element is clicked with the secondary button. The position of the event is the one in the window, where the menu is placed. Telescope fills the menu with the entries of the menu interactions of the drawable. A drawable which has a right click interaction does that instead: its menu only reminds that the right click does something"
 
 	| menu element |
 	menu := TLBlocMenu new.
 	element := self elementFromTLDrawable: aTLDrawable.
-	element addEventHandlerOn: BlMouseDownEvent do: [ :event | (event button = BlMouseButton secondary and: [ menu isEmpty not ]) ifTrue: [ menu openIn: element space at: event position ] ].
+	self
+		addHandlerOn: BlMouseDownEvent
+		to: element
+		for: aTLDrawable
+		do: [ :event |
+				(event button = BlMouseButton secondary and: [ menu isEmpty not and: [ (aTLDrawable allInteractions anySatisfy: [ :interaction | interaction kind = #rightClick ]) not ] ]) ifTrue: [
+					menu openIn: element space at: event position ] ].
 	^ menu
 ]
 
@@ -232,9 +250,15 @@ TLBlocConnector >> generateClickInteraction: aTLClickInteraction onDrawable: aTL
 	| element |
 	element := self elementFromTLDrawable: aTargetDrawable.
 	aTLClickInteraction action isPopUp ifTrue: [
-		^ element addEventHandlerOn: BlClickEvent do: [ :event | element wasDragged ifFalse: [ self togglePopUpOf: aTLClickInteraction action for: aTargetDrawable ] ] ].
-	element
-		addEventHandlerOn: BlClickEvent
+			^ self
+				  addHandlerOn: BlClickEvent
+				  to: element
+				  for: aTargetDrawable
+				  do: [ :event | element wasDragged ifFalse: [ self togglePopUpOf: aTLClickInteraction action for: aTargetDrawable ] ] ].
+	self
+		addHandlerOn: BlClickEvent
+		to: element
+		for: aTargetDrawable
 		do: [ :event | element wasDragged ifFalse: [ self executeAnimatingFrom: element do: [ self executeInteraction: aTLClickInteraction forDrawable: aTLDrawable ] ] ]
 ]
 
@@ -254,18 +278,40 @@ TLBlocConnector >> generateExternalTriggerInteraction: aTLMouseOverInteraction o
 ]
 
 { #category : 'generation - interaction' }
+TLBlocConnector >> generateInteractionsOf: aDrawable targetingDrawable: aTargetDrawable [
+	"The interactions of the drawable are remembered, to know later whether they changed: a node which moved to another group has the interactions of that group"
+
+	super generateInteractionsOf: aDrawable targetingDrawable: aTargetDrawable.
+	generatedInteractions at: aDrawable put: aDrawable allInteractions asArray
+]
+
+{ #category : 'generation - interaction' }
 TLBlocConnector >> generateMouseOverInteraction: aTLMouseOverInteraction onDrawable: aTLDrawable targetingDrawable: aTargetDrawable [
 	"The action of the interaction is executed when the mouse enters the element of the target, and reversed when it leaves it. The action of a pop up is not executed: the text is shown near the element while the mouse is over it"
 
 	| element |
 	element := self elementFromTLDrawable: aTargetDrawable.
 	aTLMouseOverInteraction action isPopUp ifTrue: [
-			^ element
-				  addEventHandlerOn: BlMouseEnterEvent do: [ :event | self showPopUpOf: aTLMouseOverInteraction action for: aTargetDrawable ];
-				  addEventHandlerOn: BlMouseLeaveEvent do: [ :event | self closePopUpOf: element ] ].
-	element
-		addEventHandlerOn: BlMouseEnterEvent do: [ :event | self executeAnimatingFrom: element do: [ self executeRegularInteraction: aTLMouseOverInteraction forDrawable: aTLDrawable ] ];
-		addEventHandlerOn: BlMouseLeaveEvent do: [ :event | self executeReverseInteraction: aTLMouseOverInteraction forDrawable: aTLDrawable ]
+			self
+				addHandlerOn: BlMouseEnterEvent
+				to: element
+				for: aTargetDrawable
+				do: [ :event | self showPopUpOf: aTLMouseOverInteraction action for: aTargetDrawable ].
+			^ self
+				  addHandlerOn: BlMouseLeaveEvent
+				  to: element
+				  for: aTargetDrawable
+				  do: [ :event | self closePopUpOf: element ] ].
+	self
+		addHandlerOn: BlMouseEnterEvent
+		to: element
+		for: aTargetDrawable
+		do: [ :event | self executeAnimatingFrom: element do: [ self executeRegularInteraction: aTLMouseOverInteraction forDrawable: aTLDrawable ] ].
+	self
+		addHandlerOn: BlMouseLeaveEvent
+		to: element
+		for: aTargetDrawable
+		do: [ :event | self executeReverseInteraction: aTLMouseOverInteraction forDrawable: aTLDrawable ]
 ]
 
 { #category : 'generation - interaction' }
@@ -316,8 +362,16 @@ TLBlocConnector >> generatePopupInteraction: aTLPopupInteraction onDrawable: aTL
 ]
 
 { #category : 'generation - interaction' }
-TLBlocConnector >> generateRightClickInteraction: aRightClickInteraction onDrawable: aTLDrawable targetingDrawable: anObject [
-	self shouldBeImplemented
+TLBlocConnector >> generateRightClickInteraction: aTLRightClickInteraction onDrawable: aTLDrawable targetingDrawable: aTargetDrawable [
+	"The action of the interaction is executed when the element of the target is pressed with the secondary button"
+
+	| element |
+	element := self elementFromTLDrawable: aTargetDrawable.
+	self
+		addHandlerOn: BlMouseDownEvent
+		to: element
+		for: aTargetDrawable
+		do: [ :event | event button = BlMouseButton secondary ifTrue: [ self executeAnimatingFrom: element do: [ self executeInteraction: aTLRightClickInteraction forDrawable: aTLDrawable ] ] ]
 ]
 
 { #category : 'generation-legendEntry' }
@@ -384,6 +438,8 @@ TLBlocConnector >> initialize [
 	connections := OrderedCollection new.
 	placedElements := IdentitySet new.
 	pendingStarts := IdentityDictionary new.
+	interactionHandlers := IdentityDictionary new.
+	generatedInteractions := IdentityDictionary new.
 	layoutReapplied := false.
 	animationDuration := 500 milliSeconds
 ]
@@ -471,6 +527,13 @@ TLBlocConnector >> removeElementLegendItemFromView: element [
 { #category : 'view' }
 TLBlocConnector >> removeElementnteractionFromView: element [
 	self shouldBeImplemented
+]
+
+{ #category : 'generation - interaction' }
+TLBlocConnector >> removeInteractionHandlersOf: aTLDrawable [
+
+	(interactionHandlers removeKey: aTLDrawable ifAbsent: [ #(  ) ]) do: [ :association | association key removeEventHandler: association value ].
+	self menuInteractionByDrawable removeKey: aTLDrawable ifAbsent: [ ]
 ]
 
 { #category : 'removing - legend' }
@@ -585,9 +648,13 @@ TLBlocConnector >> updateElementNodeOf: aNode [
 
 { #category : 'updating - interaction' }
 TLBlocConnector >> updateInteractionsOf: aDrawable [
-	"The handlers of the interactions are added when the element is generated"
+	"The interactions of a drawable are made again when they are not the ones the handlers were made for, for example when a node moved to another group. An update which does not change them, such as a highlight, leaves the handlers as they are"
 
-	self flag: #TODO
+	| generated |
+	generated := generatedInteractions at: aDrawable ifAbsent: [ ^ self ].
+	generated = aDrawable allInteractions asArray ifTrue: [ ^ self ].
+	self removeInteractionHandlersOf: aDrawable.
+	self generateInteractionsOf: aDrawable targetingDrawable: aDrawable
 ]
 
 { #category : 'updating - legend' }
