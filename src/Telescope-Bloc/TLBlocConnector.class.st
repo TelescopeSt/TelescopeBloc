@@ -763,10 +763,12 @@ TLBlocConnector >> update: shape withRectangleShape: aTLRectangleShape [
 
 { #category : 'updating' }
 TLBlocConnector >> updateConnections [
-	"The connections join the borders of their nodes, which the layouts have just placed. Those which join the same two nodes are spread first, so that a Bezier curve is an arc for them"
+	"The connections join the borders of their nodes, which the layouts have just placed. Those which join the same two nodes are spread first, so that a Bezier curve is an arc for them. The connections with segments go around the nodes in their way"
 
+	| nodeElements |
 	self spreadParallelConnections.
-	connections do: [ :connection | connection update ]
+	nodeElements := view allChildrenBreadthFirstSelect: [ :element | element class == TLBlocNodeElement ].
+	connections do: [ :connection | connection updateAvoiding: (connection obstaclesAmong: nodeElements) ]
 ]
 
 { #category : 'updating - shape' }

@@ -2,7 +2,22 @@ Extension { #name : 'TLSegmentsCurve' }
 
 { #category : '*Telescope-Bloc' }
 TLSegmentsCurve class >> blocRouteFrom: aSourceOutline to: aTargetOutline offset: anOffset [
-	"Segments with right angles, whatever the other connections between the same nodes"
+	"Segments with right angles, spread when other connections join the same nodes"
 
-	^ TLBlocConnectionTaxi from: aSourceOutline to: aTargetOutline
+	^ self
+		  blocRouteFrom: aSourceOutline
+		  to: aTargetOutline
+		  offset: anOffset
+		  obstacles: #(  )
+]
+
+{ #category : '*Telescope-Bloc' }
+TLSegmentsCurve class >> blocRouteFrom: aSourceOutline to: aTargetOutline offset: anOffset obstacles: someRectangles [
+	"Segments with right angles, spread when other connections join the same nodes, and around the other nodes when they are in the way"
+
+	^ TLBlocConnectionTaxi
+		  from: aSourceOutline
+		  to: aTargetOutline
+		  offset: anOffset
+		  obstacles: someRectangles
 ]

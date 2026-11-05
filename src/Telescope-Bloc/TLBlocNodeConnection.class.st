@@ -206,6 +206,26 @@ TLBlocNodeConnection >> lines [
 	^ lines
 ]
 
+{ #category : 'updating' }
+TLBlocNodeConnection >> obstaclesAmong: someNodeElements [
+	"The rectangles, in the coordinates of the view, of the nodes which can be in the way of the connection: not the nodes it joins, not their children, and not the composites which contain them"
+
+	| view sourceRectangle targetRectangle |
+	view := self parent.
+	sourceRectangle := self rectangleOfNode: fromNode in: view.
+	targetRectangle := self rectangleOfNode: toNode in: view.
+	^ (someNodeElements reject: [ :node | node == fromNode or: [ node == toNode ] ])
+		  collect: [ :node | self rectangleOfNode: node in: view ]
+		  thenSelect: [ :rectangle |
+				  (rectangle containsPoint: sourceRectangle center) not and: [
+					  (rectangle containsPoint: targetRectangle center) not and: [ (sourceRectangle containsRect: rectangle) not and: [ (targetRectangle containsRect: rectangle) not ] ] ] ]
+]
+
+{ #category : 'accessing' }
+TLBlocNodeConnection >> parallelOffset [
+	^ parallelOffset
+]
+
 { #category : 'accessing' }
 TLBlocNodeConnection >> parallelOffset: aNumber [
 	"The distance which spreads the connections between the same two nodes, to the left of the direction of this connection when it is positive. A Bezier curve is an arc when it is not 0"
@@ -235,6 +255,18 @@ TLBlocNodeConnection >> placeSegment [
 	self position: topLeft.
 	self extent: ((self bottomRightOf: segment points) - topLeft max: 1 @ 1).
 	self placeLinesRelativeTo: topLeft
+]
+
+{ #category : 'updating' }
+TLBlocNodeConnection >> rectangleOfNode: aNodeElement in: aView [
+	"The rectangle of the dimension of the node, in the coordinates of the view, and of its label, which a line should not cross either"
+
+	| topLeft rectangle |
+	topLeft := aNodeElement topLeftRelativeTo: aView.
+	rectangle := topLeft extent: aNodeElement dimension.
+	^ aNodeElement labelElement
+		  ifNil: [ rectangle ]
+		  ifNotNil: [ :nodeLabel | rectangle merge: (topLeft + nodeLabel measuredBounds position extent: nodeLabel extent) ]
 ]
 
 { #category : 'layout' }
@@ -277,13 +309,25 @@ TLBlocNodeConnection >> topLeftOf: somePoints [
 
 { #category : 'updating' }
 TLBlocNodeConnection >> update [
-	"Joins the borders of the nodes, once the layouts have placed them. The connection is in the view, in the coordinates of which the route is computed. The route is the one of the curve style: a straight line, an arc when other connections join the same nodes, or segments with right angles. A connection from a node to itself is a loop, whatever its curve style"
+	"Joins the borders of the nodes, once the layouts have placed them, with no other node in the way"
+
+	self updateAvoiding: #(  )
+]
+
+{ #category : 'updating' }
+TLBlocNodeConnection >> updateAvoiding: someRectangles [
+	"Joins the borders of the nodes, once the layouts have placed them. The connection is in the view, in the coordinates of which the route is computed. The route is the one of the curve style: a straight line, an arc when other connections join the same nodes, or segments with right angles which go around the rectangles of the other nodes, in the coordinates of the view. A connection from a node to itself is a loop, whatever its curve style"
 
 	| view |
 	view := self parent.
 	segment := fromNode == toNode
 		           ifTrue: [ TLBlocConnectionLoop around: (fromNode outlineRelativeTo: view) offset: parallelOffset ]
-		           ifFalse: [ curveStyle blocRouteFrom: (fromNode outlineRelativeTo: view) to: (toNode outlineRelativeTo: view) offset: parallelOffset ].
+		           ifFalse: [
+				           curveStyle
+					           blocRouteFrom: (fromNode outlineRelativeTo: view)
+					           to: (toNode outlineRelativeTo: view)
+					           offset: parallelOffset
+					           obstacles: someRectangles ].
 	self placeSegment.
 	self updateHead.
 	self centerLabel

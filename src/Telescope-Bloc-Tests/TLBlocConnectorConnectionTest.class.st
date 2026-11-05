@@ -9,6 +9,14 @@ Class {
 	#tag : 'Connection'
 }
 
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> assertRoute: aRoute avoidsTheNodeOfEntity: anEntity [
+
+	| rectangle |
+	rectangle := (self elementOfEntity: anEntity) encompassingRectangle.
+	aRoute points overlappingPairsDo: [ :from :to | self deny: (((from min: to) - 0.5 corner: (from max: to) + 0.5) intersects: rectangle) ]
+]
+
 { #category : 'tests - line style' }
 TLBlocConnectorConnectionTest >> elementOfConnectionStyledWith: aLineStyle [
 
@@ -18,6 +26,12 @@ TLBlocConnectorConnectionTest >> elementOfConnectionStyledWith: aLineStyle [
 	connector open: visualization inWindowSized: 300 @ 300 titled: 'Line style'.
 	connector view space settleForDuration: 1 seconds.
 	^ connector elementFromTLDrawable: connection
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> elementOfEntity: anEntity [
+
+	^ connector elementFromTLDrawable: (visualization allNodesRecursively detect: [ :node | node entity = anEntity ])
 ]
 
 { #category : 'tests - curves' }
@@ -55,6 +69,22 @@ TLBlocConnectorConnectionTest >> openSelfConnections: aCount [
 	^ connections collect: [ :connection | connector elementFromTLDrawable: connection ]
 ]
 
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> openThreeNodesInARowWithSegmentsFromFirstToLast: aCurveStyle [
+	"The second node is between the other two. Answers the connection from the first to the last"
+
+	| nodes connection |
+	nodes := (1 to: 3) collect: [ :entity | visualization addNodeFromEntity: entity ].
+	connection := nodes first connectTo: nodes last.
+	connection styleSheet curveStyle: aCurveStyle.
+	visualization layout: ((TLLinearLayout perLine: 3)
+			 gap: 80;
+			 yourself).
+	connector open: visualization inWindowSized: 600 @ 300 titled: 'Obstacle'.
+	connector view space settleForDuration: 1 seconds.
+	^ connector elementFromTLDrawable: connection
+]
+
 { #category : 'setup' }
 TLBlocConnectorConnectionTest >> setUp [
 
@@ -62,6 +92,15 @@ TLBlocConnectorConnectionTest >> setUp [
 	visualization styleSheet
 		width: 40;
 		height: 40
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testBezierConnectionStaysStraightThroughTheNodeBetweenItsNodes [
+	"Only the segments curve goes around the nodes"
+
+	| element |
+	element := self openThreeNodesInARowWithSegmentsFromFirstToLast: TLBezierCurve.
+	self assert: element route class equals: TLBlocConnectionSegment
 ]
 
 { #category : 'tests' }
@@ -408,6 +447,24 @@ TLBlocConnectorConnectionTest >> testNodesKnowTheirAdjacentNodesForTheLayouts [
 	self assertEmpty: (connector elementFromTLDrawable: target) outgoingAdjacentNodes
 ]
 
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testParallelSegmentsConnectionsAreNotOnTheSameLines [
+
+	| first second connections |
+	first := visualization addNodeFromEntity: 1.
+	second := visualization addNodeFromEntity: 2.
+	connections := {
+		               (first connectTo: second).
+		               (second connectTo: first) }.
+	connections do: [ :connection | connection styleSheet curveStyle: TLSegmentsCurve ].
+	visualization layout: ((TLLinearLayout perLine: 2)
+			 gap: 120;
+			 yourself).
+	connector open: visualization inWindowSized: 600 @ 300 titled: 'Parallel'.
+	connector view space settleForDuration: 1 seconds.
+	self deny: (connector elementFromTLDrawable: connections first) route start y closeTo: (connector elementFromTLDrawable: connections last) route start y
+]
+
 { #category : 'tests - adjacency' }
 TLBlocConnectorConnectionTest >> testRemovedConnectionIsForgottenByItsNodes [
 
@@ -422,6 +479,33 @@ TLBlocConnectorConnectionTest >> testRemovedConnectionIsForgottenByItsNodes [
 	connector view space settleForDuration: 1 seconds.
 	self assertEmpty: (connector elementFromTLDrawable: source) outgoingAdjacentNodes.
 	self assertEmpty: (connector elementFromTLDrawable: target) incomingAdjacentNodes
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testSegmentsConnectionGoesAroundTheNodeBetweenItsNodes [
+
+	| element |
+	element := self openThreeNodesInARowWithSegmentsFromFirstToLast: TLSegmentsCurve.
+	self assertRoute: element route avoidsTheNodeOfEntity: 2
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testSegmentsConnectionIsNotMovedByTheNodesItJoins [
+	"The nodes of the connection are not obstacles, nor the composite which contains them"
+
+	| first second connection element |
+	first := visualization addNodeFromEntity: 1.
+	second := visualization addNodeFromEntity: 2.
+	connection := first connectTo: second.
+	connection styleSheet curveStyle: TLSegmentsCurve.
+	visualization layout: ((TLLinearLayout perLine: 2)
+			 gap: 80;
+			 yourself).
+	connector open: visualization inWindowSized: 600 @ 300 titled: 'Obstacle'.
+	connector view space settleForDuration: 1 seconds.
+	element := connector elementFromTLDrawable: connection.
+	self assert: element route points size equals: 4.
+	self assert: element route points second y equals: element route points first y
 ]
 
 { #category : 'tests - curves' }

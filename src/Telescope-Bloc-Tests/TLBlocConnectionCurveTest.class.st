@@ -19,12 +19,48 @@ TLBlocConnectionCurveTest >> assertPoint: aPoint isCloseTo: anExpectedPoint [
 ]
 
 { #category : 'tests' }
+TLBlocConnectionCurveTest >> assertTaxi: aTaxi avoids: aRectangle [
+	"No segment of the taxi enters the rectangle"
+
+	aTaxi points overlappingPairsDo: [ :from :to | self deny: (((from min: to) - 0.5 corner: (from max: to) + 0.5) intersects: aRectangle) ]
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> assertTaxiHasOnlyRightAngles: aTaxi [
+
+	aTaxi points overlappingPairsDo: [ :from :to | self assert: (from x = to x or: [ from y = to y ]) ]
+]
+
+{ #category : 'tests' }
 TLBlocConnectionCurveTest >> circle: aTopLeft [
 	"A circle of 40 pixels of diameter"
 
 	| center |
 	center := aTopLeft + (20 @ 20).
 	^ GEllipse center: center asGPoint vertex: (center + (20 @ 0)) asGPoint coVertex: (center - (0 @ 20)) asGPoint
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> gridOfNodesWithoutTheCorners [
+	"Three rows of three squares at 120 pixels from each other, without the first and the last"
+
+	| squares |
+	squares := (0 to: 2) flatCollect: [ :row | (0 to: 2) collect: [ :column | column * 120 @ (row * 120) extent: 40 @ 40 ] ].
+	^ squares copyWithoutAll: {
+			  squares first.
+			  squares last }
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> lengthAlong: somePoints upTo: aPoint [
+	"The length of the line from its first point to the point, which is on it"
+
+	| walked |
+	walked := 0.
+	somePoints overlappingPairsDo: [ :from :to |
+			(((from min: to) - 0.01 corner: (from max: to) + 0.01) containsPoint: aPoint) ifTrue: [ ^ walked + (from distanceTo: aPoint) ].
+			walked := walked + (from distanceTo: to) ].
+	^ walked
 ]
 
 { #category : 'tests' }
@@ -41,9 +77,25 @@ TLBlocConnectionCurveTest >> square: aTopLeft [
 ]
 
 { #category : 'tests' }
+TLBlocConnectionCurveTest >> taxiAcrossTheGrid [
+
+	^ self taxiFrom: 0 @ 0 to: 240 @ 240 avoiding: self gridOfNodesWithoutTheCorners
+]
+
+{ #category : 'tests' }
 TLBlocConnectionCurveTest >> taxiFrom: aSourceTopLeft to: aTargetTopLeft [
 
 	^ TLBlocConnectionTaxi from: (self square: aSourceTopLeft) to: (self square: aTargetTopLeft)
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> taxiFrom: aSourceTopLeft to: aTargetTopLeft avoiding: someRectangles [
+
+	^ TLBlocConnectionTaxi
+		  from: (self square: aSourceTopLeft)
+		  to: (self square: aTargetTopLeft)
+		  offset: 0
+		  obstacles: someRectangles
 ]
 
 { #category : 'tests' }
@@ -122,6 +174,15 @@ TLBlocConnectionCurveTest >> testCurveStylesGiveTheirRoute [
 	self assert: (TLBezierCurve blocRouteFrom: source to: target offset: 30) class equals: TLBlocConnectionArc.
 	self assert: (TLDirectCurve blocRouteFrom: source to: target offset: 30) class equals: TLBlocConnectionSegment.
 	self assert: (TLSegmentsCurve blocRouteFrom: source to: target offset: 30) class equals: TLBlocConnectionTaxi
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testLabelOfALongTaxiIsNotOnItsLine [
+
+	| taxi label |
+	taxi := self taxiAcrossTheGrid.
+	label := taxi labelCenterFor: 30 @ 10 gap: 3.
+	self deny: label equals: taxi middlePoint
 ]
 
 { #category : 'tests' }
@@ -212,6 +273,28 @@ TLBlocConnectionCurveTest >> testLoopStartsAndEndsOnTheBorderOfTheNodeAbove [
 ]
 
 { #category : 'tests' }
+TLBlocConnectionCurveTest >> testMiddleOfALongTaxiIsHalfWayAlongItsLength [
+
+	| taxi length |
+	taxi := self taxiAcrossTheGrid.
+	length := 0.
+	taxi points overlappingPairsDo: [ :from :to | length := length + (from distanceTo: to) ].
+	self assert: taxi points size > 4.
+	self assert: (self lengthAlong: taxi points upTo: taxi middlePoint) closeTo: length / 2
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testMiddlePointOfALongTaxiIsOnTheLine [
+
+	| taxi middle onTheLine |
+	taxi := self taxiAcrossTheGrid.
+	middle := taxi middlePoint.
+	onTheLine := false.
+	taxi points overlappingPairsDo: [ :from :to | (((from min: to) - 0.01 corner: (from max: to) + 0.01) containsPoint: middle) ifTrue: [ onTheLine := true ] ].
+	self assert: onTheLine
+]
+
+{ #category : 'tests' }
 TLBlocConnectionCurveTest >> testOppositeArcsDoNotShareTheSameSide [
 	"Two connections between the same nodes, in both directions, with the same offset: each bulges to the left of its own direction, so they do not overlap"
 
@@ -220,6 +303,46 @@ TLBlocConnectionCurveTest >> testOppositeArcsDoNotShareTheSameSide [
 	backward := self arcFrom: 100 @ 0 to: 0 @ 0 offset: 40.
 	self assert: forward middlePoint y < 20.
 	self assert: backward middlePoint y > 20
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testParallelTaxisAreNotOnTheSameLines [
+
+	| first second |
+	first := TLBlocConnectionTaxi
+		         from: (self square: 0 @ 0)
+		         to: (self square: 200 @ 100)
+		         offset: -20
+		         obstacles: #(  ).
+	second := TLBlocConnectionTaxi
+		          from: (self square: 0 @ 0)
+		          to: (self square: 200 @ 100)
+		          offset: 20
+		          obstacles: #(  ).
+	self assertTaxiHasOnlyRightAngles: first.
+	self assertTaxiHasOnlyRightAngles: second.
+	self deny: first start y closeTo: second start y.
+	self deny: first end y closeTo: second end y.
+	self deny: first middlePoint x closeTo: second middlePoint x
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testParallelTaxisInOppositeDirectionsAreOnOppositeSides [
+	"Each one is to the left of its own direction"
+
+	| going coming |
+	going := TLBlocConnectionTaxi
+		         from: (self square: 0 @ 0)
+		         to: (self square: 200 @ 0)
+		         offset: 20
+		         obstacles: #(  ).
+	coming := TLBlocConnectionTaxi
+		          from: (self square: 200 @ 0)
+		          to: (self square: 0 @ 0)
+		          offset: 20
+		          obstacles: #(  ).
+	self assert: going start y < 20.
+	self assert: coming start y > 20
 ]
 
 { #category : 'tests' }
@@ -236,6 +359,27 @@ TLBlocConnectionCurveTest >> testStraightSegmentHasTheApiOfARoute [
 ]
 
 { #category : 'tests' }
+TLBlocConnectionCurveTest >> testTaxiAcrossTheGridLeavesAndArrivesAlongAnAxis [
+	"The first and the last segments are not empty and are perpendicular to the borders"
+
+	| taxi |
+	taxi := self taxiAcrossTheGrid.
+	self assert: taxi points first ~= taxi points second.
+	self assert: taxi points last ~= (taxi points at: taxi points size - 1)
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testTaxiAcrossTheGridStartsAndEndsOnTheBordersOfItsNodes [
+
+	| taxi |
+	taxi := self taxiAcrossTheGrid.
+	self assert: taxi start equals: taxi points first.
+	self assert: taxi end equals: taxi points last.
+	self assert: (taxi start x = 40 or: [ taxi start x = 0 or: [ taxi start y = 0 or: [ taxi start y = 40 ] ] ]).
+	self assert: (taxi end x = 240 or: [ taxi end x = 280 or: [ taxi end y = 240 or: [ taxi end y = 280 ] ] ])
+]
+
+{ #category : 'tests' }
 TLBlocConnectionCurveTest >> testTaxiArrivesAlongTheLastSegment [
 
 	| horizontal vertical |
@@ -246,6 +390,18 @@ TLBlocConnectionCurveTest >> testTaxiArrivesAlongTheLastSegment [
 ]
 
 { #category : 'tests' }
+TLBlocConnectionCurveTest >> testTaxiAvoidsSeveralNodes [
+
+	| taxi obstacles |
+	obstacles := {
+		             (100 @ 50 corner: 140 @ 90).
+		             (40 @ 40 corner: 80 @ 80).
+		             (100 @ 0 corner: 140 @ 40) }.
+	taxi := self taxiFrom: 0 @ 0 to: 200 @ 100 avoiding: obstacles.
+	obstacles do: [ :obstacle | self assertTaxi: taxi avoids: obstacle ]
+]
+
+{ #category : 'tests' }
 TLBlocConnectionCurveTest >> testTaxiBetweenAlignedNodesIsAStraightLine [
 
 	| taxi |
@@ -253,6 +409,27 @@ TLBlocConnectionCurveTest >> testTaxiBetweenAlignedNodesIsAStraightLine [
 	taxi points do: [ :point | self assert: point y equals: 20 ].
 	self assertPoint: taxi start isCloseTo: 40 @ 20.
 	self assertPoint: taxi end isCloseTo: 100 @ 20
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testTaxiGoesAcrossAGridOfNodesWhenFourPointsAreNotEnough [
+
+	| taxi |
+	taxi := self taxiAcrossTheGrid.
+	self assertTaxiHasOnlyRightAngles: taxi.
+	self gridOfNodesWithoutTheCorners do: [ :node | self assertTaxi: taxi avoids: node ].
+	self assert: taxi points size > 4
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testTaxiGoesAroundANodeBetweenAlignedNodes [
+	"A straight line would cross the node: the taxi leaves the other way, above it"
+
+	| taxi obstacle |
+	obstacle := 80 @ 0 corner: 120 @ 40.
+	taxi := self taxiFrom: 0 @ 0 to: 200 @ 0 avoiding: { obstacle }.
+	self assertTaxiHasOnlyRightAngles: taxi.
+	self assertTaxi: taxi avoids: obstacle
 ]
 
 { #category : 'tests' }
@@ -292,6 +469,31 @@ TLBlocConnectionCurveTest >> testTaxiGoesVerticallyWhenTheNodesAreMoreApartVerti
 ]
 
 { #category : 'tests' }
+TLBlocConnectionCurveTest >> testTaxiKeepsItsDefaultRouteWhenNoRouteAvoidsTheNodes [
+	"Nodes all around the target: nothing can be avoided"
+
+	| taxi |
+	taxi := self taxiFrom: 0 @ 0 to: 100 @ 60 avoiding: { (-1000 @ -1000 corner: 1000 @ 1000) }.
+	self assertPoint: taxi points second isCloseTo: 70 @ 20.
+	self assertPoint: taxi points third isCloseTo: 70 @ 80
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testTaxiKeepsItsFourPointsWhenTheyAvoidTheNodes [
+	"The grid search is only for the lines which cannot be made with four points"
+
+	self assert: (self taxiFrom: 0 @ 0 to: 200 @ 100 avoiding: { (100 @ 50 corner: 140 @ 90) }) points size equals: 4
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testTaxiKeepsItsMiddleSegmentWhenTheNodeIsNotInTheWay [
+
+	| taxi |
+	taxi := self taxiFrom: 0 @ 0 to: 200 @ 100 avoiding: { (100 @ 300 corner: 140 @ 340) }.
+	self assertPoint: taxi points second isCloseTo: 120 @ 20
+]
+
+{ #category : 'tests' }
 TLBlocConnectionCurveTest >> testTaxiLabelIsNextToTheMiddleSegment [
 	"The middle segment of a horizontal taxi is vertical: the label is on its right"
 
@@ -302,11 +504,39 @@ TLBlocConnectionCurveTest >> testTaxiLabelIsNextToTheMiddleSegment [
 ]
 
 { #category : 'tests' }
+TLBlocConnectionCurveTest >> testTaxiMovesItsMiddleSegmentAwayFromANodeInTheWay [
+
+	| taxi obstacle |
+	obstacle := 100 @ 50 corner: 140 @ 90.
+	taxi := self taxiFrom: 0 @ 0 to: 200 @ 100 avoiding: { obstacle }.
+	self assert: taxi points size equals: 4.
+	self assertTaxiHasOnlyRightAngles: taxi.
+	self assertTaxi: taxi avoids: obstacle.
+	self assertPoint: taxi start isCloseTo: 40 @ 20.
+	self assertPoint: taxi end isCloseTo: 200 @ 120
+]
+
+{ #category : 'tests' }
 TLBlocConnectionCurveTest >> testTaxiWithTheSameCentersIsEmpty [
 
 	| taxi |
 	taxi := self taxiFrom: 0 @ 0 to: 0 @ 0.
 	self assert: taxi start equals: taxi end
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testTaxiWithoutObstacleIsTheSameAsBefore [
+
+	| taxi |
+	taxi := self taxiFrom: 0 @ 0 to: 100 @ 60 avoiding: #(  ).
+	self assertPoint: taxi points second isCloseTo: 70 @ 20.
+	self assertPoint: taxi points third isCloseTo: 70 @ 80
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testTaxiWithoutOffsetOrObstacleStillUsesTheShortApi [
+
+	self assert: (self taxiFrom: 0 @ 0 to: 100 @ 60) points equals: (self taxiFrom: 0 @ 0 to: 100 @ 60 avoiding: #(  )) points
 ]
 
 { #category : 'tests' }

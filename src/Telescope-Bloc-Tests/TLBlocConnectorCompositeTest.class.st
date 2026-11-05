@@ -547,6 +547,23 @@ TLBlocConnectorCompositeTest >> testRightClickOnAnInnerCompositeDoesNotRightClic
 ]
 
 { #category : 'tests' }
+TLBlocConnectorCompositeTest >> testSegmentsConnectionOfCompositeChildrenIsNotBlockedByTheirComposite [
+	"The composite which contains both nodes is not an obstacle"
+
+	| connection element |
+	self prepareComposites.
+	visualization styleSheet compositeExpandedByDefault: true.
+	visualization addNodeFromEntity: 6.
+	connection := (self nodeOfEntity: 2) connectTo: (self nodeOfEntity: 3).
+	connection styleSheet curveStyle: TLSegmentsCurve.
+	connector open: visualization inWindowSized: 600 @ 500 titled: 'Composite'.
+	connector view space settleForDuration: 1 seconds.
+	element := connector elementFromTLDrawable: connection.
+	self assert: element route points size equals: 4.
+	self assert: element route start x equals: element route end x
+]
+
+{ #category : 'tests' }
 TLBlocConnectorCompositeTest >> testTwoCompositesDoNotOverlap [
 	"Two nodes of the visualization, the first one with children: the layout of the visualization places them by their size"
 
