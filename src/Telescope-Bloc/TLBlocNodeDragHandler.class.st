@@ -69,14 +69,14 @@ TLBlocNodeDragHandler >> mouseUpEvent: anEvent [
 	node := nil
 ]
 
-{ #category : 'private' }
+{ #category : 'dragging' }
 TLBlocNodeDragHandler >> nodeElementOf: anElement [
-	"The node which contains the element, if any: the target of a press on a label is the label"
+	"The node which contains the element, if any: the target of a press on a label is the label. A trigger is not dragged away from its node: there is no node to drag when the press is on it"
 
 	| current |
 	current := anElement.
 	[ current isNil or: [ current class = TLBlocNodeElement ] ] whileFalse: [ current := current parent ].
-	^ current
+	^ (current isNotNil and: [ current isTrigger ]) ifFalse: [ current ]
 ]
 
 { #category : 'private' }

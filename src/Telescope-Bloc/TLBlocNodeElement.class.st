@@ -1,5 +1,5 @@
 "
-I am the Bloc element of a Telescope node. My dimension, my background and my border come from the style sheet of the node, the border being half inside and half outside of the edge, solid, dashed, dotted or double, the outline drawn a second time inside of the first one with a small gap: the colors can depend on the entity of the node, with a block or a gradient. My shape is my outline: a Geometry project shape (a polygon, a rectangle or an ellipse) built from the Telescope shape and my dimension, in my own coordinates. My Bloc geometry is derived from my outline, and the connections use my outline to find where they meet the border of the node. I have no outline when the node has no shape, and then only my label is drawn. The layouts of Telescope place a node by its center: #position: takes the center, but #position stays the top left corner of the element, because Bloc reads it to draw me. I do not clip my children, because the label of a node is drawn outside of the node. I know the elements of the connections which leave me and enter me, as my adjacent nodes are asked by the layouts of Telescope such as the tree layout. I know whether the user dragged me with the mouse, because the click which ends a drag is not a click. A composite node has its children in a group: the element of the group is inside of me, at my padding from my border, and I am as big as it and the padding (#fitToChildren). Without child, or when I am collapsed, I have the dimension of my style again. A dimension of 0 gives an outline of at least one pixel. A node can have a fixed center, which a layout does not change (#defineFixedRelativePosition:): this is what the action which memorizes the position of a node does. My label is made again when the entity of the node changes. When the label of a composite node with children displayed is at its center (#inside), it is in a strip at the top of the node: the node makes room for it above its children (#headerHeight), is as wide as it when it is wider than the children, and centers the children under it. The node makes room once, when the label is measured (#fitToChildrenWhenTheHeaderChanged), and does not follow the children the user moved. A collapsed composite, and a leaf, have their label centered over them. A node which takes all the space of its line (the takeAllSpace or occupyMaximumSpace of its style, which can depend on the entity) answers true to #occupyMaxSpace: the linear layout makes it as high as the tallest node of its line, and asks for #restoreOriginalDimension before it is applied again. Applying its style again keeps the height the layout gave it. #width and #height are the ones of the dimension, because the layouts of Telescope ask them and a Bloc element has no extent before it is laid out.
+I am the Bloc element of a Telescope node. My dimension, my background and my border come from the style sheet of the node, the border being half inside and half outside of the edge, solid, dashed, dotted or double, the outline drawn a second time inside of the first one with a small gap: the colors can depend on the entity of the node, with a block or a gradient. My shape is my outline: a Geometry project shape (a polygon, a rectangle or an ellipse) built from the Telescope shape and my dimension, in my own coordinates. My Bloc geometry is derived from my outline, and the connections use my outline to find where they meet the border of the node. I have no outline when the node has no shape, and then only my label is drawn. The layouts of Telescope place a node by its center: #position: takes the center, but #position stays the top left corner of the element, because Bloc reads it to draw me. I do not clip my children, because the label of a node is drawn outside of the node. I know the elements of the connections which leave me and enter me, as my adjacent nodes are asked by the layouts of Telescope such as the tree layout. I know whether the user dragged me with the mouse, because the click which ends a drag is not a click. A composite node has its children in a group: the element of the group is inside of me, at my padding from my border, and I am as big as it and the padding (#fitToChildren). Without child, or when I am collapsed, I have the dimension of my style again. A dimension of 0 gives an outline of at least one pixel. A node can have a fixed center, which a layout does not change (#defineFixedRelativePosition:): this is what the action which memorizes the position of a node does. My label is made again when the entity of the node changes. When the label of a composite node with children displayed is at its center (#inside), it is in a strip at the top of the node: the node makes room for it above its children (#headerHeight), is as wide as it when it is wider than the children, and centers the children under it. The node makes room once, when the label is measured (#fitToChildrenWhenTheHeaderChanged), and does not follow the children the user moved. A collapsed composite, and a leaf, have their label centered over them. A node which takes all the space of its line (the takeAllSpace or occupyMaximumSpace of its style, which can depend on the entity) answers true to #occupyMaxSpace: the linear layout makes it as high as the tallest node of its line, and asks for #restoreOriginalDimension before it is applied again. Applying its style again keeps the height the layout gave it. #width and #height are the ones of the dimension, because the layouts of Telescope ask them and a Bloc element has no extent before it is laid out. A shape trigger of Telescope (the small shape which runs the action of a shape interaction on click, such as the one which expands a node of the tree explorer) is a node element too, a child of the element of its node, so it follows the node: its center is on the side of the trigger position of the style sheet (on the right by default), and it is placed again when the node changes its dimension. A press on a trigger does not drag it.
 "
 Class {
 	#name : 'TLBlocNodeElement',
@@ -17,7 +17,8 @@ Class {
 		'borderStyle',
 		'fixedCenter',
 		'fittedHeaderExtent',
-		'occupiesMaxSpace'
+		'occupiesMaxSpace',
+		'triggerPosition'
 	],
 	#category : 'Telescope-Bloc-Elements',
 	#package : 'Telescope-Bloc',
@@ -111,11 +112,13 @@ TLBlocNodeElement >> dimension [
 
 { #category : 'accessing' }
 TLBlocNodeElement >> dimension: aDimension [
-	"The dimension of the node, and with it its extent and its outline, where the connections meet the node. A layout changes it for the nodes which take all the space of their line"
+	"The dimension of the node, and with it its extent and its outline, where the connections meet the node. A layout changes it for the nodes which take all the space of their line. The triggers of the node follow it, and a trigger stays centered on its anchor"
 
 	dimension := aDimension.
 	self extent: aDimension.
-	shape ifNotNil: [ self updateOutline ]
+	shape ifNotNil: [ self updateOutline ].
+	self placeTriggers.
+	self isTrigger ifTrue: [ self placeOnItsNode ]
 ]
 
 { #category : 'layout' }
@@ -145,6 +148,16 @@ TLBlocNodeElement >> fitToChildrenWhenTheHeaderChanged [
 	"The label of the strip is measured after the layout: the node makes room for it, once, and does not follow the children which the user moved"
 
 	self headerExtent = fittedHeaderExtent ifFalse: [ self fitToChildren ]
+]
+
+{ #category : 'triggers' }
+TLBlocNodeElement >> fractionOf: aSide [
+	"Where a side lies along its axis, from 0 to 1"
+
+	(#( left top ) includes: aSide) ifTrue: [ ^ 0 ].
+	^ aSide = #center
+		  ifTrue: [ 0.5 ]
+		  ifFalse: [ 1 ]
 ]
 
 { #category : 'children' }
@@ -230,6 +243,13 @@ TLBlocNodeElement >> isNode [
 	^ true
 ]
 
+{ #category : 'triggers' }
+TLBlocNodeElement >> isTrigger [
+	"A trigger is a small node element on the side of another node, which executes an action when it is clicked"
+
+	^ triggerPosition isNotNil
+]
+
 { #category : 'children' }
 TLBlocNodeElement >> labelElement [
 	"The label of the node, or nil when it has none"
@@ -267,11 +287,36 @@ TLBlocNodeElement >> outlineRelativeTo: anAncestor [
 	^ (outline ifNil: [ GRectangle origin: 0 @ 0 corner: dimension ]) translatedCopyBy: (self topLeftRelativeTo: anAncestor)
 ]
 
+{ #category : 'triggers' }
+TLBlocNodeElement >> placeAsTriggerAt: aTLPosition [
+	"I am a trigger of my parent, a node: my center is at the anchor of the position on the border of the parent, the center of its right side for #right. I am placed again when the parent changes its dimension"
+
+	triggerPosition := aTLPosition.
+	self placeOnItsNode
+]
+
 { #category : 'layout' }
 TLBlocNodeElement >> placeAt: aTopLeft [
 	"Places the element by its top left corner, as Bloc does, where #position: places it by its center, as the layouts of Telescope do"
 
 	super position: aTopLeft
+]
+
+{ #category : 'triggers' }
+TLBlocNodeElement >> placeOnItsNode [
+
+	| owner anchor |
+	owner := self parent.
+	(triggerPosition isNil or: [ owner isNil ]) ifTrue: [ ^ self ].
+	anchor := owner dimension * ((self fractionOf: triggerPosition horizontal) @ (self fractionOf: triggerPosition vertical)).
+	self placeAt: anchor - (dimension / 2)
+]
+
+{ #category : 'triggers' }
+TLBlocNodeElement >> placeTriggers [
+	"The triggers follow the dimension of the node"
+
+	self triggerElements do: [ :trigger | trigger placeOnItsNode ]
 ]
 
 { #category : 'layout' }
@@ -361,6 +406,13 @@ TLBlocNodeElement >> topLeftRelativeTo: anAncestor [
 			topLeft := topLeft + current measuredBounds position.
 			current := current parent ].
 	^ topLeft
+]
+
+{ #category : 'triggers' }
+TLBlocNodeElement >> triggerElements [
+	"The triggers of the node, which are its children"
+
+	^ self children select: [ :child | child class = TLBlocNodeElement and: [ child isTrigger ] ]
 ]
 
 { #category : 'connections' }

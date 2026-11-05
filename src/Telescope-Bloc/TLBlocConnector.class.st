@@ -1,5 +1,5 @@
 "
-I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, slowly at first and at the end (see TLBlocSmoothEasing), and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The visualization is fitted into its window again when a layout which is applied again moves or adds a node. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet. The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back, with the animation. The menus of Telescope open at the mouse when a node is clicked with the secondary button, as Bloc elements (see TLBlocMenu). When an interaction changes the style of a node or of a connection, for example to highlight it, its element is made again from the style sheet. Closing a visualization closes its window. The pop up action, which Telescope leaves to its connectors, shows its text in a TLBlocPopUpElement near the node, while the mouse is over it or after a click. The legend of a visualization is made of the entries of Telescope, static or dynamic, as TLBlocLegendElement. The right click interaction executes its action when a node is pressed with the secondary button, and the menu of that node then does not open. The handlers of the interactions of a drawable are remembered: when its interactions change, for example because the node moved to another group, they are made again. The children of a composite node are the group of its node: #define:asParentFor: puts the element of the group inside of the element of the node, and the node is as big as its children each time their layout is applied. Collapsing a composite removes the group of its children. A node has no label element when its style says TLNoNodeLabel. A click, a right click or a menu is for the innermost node under the pointer, and a click which ends the drag of a node is not a click: a composite node does not get the clicks of its children. The moved interaction is executed with the center of the node when the user drops it. The first update after the generation does not apply the layouts again, so it does not put back the nodes which the user dragged. The connections which join the same two nodes are spread on both sides of the line between them (#spreadParallelConnections), so that the Bezier curves do not overlap. The double click is handled like the click, by the innermost node. The drop interaction is executed on the node under the pointer when another node is dropped, with the dropped node as the parameter: the dropped node and the nodes which contain it or which it contains are not a target. The external trigger interactions are executed by #triggerExternal:, given the interaction or its id: something outside of the visualization, such as a button of the application, calls it.
+I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, slowly at first and at the end (see TLBlocSmoothEasing), and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The visualization is fitted into its window again when a layout which is applied again moves or adds a node. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet. The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back, with the animation. The menus of Telescope open at the mouse when a node is clicked with the secondary button, as Bloc elements (see TLBlocMenu). When an interaction changes the style of a node or of a connection, for example to highlight it, its element is made again from the style sheet. Closing a visualization closes its window. The pop up action, which Telescope leaves to its connectors, shows its text in a TLBlocPopUpElement near the node, while the mouse is over it or after a click. The legend of a visualization is made of the entries of Telescope, static or dynamic, as TLBlocLegendElement. The right click interaction executes its action when a node is pressed with the secondary button, and the menu of that node then does not open. The handlers of the interactions of a drawable are remembered: when its interactions change, for example because the node moved to another group, they are made again. The children of a composite node are the group of its node: #define:asParentFor: puts the element of the group inside of the element of the node, and the node is as big as its children each time their layout is applied. Collapsing a composite removes the group of its children. A node has no label element when its style says TLNoNodeLabel. A click, a right click or a menu is for the innermost node under the pointer, and a click which ends the drag of a node is not a click: a composite node does not get the clicks of its children. The moved interaction is executed with the center of the node when the user drops it. The first update after the generation does not apply the layouts again, so it does not put back the nodes which the user dragged. The connections which join the same two nodes are spread on both sides of the line between them (#spreadParallelConnections), so that the Bezier curves do not overlap. The double click is handled like the click, by the innermost node. The drop interaction is executed on the node under the pointer when another node is dropped, with the dropped node as the parameter: the dropped node and the nodes which contain it or which it contains are not a target. The external trigger interactions are executed by #triggerExternal:, given the interaction or its id: something outside of the visualization, such as a button of the application, calls it. The element of a shape trigger is made by #createElementFromTrigger: and placed in its node by #placeElement:correspondingToTrigger:relativeToDrawable:; its click, double click and right click are for the trigger, and their action for the node it triggers (#eventElementFor:targeting: and #actedDrawableFor:targeting:). The style of the triggers of a node is applied again when the node is updated.
 "
 Class {
 	#name : 'TLBlocConnector',
@@ -28,6 +28,15 @@ TLBlocConnector class >> priority [
 	^ 50
 ]
 
+{ #category : 'triggers' }
+TLBlocConnector >> actedDrawableFor: aTLDrawable targeting: aTargetDrawable [
+	"The drawable on which the action of an interaction is executed: the one which has the interaction, except for a trigger, whose action is for the node it triggers"
+
+	^ (self isTrigger: aTLDrawable)
+		  ifTrue: [ aTargetDrawable ]
+		  ifFalse: [ aTLDrawable ]
+]
+
 { #category : 'generation - connection' }
 TLBlocConnector >> addElementConnectionInView: element [
 	self view addChild: element.
@@ -36,9 +45,11 @@ TLBlocConnector >> addElementConnectionInView: element [
 	element toNode registerConnection: element
 ]
 
-{ #category : 'view' }
-TLBlocConnector >> addElementInteractionInView: element [
-	self shouldBeImplemented
+{ #category : 'triggers' }
+TLBlocConnector >> addElementInteractionInView: anElement [
+	"The element of a trigger is already in its node, where it was placed"
+
+	
 ]
 
 { #category : 'generation - legend' }
@@ -160,9 +171,13 @@ TLBlocConnector >> createElementConnection: aTLConnection From: fromNode to: toN
 		  yourself
 ]
 
-{ #category : 'generation - interaction' }
+{ #category : 'triggers' }
 TLBlocConnector >> createElementFromTrigger: aTLShapeTrigger [
-	self shouldBeImplemented
+	"A trigger is a small node element, without label, with the style of the trigger. It is a child of the element of its node, so that it follows it"
+
+	^ TLBlocNodeElement new
+		  customizeFromNode: aTLShapeTrigger;
+		  yourself
 ]
 
 { #category : 'generation - legend' }
@@ -249,6 +264,15 @@ TLBlocConnector >> event: aMouseEvent isForElement: anElement [
 	^ true
 ]
 
+{ #category : 'triggers' }
+TLBlocConnector >> eventElementFor: aTLDrawable targeting: aTargetDrawable [
+	"The element which gets the events of the interactions of the drawable: the one of the target, except for a trigger, whose interactions are for its own element"
+
+	^ self elementFromTLDrawable: ((self isTrigger: aTLDrawable)
+			   ifTrue: [ aTLDrawable ]
+			   ifFalse: [ aTargetDrawable ])
+]
+
 { #category : 'layout' }
 TLBlocConnector >> executeAnimatingFrom: anElement do: aBlock [
 	"The nodes which the action adds appear where the element is, and slide to the place of the layout"
@@ -280,10 +304,11 @@ TLBlocConnector >> generateBasicInteraction: aTLInteraction onNode: aTLNode [
 
 { #category : 'generation - interaction' }
 TLBlocConnector >> generateClickInteraction: aTLClickInteraction onDrawable: aTLDrawable targetingDrawable: aTargetDrawable [
-	"The action of the interaction is executed when the element of the target is clicked, unless the click ends the drag of the node. The click is for the innermost node under the pointer: a composite node does not get the clicks of its children. The action of a pop up is not executed: a click shows the text near the element, and the next click hides it"
+	"The action of the interaction is executed when the element of the target is clicked, unless the click ends the drag of the node. The click is for the innermost node under the pointer: a composite node does not get the clicks of its children. The action of a pop up is not executed: a click shows the text near the element, and the next click hides it. The interaction of a trigger is for the element of the trigger, and its action for the node of the trigger"
 
-	| element |
-	element := self elementFromTLDrawable: aTargetDrawable.
+	| element acted |
+	element := self eventElementFor: aTLDrawable targeting: aTargetDrawable.
+	acted := self actedDrawableFor: aTLDrawable targeting: aTargetDrawable.
 	aTLClickInteraction action isPopUp ifTrue: [
 			^ self
 				  addHandlerOn: BlClickEvent
@@ -295,21 +320,23 @@ TLBlocConnector >> generateClickInteraction: aTLClickInteraction onDrawable: aTL
 		to: element
 		for: aTargetDrawable
 		do: [ :event |
-			((self event: event isForElement: element) and: [ element wasDragged not ]) ifTrue: [
-				self executeAnimatingFrom: element do: [ self executeInteraction: aTLClickInteraction forDrawable: aTLDrawable ] ] ]
+				((self event: event isForElement: element) and: [ element wasDragged not ]) ifTrue: [
+					self executeAnimatingFrom: (self elementFromTLDrawable: acted) do: [ self executeInteraction: aTLClickInteraction forDrawable: acted ] ] ]
 ]
 
 { #category : 'generation - interaction' }
 TLBlocConnector >> generateDoubleClickInteraction: aTLDoubleClickInteraction onDrawable: aTLDrawable targetingDrawable: aTargetDrawable [
 	"The action of the interaction is executed when the element of the target is double clicked. The double click is for the innermost node under the pointer, like the click"
 
-	| element |
-	element := self elementFromTLDrawable: aTargetDrawable.
+	| element acted |
+	element := self eventElementFor: aTLDrawable targeting: aTargetDrawable.
+	acted := self actedDrawableFor: aTLDrawable targeting: aTargetDrawable.
 	self
 		addHandlerOn: BlDoubleClickEvent
 		to: element
 		for: aTargetDrawable
-		do: [ :event | (self event: event isForElement: element) ifTrue: [ self executeAnimatingFrom: element do: [ self executeInteraction: aTLDoubleClickInteraction forDrawable: aTLDrawable ] ] ]
+		do: [ :event |
+			(self event: event isForElement: element) ifTrue: [ self executeAnimatingFrom: (self elementFromTLDrawable: acted) do: [ self executeInteraction: aTLDoubleClickInteraction forDrawable: acted ] ] ]
 ]
 
 { #category : 'generation - interaction' }
@@ -424,15 +451,16 @@ TLBlocConnector >> generatePopupInteraction: aTLPopupInteraction onDrawable: aTL
 TLBlocConnector >> generateRightClickInteraction: aTLRightClickInteraction onDrawable: aTLDrawable targetingDrawable: aTargetDrawable [
 	"The action of the interaction is executed when the element of the target is pressed with the secondary button. The press is for the innermost node under the pointer: a composite node does not get the presses on its children"
 
-	| element |
-	element := self elementFromTLDrawable: aTargetDrawable.
+	| element acted |
+	element := self eventElementFor: aTLDrawable targeting: aTargetDrawable.
+	acted := self actedDrawableFor: aTLDrawable targeting: aTargetDrawable.
 	self
 		addHandlerOn: BlMouseDownEvent
 		to: element
 		for: aTargetDrawable
 		do: [ :event |
 				(event button = BlMouseButton secondary and: [ self event: event isForElement: element ]) ifTrue: [
-					self executeAnimatingFrom: element do: [ self executeInteraction: aTLRightClickInteraction forDrawable: aTLDrawable ] ] ]
+					self executeAnimatingFrom: (self elementFromTLDrawable: acted) do: [ self executeInteraction: aTLRightClickInteraction forDrawable: acted ] ] ]
 ]
 
 { #category : 'generation-legendEntry' }
@@ -506,6 +534,12 @@ TLBlocConnector >> initialize [
 	animationDuration := 500 milliSeconds
 ]
 
+{ #category : 'triggers' }
+TLBlocConnector >> isTrigger: aTLDrawable [
+
+	^ aTLDrawable class = TLShapeTrigger
+]
+
 { #category : 'generation - node' }
 TLBlocConnector >> labelElementOf: aNode [
 	"The label of the node, or nil when its style gives none: Telescope says so with the class TLNoNodeLabel, which is not a text to draw"
@@ -568,9 +602,12 @@ TLBlocConnector >> parallelConnectionsSpacing [
 	^ 40
 ]
 
-{ #category : 'layout' }
-TLBlocConnector >> placeElement: anAssociation correspondingToTrigger: aTLShapeTrigger relativeToDrawable: aTLSimpleNode [
-	self shouldBeImplemented
+{ #category : 'triggers' }
+TLBlocConnector >> placeElement: anElement correspondingToTrigger: aTLShapeTrigger relativeToDrawable: aTLDrawable [
+	"The trigger is a child of the element of the drawable, and its center is on the side of the position of the trigger of the style sheet of the drawable: on the right by default"
+
+	(self elementFromTLDrawable: aTLDrawable) addChild: anElement.
+	anElement placeAsTriggerAt: (TLPosition for: aTLDrawable effectiveStyleSheet triggerPosition)
 ]
 
 { #category : 'layout' }
@@ -611,9 +648,10 @@ TLBlocConnector >> removeElementLegendItemFromView: element [
 	self flag: #TODO
 ]
 
-{ #category : 'view' }
-TLBlocConnector >> removeElementnteractionFromView: element [
-	self shouldBeImplemented
+{ #category : 'triggers' }
+TLBlocConnector >> removeElementnteractionFromView: anElement [
+
+	anElement removeFromParent
 ]
 
 { #category : 'generation - group' }
@@ -641,6 +679,13 @@ TLBlocConnector >> removeLegend: aTLLegend [
 
 	self view removeLegend.
 	self unregisterShapeForDrawable: aTLLegend
+]
+
+{ #category : 'triggers' }
+TLBlocConnector >> removeTriggersOf: aDrawable [
+	"The elements of the triggers of a node, which are made again with its interactions"
+
+	self elementFromTLDrawable: aDrawable ifPresent: [ :element | element class = TLBlocNodeElement ifTrue: [ element triggerElements do: #removeFromParent ] ] ifNone: [ ]
 ]
 
 { #category : 'layout' }
@@ -723,7 +768,7 @@ TLBlocConnector >> togglePopUpOf: aPopUpAction for: aTLDrawable [
 					ifFalse: [ self showPopUpOf: aPopUpAction for: aTLDrawable ] ]
 ]
 
-{ #category : 'interactions' }
+{ #category : 'generation - interaction' }
 TLBlocConnector >> triggerExternal: anInteractionOrItsId [
 	"Executes the action of the external trigger interactions, given or found by their id, on all the drawables they are for. The visualization is updated once, after all the actions. Something outside of the visualization, such as a button of the application, calls it"
 
@@ -763,11 +808,11 @@ TLBlocConnector >> update: shape withRectangleShape: aTLRectangleShape [
 
 { #category : 'updating' }
 TLBlocConnector >> updateConnections [
-	"The connections join the borders of their nodes, which the layouts have just placed. Those which join the same two nodes are spread first, so that a Bezier curve is an arc for them. The connections with segments go around the nodes in their way"
+	"The connections join the borders of their nodes, which the layouts have just placed. Those which join the same two nodes are spread first, so that a Bezier curve is an arc for them. The connections with segments go around the nodes in their way, but not around the triggers, which are on the border of their nodes"
 
 	| nodeElements |
 	self spreadParallelConnections.
-	nodeElements := view allChildrenBreadthFirstSelect: [ :element | element class == TLBlocNodeElement ].
+	nodeElements := view allChildrenBreadthFirstSelect: [ :element | element class == TLBlocNodeElement and: [ element isTrigger not ] ].
 	connections do: [ :connection | connection updateAvoiding: (connection obstaclesAmong: nodeElements) ]
 ]
 
@@ -778,24 +823,26 @@ TLBlocConnector >> updateEdgeOf: aConnection [
 	(self elementFromTLDrawable: aConnection) customizeFromConnection: aConnection
 ]
 
-{ #category : 'updating - shape' }
+{ #category : 'updating - interaction' }
 TLBlocConnector >> updateElementNodeOf: aNode [
-	"An interaction changed the style or the entity of the node, for example to highlight it or to move it: the element is made again from the style sheet, and its label follows the entity"
+	"An interaction changed the style or the entity of the node, for example to highlight it or to move it: the element is made again from the style sheet, and its label follows the entity. The style of its triggers may depend on it too"
 
 	| element |
 	element := self elementFromTLDrawable: aNode.
 	element customizeFromNode: aNode.
-	element replaceLabelWith: (self labelElementOf: aNode)
+	element replaceLabelWith: (self labelElementOf: aNode).
+	self updateTriggersOf: aNode
 ]
 
 { #category : 'updating - interaction' }
 TLBlocConnector >> updateInteractionsOf: aDrawable [
-	"The interactions of a drawable are made again when they are not the ones the handlers were made for, for example when a node moved to another group. An update which does not change them, such as a highlight, leaves the handlers as they are"
+	"The interactions of a drawable are made again when they are not the ones the handlers were made for, for example when a node moved to another group: the triggers of the node are made again too. An update which does not change them, such as a highlight, leaves the handlers as they are"
 
 	| generated |
 	generated := generatedInteractions at: aDrawable ifAbsent: [ ^ self ].
 	generated = aDrawable allInteractions asArray ifTrue: [ ^ self ].
 	self removeInteractionHandlersOf: aDrawable.
+	self removeTriggersOf: aDrawable.
 	self generateInteractionsOf: aDrawable targetingDrawable: aDrawable
 ]
 
@@ -809,9 +856,18 @@ TLBlocConnector >> updateLegend: aTLLegend [
 	aTLLegend updateDone
 ]
 
-{ #category : 'updating - interaction' }
+{ #category : 'triggers' }
 TLBlocConnector >> updateShapeTrigger: aTLShapeTrigger [
-	self shouldBeImplemented
+	"The style of a trigger changed, for example because its node was expanded: its element is made again from the style"
+
+	(self elementFromTLDrawable: aTLShapeTrigger) customizeFromNode: aTLShapeTrigger
+]
+
+{ #category : 'triggers' }
+TLBlocConnector >> updateTriggersOf: aNode [
+	"The style of a trigger may depend on its node, which has just changed: the triggers of the node are made again from their style"
+
+	triggerForInteractionAndDrawable keysAndValuesDo: [ :interactionAndDrawable :trigger | interactionAndDrawable value == aNode ifTrue: [ self updateShapeTrigger: trigger ] ]
 ]
 
 { #category : 'updating' }
