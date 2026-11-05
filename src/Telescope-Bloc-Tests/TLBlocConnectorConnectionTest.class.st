@@ -641,6 +641,30 @@ TLBlocConnectorConnectionTest >> testRemovedConnectionIsForgottenByItsNodes [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorConnectionTest >> testSegmentsConnectionAvoidsTheLabelsOfTheNodesInItsWay [
+	"The labels are measured after the first layout: the routes are made again once they are"
+
+	| nodes connection element label labelRectangle |
+	visualization styleSheet
+		width: 50;
+		height: 50;
+		nodeLabel: #asString position: #bottom;
+		layout: ((TLLinearLayout perLine: 3)
+				 gap: 70;
+				 yourself).
+	nodes := (1 to: 3) collect: [ :entity | visualization addNodeFromEntity: entity ].
+	connection := nodes first connectTo: nodes last.
+	connection styleSheet curveStyle: TLSegmentsCurve.
+	connector open: visualization inWindowSized: 600 @ 300 titled: 'Labels'.
+	connector view space settleForDuration: 2 seconds.
+	element := connector elementFromTLDrawable: connection.
+	label := (self elementOfEntity: 2) labelElement.
+	self assert: label extent y > 0.
+	labelRectangle := ((self elementOfEntity: 2) topLeftRelativeTo: connector view) + label measuredBounds position extent: label extent.
+	element route points overlappingPairsDo: [ :from :to | self deny: (((from min: to) - 0.5 corner: (from max: to) + 0.5) intersects: labelRectangle) ]
+]
+
+{ #category : 'tests' }
 TLBlocConnectorConnectionTest >> testSegmentsConnectionGoesAroundTheNodeBetweenItsNodes [
 
 	| element |

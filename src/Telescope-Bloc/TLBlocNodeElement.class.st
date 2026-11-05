@@ -341,6 +341,18 @@ TLBlocNodeElement >> position: aCenter [
 ]
 
 { #category : 'layout' }
+TLBlocNodeElement >> rectangleWithLabelRelativeTo: anAncestor [
+	"The rectangle of the dimension of the node, in the coordinates of an ancestor, and of its label, which a line should not cross either. The label is placed after it is measured: its place is computed from its size and not read, so that the rectangle is right as soon as the label is measured"
+
+	| topLeft rectangle |
+	topLeft := self topLeftRelativeTo: anAncestor.
+	rectangle := topLeft extent: dimension.
+	^ self labelElement
+		  ifNil: [ rectangle ]
+		  ifNotNil: [ :nodeLabel | rectangle merge: (topLeft + (nodeLabel offsetForNodeExtent: dimension) extent: nodeLabel extent) ]
+]
+
+{ #category : 'layout' }
 TLBlocNodeElement >> rectanglesRelativeTo: anOrigin [
 	"The rectangles of the node, of its labels and of its children, from the given origin: their union is what a visualization fits in a window"
 

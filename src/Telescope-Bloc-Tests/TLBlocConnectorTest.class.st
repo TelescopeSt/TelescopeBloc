@@ -20,6 +20,11 @@ TLBlocConnectorTest class >> isAbstract [
 	^ self == TLBlocConnectorTest
 ]
 
+{ #category : 'accessing' }
+TLBlocConnectorTest >> connector [
+	^ connector
+]
+
 { #category : 'running' }
 TLBlocConnectorTest >> setUp [
 
@@ -42,4 +47,9 @@ TLBlocConnectorTest >> tearDown [
 			space close.
 			space settleForDuration: 1 seconds ].
 	super tearDown
+]
+
+{ #category : 'accessing' }
+TLBlocConnectorTest >> visualization [
+	^ visualization
 ]

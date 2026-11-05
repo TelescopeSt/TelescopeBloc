@@ -50,6 +50,13 @@ TLBlocNodeConnection >> arrows [
 	^ arrows
 ]
 
+{ #category : 'updating' }
+TLBlocNodeConnection >> avoidsOtherNodes [
+	"Whether the route goes around the nodes in its way, and so depends on their labels, which are measured after the first layout: only the segments do"
+
+	^ curveStyle == TLSegmentsCurve
+]
+
 { #category : 'layout' }
 TLBlocNodeConnection >> bottomRightOf: somePoints [
 
@@ -286,14 +293,9 @@ TLBlocNodeConnection >> placeSegment [
 
 { #category : 'updating' }
 TLBlocNodeConnection >> rectangleOfNode: aNodeElement in: aView [
-	"The rectangle of the dimension of the node, in the coordinates of the view, and of its label, which a line should not cross either"
+	"The rectangle of the node and of its label, in the coordinates of the view"
 
-	| topLeft rectangle |
-	topLeft := aNodeElement topLeftRelativeTo: aView.
-	rectangle := topLeft extent: aNodeElement dimension.
-	^ aNodeElement labelElement
-		  ifNil: [ rectangle ]
-		  ifNotNil: [ :nodeLabel | rectangle merge: (topLeft + nodeLabel measuredBounds position extent: nodeLabel extent) ]
+	^ aNodeElement rectangleWithLabelRelativeTo: aView
 ]
 
 { #category : 'layout' }

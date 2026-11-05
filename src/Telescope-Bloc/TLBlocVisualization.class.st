@@ -17,7 +17,8 @@ Class {
 		'autoFit',
 		'fittedRectangle',
 		'fittedArea',
-		'autoFitOnLayout'
+		'autoFitOnLayout',
+		'afterLayoutActions'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -79,6 +80,13 @@ TLBlocVisualization >> contentTopLeft [
 	"Answers the smallest top left corner of the nodes and their labels, relative to the visualization, whatever the depth of the groups they are in"
 
 	^ self contentRectangle origin
+]
+
+{ #category : 'fitting' }
+TLBlocVisualization >> doAfterNextLayout: aBlock [
+	"The block is evaluated once, the next time I am laid out: the elements of my nodes, such as their labels, are measured then"
+
+	afterLayoutActions add: aBlock
 ]
 
 { #category : 'dragging' }
@@ -191,7 +199,7 @@ TLBlocVisualization >> fitOnNextLayoutIfAutoFit [
 
 { #category : 'initialization' }
 TLBlocVisualization >> initialize [
-	"The window already clips the visualization, so nodes and labels placed outside the default extent must still be drawn. The visualization is fitted into the window the first time it is laid out, and again when a layout is applied again unless the auto fit is turned off"
+	"The window already clips the visualization, so nodes and labels placed outside the default extent must still be drawn. The visualization is fitted into the window the first time it is laid out, and again when a layout is applied again unless the auto fit is turned off. The actions asked with #doAfterNextLayout: are evaluated once, after the next layout"
 
 	super initialize.
 	self clipChildren: false.
@@ -200,11 +208,14 @@ TLBlocVisualization >> initialize [
 	fitPending := true.
 	autoFit := false.
 	autoFitOnLayout := true.
+	afterLayoutActions := OrderedCollection new.
 	nodesMovedAction := [ ].
 	panHandler := TLBlocPanHandler on: self.
 	zoomHandler := TLBlocZoomHandler on: self.
 	dragHandler := TLBlocNodeDragHandler on: self.
-	self addEventHandlerOn: BlElementLayoutComputedEvent do: [ :event | self fitIfPendingOtherwiseKeepContentInWindow ].
+	self addEventHandlerOn: BlElementLayoutComputedEvent do: [ :event |
+			self runAfterLayoutActions.
+			self fitIfPendingOtherwiseKeepContentInWindow ].
 	self addEventHandlerOn: BlElementAddedToSceneGraphEvent do: [ :event | self installNavigationHandlers ].
 	self addEventHandlerOn: BlElementRemovedFromSceneGraphEvent do: [ :event | self uninstallNavigationHandlers ]
 ]
@@ -295,6 +306,16 @@ TLBlocVisualization >> removeLegend [
 
 	legend ifNotNil: [ :previous | previous removeFromParent ].
 	legend := nil
+]
+
+{ #category : 'fitting' }
+TLBlocVisualization >> runAfterLayoutActions [
+
+	| actions |
+	afterLayoutActions isEmpty ifTrue: [ ^ self ].
+	actions := afterLayoutActions copy.
+	afterLayoutActions removeAll.
+	actions do: #value
 ]
 
 { #category : 'toolbar' }

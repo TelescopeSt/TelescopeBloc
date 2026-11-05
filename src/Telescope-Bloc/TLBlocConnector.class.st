@@ -39,7 +39,9 @@ Class {
 		'layoutReapplied',
 		'interactionHandlers',
 		'generatedInteractions',
-		'externalInteractions'
+		'externalInteractions',
+		'connectionObstacles',
+		'stableLayoutCount'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -179,6 +181,11 @@ TLBlocConnector >> connectionHeadShapesAvailableForConnector [
 	"Every shape can be the head of a connection, since the head is drawn from the outline of the shape"
 
 	^ TLSimpleShape allSubclasses
+]
+
+{ #category : 'accessing' }
+TLBlocConnector >> connectionObstacles [
+	^ connectionObstacles
 ]
 
 { #category : 'accessing' }
@@ -563,6 +570,23 @@ TLBlocConnector >> isTrigger: aTLDrawable [
 	^ aTLDrawable class = TLShapeTrigger
 ]
 
+{ #category : 'updating' }
+TLBlocConnector >> keepWatchingTheObstaclesAfterTheNextLayout [
+
+	view doAfterNextLayout: [
+			| current |
+			current := self obstacleRectangles.
+			current = connectionObstacles
+				ifTrue: [ stableLayoutCount := stableLayoutCount + 1 ]
+				ifFalse: [
+						connectionObstacles := current.
+						stableLayoutCount := 0.
+						self updateConnectionRoutes ].
+			stableLayoutCount < self layoutsToBeStable
+				ifTrue: [ self keepWatchingTheObstaclesAfterTheNextLayout ]
+				ifFalse: [ connectionObstacles := nil ] ]
+]
+
 { #category : 'generation - node' }
 TLBlocConnector >> labelElementOf: aNode [
 	"The label of the node, or nil when its style gives none: Telescope says so with the class TLNoNodeLabel, which is not a text to draw"
@@ -570,6 +594,13 @@ TLBlocConnector >> labelElementOf: aNode [
 	| styleSheet |
 	styleSheet := aNode effectiveStyleSheet.
 	^ ((styleSheet attributes includesKey: #nodeLabel) and: [ (styleSheet obtainValue: #nodeLabel forEntity: aNode entity inNode: aNode) ~~ TLNoNodeLabel ]) ifTrue: [ TLBlocLabelElement forNode: aNode ]
+]
+
+{ #category : 'updating' }
+TLBlocConnector >> layoutsToBeStable [
+	"The number of layouts in a row where the nodes and their labels did not move, after which the connections stop being watched"
+
+	^ 4
 ]
 
 { #category : 'generation - legend' }
@@ -586,6 +617,13 @@ TLBlocConnector >> nodesShapesAvailableForConnector [
 	"The shapes a node can have: all but the ones that are only for connections"
 
 	^ TLSimpleShape allSubclasses select: [ :each | each isAvailableForBlocNode ]
+]
+
+{ #category : 'updating' }
+TLBlocConnector >> obstacleRectangles [
+	"The rectangles of the nodes and of their labels, in the coordinates of the view, which the connections with segments go around"
+
+	^ (view allChildrenBreadthFirstSelect: [ :element | element class == TLBlocNodeElement and: [ element isTrigger not ] ]) collect: [ :element | element rectangleWithLabelRelativeTo: view ]
 ]
 
 { #category : 'opening' }
@@ -752,6 +790,11 @@ TLBlocConnector >> spreadParallelConnections [
 							 ifFalse: [ offset negated ]) ] ]
 ]
 
+{ #category : 'accessing' }
+TLBlocConnector >> stableLayoutCount [
+	^ stableLayoutCount
+]
+
 { #category : 'layout' }
 TLBlocConnector >> startPendingAnimation [
 	"The update is done and the items are at their final place. They go back to where they were, and an animation brings them to their place, slowly at first and at the end, with the connections following them. The new items start from the origin of the animation, if there is one. The places are the top left corners of the elements, so that the nodes of a group, which move with it, do not change where the group goes"
@@ -830,13 +873,21 @@ TLBlocConnector >> update: shape withRectangleShape: aTLRectangleShape [
 ]
 
 { #category : 'updating' }
-TLBlocConnector >> updateConnections [
-	"The connections join the borders of their nodes, which the layouts have just placed. Those which join the same two nodes are spread first, so that a Bezier curve is an arc for them. The connections with segments go around the nodes in their way, but not around the triggers, which are on the border of their nodes"
+TLBlocConnector >> updateConnectionRoutes [
+	"Those which join the same two nodes are spread first, so that a Bezier curve is an arc for them. The connections with segments go around the nodes in their way, but not around the triggers, which are on the border of their nodes"
 
 	| nodeElements |
 	self spreadParallelConnections.
 	nodeElements := view allChildrenBreadthFirstSelect: [ :element | element class == TLBlocNodeElement and: [ element isTrigger not ] ].
 	connections do: [ :connection | connection updateAvoiding: (connection obstaclesAmong: nodeElements) ]
+]
+
+{ #category : 'updating' }
+TLBlocConnector >> updateConnections [
+	"The connections join the borders of their nodes, which the layouts have just placed. The connections which go around the nodes are made again while the nodes and their labels move, because the labels are measured and placed after the layouts and are in their way too"
+
+	self updateConnectionRoutes.
+	self watchTheObstaclesOfTheConnections
 ]
 
 { #category : 'updating - shape' }
@@ -904,4 +955,16 @@ TLBlocConnector >> updateViewForVisualization: aTLVisualization [
 	self startPendingAnimation.
 	reapplied ifTrue: [ self fitAgainWhenTheNodesAreMeasured ].
 	self updateConnections
+]
+
+{ #category : 'updating' }
+TLBlocConnector >> watchTheObstaclesOfTheConnections [
+	"The labels are measured and placed after the layouts: the connections which go around the nodes are made again after each layout which moves a node or a label, until nothing has moved for a few layouts"
+
+	| watching |
+	(connections anySatisfy: [ :connection | connection avoidsOtherNodes ]) ifFalse: [ ^ self ].
+	watching := connectionObstacles isNotNil.
+	connectionObstacles := self obstacleRectangles.
+	stableLayoutCount := 0.
+	watching ifFalse: [ self keepWatchingTheObstaclesAfterTheNextLayout ]
 ]
