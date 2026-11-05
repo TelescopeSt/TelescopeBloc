@@ -15,16 +15,22 @@ Class {
 
 { #category : 'instance creation' }
 TLBlocToolbar class >> for: aVisualization [
-	"The toolbar of a visualization: fit it to the window, zoom in, zoom out, and export it as a PNG or as a SVG, in a file the user chooses. The export buttons have an arrow down"
+	"The toolbar of a visualization: fit it to the window, turn the auto fit on or off, zoom in, zoom out, and export it as a PNG or as a SVG, in a file the user chooses. The export buttons have an arrow down. Each button explains itself in a tooltip"
 
 	| toolbar |
 	toolbar := self new.
-	toolbar
-		addButton: 'Fit' action: [ aVisualization fitIntoWindow ];
-		addButton: '+' action: [ aVisualization zoomIn ];
-		addButton: '-' action: [ aVisualization zoomOut ].
-	(toolbar addButton: 'PNG' action: [ toolbar askForFileOfExtension: 'png' thenDo: [ :file | aVisualization exportAsPngTo: file ] ]) addDownArrow.
-	(toolbar addButton: 'SVG' action: [ toolbar askForFileOfExtension: 'svg' thenDo: [ :file | aVisualization exportAsSvgTo: file ] ]) addDownArrow.
+	(toolbar addButton: 'Fit' action: [ aVisualization fitIntoWindow ]) tooltip: 'Fit' , String cr , 'Scales and centers the visualization to fill the window'.
+	(toolbar addToggleButton: 'Auto' action: [ :isOn | aVisualization autoFitOnLayout: isOn ])
+		isOn: aVisualization autoFitOnLayout;
+		tooltip: 'Auto fit' , String cr , 'On: the visualization fits the window each time its layout is updated' , String cr , 'Off: it stays where it is, even when its layout is updated'.
+	(toolbar addButton: '+' action: [ aVisualization zoomIn ]) tooltip: 'Zoom in'.
+	(toolbar addButton: '-' action: [ aVisualization zoomOut ]) tooltip: 'Zoom out'.
+	(toolbar addButton: 'PNG' action: [ toolbar askForFileOfExtension: 'png' thenDo: [ :file | aVisualization exportAsPngTo: file ] ])
+		tooltip: 'Export as a PNG image';
+		addDownArrow.
+	(toolbar addButton: 'SVG' action: [ toolbar askForFileOfExtension: 'svg' thenDo: [ :file | aVisualization exportAsSvgTo: file ] ])
+		tooltip: 'Export as a SVG image';
+		addDownArrow.
 	^ toolbar
 ]
 
@@ -34,6 +40,16 @@ TLBlocToolbar >> addButton: aString action: aBlock [
 
 	| button |
 	button := TLBlocToolbarButton label: aString action: aBlock.
+	self addChild: button.
+	^ button
+]
+
+{ #category : 'adding' }
+TLBlocToolbar >> addToggleButton: aString action: aBlock [
+	"Answers the new button, which is off. The block receives the new state each time it is clicked"
+
+	| button |
+	button := TLBlocToolbarToggleButton label: aString action: aBlock.
 	self addChild: button.
 	^ button
 ]

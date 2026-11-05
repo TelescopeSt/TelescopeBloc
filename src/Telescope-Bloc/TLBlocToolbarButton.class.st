@@ -1,5 +1,5 @@
 "
-I am a small button of the toolbar of a visualization: a rounded box with a text, which executes an action when it is clicked and which changes its color while the mouse is over it. My text is my label. The buttons which save something have an arrow down after their label.
+A small button of the toolbar of a visualization. Its action is evaluated when it is clicked. It can have an icon drawn after its label, and a tooltip which explains it once the mouse stayed over it for a second.
 "
 Class {
 	#name : 'TLBlocToolbarButton',
@@ -7,7 +7,9 @@ Class {
 	#instVars : [
 		'label',
 		'action',
-		'icon'
+		'icon',
+		'tooltip',
+		'tooltipTask'
 	],
 	#category : 'Telescope-Bloc-Elements',
 	#package : 'Telescope-Bloc',
@@ -20,6 +22,13 @@ TLBlocToolbarButton class >> label: aString action: aBlock [
 	^ self new
 		  label: aString action: aBlock;
 		  yourself
+]
+
+{ #category : 'actions' }
+TLBlocToolbarButton >> activate [
+	"What happens when the button is clicked"
+
+	action value
 ]
 
 { #category : 'icon' }
@@ -40,6 +49,13 @@ TLBlocToolbarButton >> addDownArrow [
 		        margin: (BlInsets left: 5);
 		        yourself.
 	self addChild: icon
+]
+
+{ #category : 'accessing' }
+TLBlocToolbarButton >> hideTooltip [
+
+	tooltipTask ifNotNil: [ :task | task stop ].
+	self space ifNotNil: [ :space | TLBlocPopUpElement closeIn: space root ]
 ]
 
 { #category : 'accessing' }
@@ -80,7 +96,13 @@ TLBlocToolbarButton >> initialize [
 		border: (BlBorder paint: Color lightGray width: 1);
 		addEventHandlerOn: BlMouseEnterEvent do: [ :event | self background: self hoverColor ];
 		addEventHandlerOn: BlMouseLeaveEvent do: [ :event | self background: self restColor ];
-		addEventHandlerOn: BlClickEvent do: [ :event | action value ]
+		addEventHandlerOn: BlClickEvent do: [ :event | self activate ]
+]
+
+{ #category : 'accessing' }
+TLBlocToolbarButton >> isToggle [
+
+	^ false
 ]
 
 { #category : 'accessing' }
@@ -105,4 +127,48 @@ TLBlocToolbarButton >> label: aString action: aBlock [
 TLBlocToolbarButton >> restColor [
 
 	^ Color white
+]
+
+{ #category : 'accessing' }
+TLBlocToolbarButton >> scheduleTooltip [
+
+	tooltipTask ifNil: [
+			tooltipTask := BlDelayedTaskAction new
+				               delay: self tooltipDelay;
+				               action: [ self showTooltip ];
+				               yourself ].
+	tooltipTask element: self.
+	tooltipTask startOrRestart
+]
+
+{ #category : 'accessing' }
+TLBlocToolbarButton >> showTooltip [
+
+	self space ifNotNil: [ TLBlocPopUpElement showText: tooltip near: self position: TLPosition bottom ]
+]
+
+{ #category : 'accessing' }
+TLBlocToolbarButton >> tooltip [
+	"The text which explains the button when the mouse is over it"
+
+	^ tooltip
+]
+
+{ #category : 'accessing' }
+TLBlocToolbarButton >> tooltip: aString [
+	"Shows the text below the button once the mouse stayed over it for a moment. It is hidden when the mouse leaves, and when the button is clicked because the tooltip would hide what the click changed"
+
+	tooltip ifNil: [
+			self
+				addEventHandlerOn: BlMouseEnterEvent do: [ :event | self scheduleTooltip ];
+				addEventHandlerOn: BlMouseLeaveEvent do: [ :event | self hideTooltip ];
+				addEventHandlerOn: BlClickEvent do: [ :event | self hideTooltip ] ].
+	tooltip := aString
+]
+
+{ #category : 'accessing' }
+TLBlocToolbarButton >> tooltipDelay [
+	"How long the mouse has to stay over the button before its tooltip is shown"
+
+	^ 0.5 second
 ]

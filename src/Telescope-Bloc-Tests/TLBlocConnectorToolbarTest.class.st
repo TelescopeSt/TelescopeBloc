@@ -27,6 +27,66 @@ TLBlocConnectorToolbarTest >> exportFile: anExtension [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorToolbarTest >> popUpShown [
+
+	^ TLBlocPopUpElement shownIn: connector view space root
+]
+
+{ #category : 'tests' }
+TLBlocConnectorToolbarTest >> settleLongEnoughForATooltip [
+
+	connector view space settleForDuration: 1300 milliSeconds
+]
+
+{ #category : 'tests' }
+TLBlocConnectorToolbarTest >> testAutoFitButtonLooksPressedWhenAutoFitIsOn [
+
+	| button on |
+	button := self toolbar buttonLabeled: 'Auto'.
+	on := button background paint color.
+	self click: 'Auto'.
+	self deny: button background paint color equals: on
+]
+
+{ #category : 'tests' }
+TLBlocConnectorToolbarTest >> testAutoFitButtonTurnsAutoFitOffAndOn [
+
+	self click: 'Auto'.
+	self deny: connector view autoFitOnLayout.
+	self deny: (self toolbar buttonLabeled: 'Auto') isOn.
+	self click: 'Auto'.
+	self assert: connector view autoFitOnLayout.
+	self assert: (self toolbar buttonLabeled: 'Auto') isOn
+]
+
+{ #category : 'tests' }
+TLBlocConnectorToolbarTest >> testAutoFitIsOnByDefault [
+
+	self assert: connector view autoFitOnLayout.
+	self assert: (self toolbar buttonLabeled: 'Auto') isOn
+]
+
+{ #category : 'tests' }
+TLBlocConnectorToolbarTest >> testClickingAButtonHidesItsTooltip [
+	"The tooltip would stay over the content which the button just changed"
+
+	| button |
+	button := self toolbar buttonLabeled: 'Auto'.
+	button dispatchEvent: BlMouseEnterEvent new.
+	self settleLongEnoughForATooltip.
+	self assert: self popUpShown isNotNil.
+	button dispatchEvent: BlClickEvent new.
+	self settle.
+	self assert: self popUpShown isNil
+]
+
+{ #category : 'tests' }
+TLBlocConnectorToolbarTest >> testEveryButtonHasATooltip [
+
+	self toolbar buttons do: [ :button | self assert: button tooltip isNotNil ]
+]
+
+{ #category : 'tests' }
 TLBlocConnectorToolbarTest >> testExportButtonsHaveAnArrowDownNextToTheirLabel [
 
 	#( 'PNG' 'SVG' ) do: [ :label |
@@ -53,6 +113,37 @@ TLBlocConnectorToolbarTest >> testFitButtonFitsTheVisualizationAgain [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorToolbarTest >> testHoveringAButtonShowsItsTooltipBelowIt [
+
+	| button |
+	button := self toolbar buttonLabeled: 'Auto'.
+	button dispatchEvent: BlMouseEnterEvent new.
+	self settleLongEnoughForATooltip.
+	self assert: self popUpShown isNotNil.
+	self assert: self popUpShown lines first equals: 'Auto fit'.
+	self assert: self popUpShown boundsInSpace top >= button boundsInSpace bottom
+]
+
+{ #category : 'tests' }
+TLBlocConnectorToolbarTest >> testLeavingAButtonHidesItsTooltip [
+
+	| button |
+	button := self toolbar buttonLabeled: 'Fit'.
+	button dispatchEvent: BlMouseEnterEvent new.
+	self settleLongEnoughForATooltip.
+	self assert: self popUpShown isNotNil.
+	button dispatchEvent: BlMouseLeaveEvent new.
+	self settle.
+	self assert: self popUpShown isNil
+]
+
+{ #category : 'tests' }
+TLBlocConnectorToolbarTest >> testOtherButtonsAreNotToggles [
+
+	#( 'Fit' '+' '-' 'PNG' 'SVG' ) do: [ :label | self assert: (self toolbar buttonLabeled: label) isToggle not ]
+]
+
+{ #category : 'tests' }
 TLBlocConnectorToolbarTest >> testOtherButtonsHaveNoIcon [
 
 	#( 'Fit' '+' '-' ) do: [ :label | self assert: (self toolbar buttonLabeled: label) icon isNil ]
@@ -61,7 +152,7 @@ TLBlocConnectorToolbarTest >> testOtherButtonsHaveNoIcon [
 { #category : 'tests' }
 TLBlocConnectorToolbarTest >> testToolbarHasTheNavigationAndExportActions [
 
-	self assert: (self toolbar buttons collect: #label) asArray equals: #( 'Fit' '+' '-' 'PNG' 'SVG' )
+	self assert: (self toolbar buttons collect: #label) asArray equals: #( 'Fit' 'Auto' '+' '-' 'PNG' 'SVG' )
 ]
 
 { #category : 'tests' }
@@ -69,6 +160,48 @@ TLBlocConnectorToolbarTest >> testToolbarIsInTheWindowAndNotPannedWithTheVisuali
 
 	self assert: self toolbar isNotNil.
 	self assert: self toolbar parent identicalTo: connector view space root
+]
+
+{ #category : 'tests' }
+TLBlocConnectorToolbarTest >> testTooltipIsNeverShownWhenTheMouseLeavesBeforeASecond [
+
+	| button |
+	button := self toolbar buttonLabeled: 'Auto'.
+	button dispatchEvent: BlMouseEnterEvent new.
+	connector view space settleForDuration: 300 milliSeconds.
+	button dispatchEvent: BlMouseLeaveEvent new.
+	self settleLongEnoughForATooltip.
+	self assert: self popUpShown isNil
+]
+
+{ #category : 'tests' }
+TLBlocConnectorToolbarTest >> testTooltipIsNotShownBeforeTheMouseStayedOverTheButtonForASecond [
+
+	(self toolbar buttonLabeled: 'Auto') dispatchEvent: BlMouseEnterEvent new.
+	connector view space settleForDuration: 500 milliSeconds.
+	self assert: self popUpShown isNil
+]
+
+{ #category : 'tests' }
+TLBlocConnectorToolbarTest >> testTooltipOfAutoFitExplainsWhatItDoes [
+
+	| tooltip |
+	tooltip := (self toolbar buttonLabeled: 'Auto') tooltip.
+	self assert: (tooltip includesSubstring: 'Auto fit').
+	self assert: (tooltip includesSubstring: 'On').
+	self assert: (tooltip includesSubstring: 'Off').
+	self assert: (tooltip includesSubstring: 'layout')
+]
+
+{ #category : 'tests' }
+TLBlocConnectorToolbarTest >> testTooltipStaysInTheWindowWhenTheButtonIsAtTheRight [
+
+	| button window |
+	button := self toolbar buttonLabeled: 'SVG'.
+	button dispatchEvent: BlMouseEnterEvent new.
+	self settleLongEnoughForATooltip.
+	window := 0 @ 0 extent: connector view space extent.
+	self assert: (window containsRect: self popUpShown boundsInSpace asRectangle)
 ]
 
 { #category : 'tests' }

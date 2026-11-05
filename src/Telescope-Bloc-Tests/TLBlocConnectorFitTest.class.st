@@ -55,6 +55,22 @@ TLBlocConnectorFitTest >> openNodes: aNumber [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorFitTest >> testAutoFitIsOnAgainAfterBeingTurnedOnAgain [
+
+	| zoomBefore |
+	self openNodes: 3.
+	connector view autoFitOnLayout: false.
+	connector view autoFitOnLayout: true.
+	zoomBefore := connector view zoom.
+	visualization layout: ((TLLinearLayout perLine: 3)
+			 gap: 400;
+			 yourself).
+	visualization update.
+	connector view space settleForDuration: 1500 milliSeconds.
+	self assert: connector view zoom < zoomBefore
+]
+
+{ #category : 'tests' }
 TLBlocConnectorFitTest >> testChangingTheLayoutFitsTheVisualizationAgain [
 
 	| zoomBefore |
@@ -163,6 +179,17 @@ TLBlocConnectorFitTest >> testFitForgetsThePanningAndTheZoomWhenTheLayoutIsAppli
 ]
 
 { #category : 'tests' }
+TLBlocConnectorFitTest >> testFitFunctionsWhenAutoFitIsOff [
+
+	self openNodes: 200.
+	connector view autoFitOnLayout: false.
+	connector view zoomBy: 4 around: 150 @ 150.
+	connector view fitIntoWindow.
+	connector view space settleForDuration: 500 milliSeconds.
+	self assertEveryNodeIsInTheWindow
+]
+
+{ #category : 'tests' }
 TLBlocConnectorFitTest >> testFitKeepsTheContentAwayFromTheLegend [
 	"A square of nodes fills the window, so it would be under the legend"
 
@@ -253,6 +280,52 @@ TLBlocConnectorFitTest >> testLargeVisualizationFitsTheWindowWhenItOpens [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorFitTest >> testLayoutUpdateDoesNotFitWhenAutoFitIsOff [
+	"The visualization stays where it is, even though the new layout makes it bigger than the window: the user asked not to fit it again"
+
+	| zoomBefore |
+	self openNodes: 3.
+	connector view autoFitOnLayout: false.
+	zoomBefore := connector view zoom.
+	visualization layout: ((TLLinearLayout perLine: 3)
+			 gap: 400;
+			 yourself).
+	visualization update.
+	connector view space settleForDuration: 1500 milliSeconds.
+	self assert: connector view zoom equals: zoomBefore
+]
+
+{ #category : 'tests' }
+TLBlocConnectorFitTest >> testLayoutUpdateStillFitsWhenAutoFitIsOn [
+
+	| zoomBefore |
+	self openNodes: 3.
+	self assert: connector view autoFitOnLayout.
+	zoomBefore := connector view zoom.
+	visualization layout: ((TLLinearLayout perLine: 3)
+			 gap: 400;
+			 yourself).
+	visualization update.
+	connector view space settleForDuration: 1500 milliSeconds.
+	self assert: connector view zoom < zoomBefore
+]
+
+{ #category : 'tests' }
+TLBlocConnectorFitTest >> testNodesAddedByAnUpdateDoNotFitWhenAutoFitIsOff [
+	"Neither the layout, nor the labels which are placed after it, make the visualization fit again"
+
+	| zoomBefore |
+	visualization styleSheet nodeLabel: #asString position: #top.
+	self openNodes: 3.
+	connector view autoFitOnLayout: false.
+	zoomBefore := connector view zoom.
+	visualization addNodesFromEntities: (4 to: 40).
+	visualization update.
+	connector view space settleForDuration: 2 seconds.
+	self assert: connector view zoom equals: zoomBefore
+]
+
+{ #category : 'tests' }
 TLBlocConnectorFitTest >> testPathBuilderIsFittedAfterItsOriginIsClicked [
 	"The nodes it adds are in groups, and their labels are above them: the content is only known once the labels are placed"
 
@@ -298,6 +371,16 @@ TLBlocConnectorFitTest >> testUpdatingWithoutApplyingTheLayoutKeepsTheZoom [
 	visualization update.
 	connector view space settleForDuration: 500 milliSeconds.
 	self assert: connector view zoom equals: zoomBefore
+]
+
+{ #category : 'tests' }
+TLBlocConnectorFitTest >> testVisualizationIsFittedWhenItOpensWhateverAutoFit [
+	"Auto fit is about the layouts which are applied again: the first one still fits"
+
+	connector view autoFitOnLayout: false.
+	self openNodes: 200.
+	self assert: connector view zoom < 1.
+	self assertEveryNodeIsInTheWindow
 ]
 
 { #category : 'tests' }

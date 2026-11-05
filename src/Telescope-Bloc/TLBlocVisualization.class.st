@@ -16,7 +16,8 @@ Class {
 		'legend',
 		'autoFit',
 		'fittedRectangle',
-		'fittedArea'
+		'fittedArea',
+		'autoFitOnLayout'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -42,6 +43,19 @@ TLBlocVisualization >> applyZoom [
 			builder
 				topLeftOrigin;
 				scaleBy: zoomFactor @ zoomFactor ]
+]
+
+{ #category : 'fitting' }
+TLBlocVisualization >> autoFitOnLayout [
+	"Whether the visualization is fitted again into the window when its layout is applied again. The first fit and the fit button do not depend on it"
+
+	^ autoFitOnLayout
+]
+
+{ #category : 'fitting' }
+TLBlocVisualization >> autoFitOnLayout: aBoolean [
+
+	autoFitOnLayout := aBoolean
 ]
 
 { #category : 'layout' }
@@ -133,12 +147,12 @@ TLBlocVisualization >> fitContentToWindow [
 
 { #category : 'fitting' }
 TLBlocVisualization >> fitIfPendingOtherwiseKeepContentInWindow [
-	"The first layout with some content fits the visualization into the window. As long as the user did not pan, zoom or drag, it is fitted again when its content changes, or when the area it is fitted in changes because the toolbar or the legend were measured: the labels of new nodes are placed after the layout which measures them, so the content is only known after a few layouts. Otherwise the content stays where the panning and the zoom put it"
+	"The first layout with some content fits the visualization into the window. As long as the user did not pan, zoom or drag, and the auto fit is on, it is fitted again when its content changes, or when the area it is fitted in changes because the toolbar or the legend were measured: the labels of new nodes are placed after the layout which measures them, so the content is only known after a few layouts. Otherwise the content stays where the panning and the zoom put it"
 
 	(fitPending and: [ self children isNotEmpty ]) ifTrue: [
 			fitPending := false.
 			^ self fitIntoWindow ].
-	(autoFit and: [ self contentRectangle ~= fittedRectangle or: [ self fitArea ~= fittedArea ] ]) ifTrue: [ ^ self fitIntoWindow ].
+	(autoFitOnLayout and: [ autoFit and: [ self contentRectangle ~= fittedRectangle or: [ self fitArea ~= fittedArea ] ] ]) ifTrue: [ ^ self fitIntoWindow ].
 	self fitContentToWindow
 ]
 
@@ -168,9 +182,16 @@ TLBlocVisualization >> fitOnNextLayout [
 	fitPending := true
 ]
 
+{ #category : 'fitting' }
+TLBlocVisualization >> fitOnNextLayoutIfAutoFit [
+	"The next time I am laid out, once the nodes and their labels are measured, I am fitted into the window, unless the auto fit is off"
+
+	autoFitOnLayout ifTrue: [ self fitOnNextLayout ]
+]
+
 { #category : 'initialization' }
 TLBlocVisualization >> initialize [
-	"The window already clips the visualization, so nodes and labels placed outside the default extent must still be drawn. The visualization is fitted into the window the first time it is laid out"
+	"The window already clips the visualization, so nodes and labels placed outside the default extent must still be drawn. The visualization is fitted into the window the first time it is laid out, and again when a layout is applied again unless the auto fit is turned off"
 
 	super initialize.
 	self clipChildren: false.
@@ -178,6 +199,7 @@ TLBlocVisualization >> initialize [
 	zoomFactor := 1.
 	fitPending := true.
 	autoFit := false.
+	autoFitOnLayout := true.
 	nodesMovedAction := [ ].
 	panHandler := TLBlocPanHandler on: self.
 	zoomHandler := TLBlocZoomHandler on: self.

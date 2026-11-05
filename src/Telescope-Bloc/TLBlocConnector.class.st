@@ -257,13 +257,13 @@ TLBlocConnector >> executeAnimatingFrom: anElement do: aBlock [
 	aBlock ensure: [ animationOrigin := nil ]
 ]
 
-{ #category : 'layout' }
+{ #category : 'updating' }
 TLBlocConnector >> fitAgainWhenTheNodesAreMeasured [
-	"The new nodes have no labels measured yet when the visualization is first fitted. It is fitted again when they are: at the next layout of the view, or when the animation is done, because the nodes are not at their final place before"
+	"The new nodes have no labels measured yet when the visualization is first fitted. It is fitted again when they are: at the next layout of the view, or when the animation is done, because the nodes are not at their final place before. Nothing happens when the auto fit was turned off in the meantime"
 
 	animation
-		ifNil: [ view fitOnNextLayout ]
-		ifNotNil: [ :current | current onFinishedDo: [ view fitIntoWindow ] ]
+		ifNil: [ view fitOnNextLayoutIfAutoFit ]
+		ifNotNil: [ :current | current onFinishedDo: [ view autoFitOnLayout ifTrue: [ view fitIntoWindow ] ] ]
 ]
 
 { #category : 'layout' }
@@ -814,10 +814,10 @@ TLBlocConnector >> updateShapeTrigger: aTLShapeTrigger [
 
 { #category : 'updating' }
 TLBlocConnector >> updateViewForVisualization: aTLVisualization [
-	"The elements are updated one by one, and the layouts have put them at their final place. The visualization is fitted into its window if a layout was applied again, then the items which moved are animated, and the connections have to join the nodes again: some were added or removed, and the nodes have moved"
+	"The elements are updated one by one, and the layouts have put them at their final place. The visualization is fitted into its window if a layout was applied again and the auto fit is on, then the items which moved are animated, and the connections have to join the nodes again: some were added or removed, and the nodes have moved"
 
 	| reapplied |
-	reapplied := layoutReapplied.
+	reapplied := layoutReapplied and: [ view autoFitOnLayout ].
 	layoutReapplied := false.
 	reapplied ifTrue: [ view fitIntoWindow ].
 	self startPendingAnimation.
