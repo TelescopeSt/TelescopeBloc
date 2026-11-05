@@ -1,5 +1,5 @@
 "
-I am a baseline of the Bloc connector for Telescope. I depend on the Bloc dev branch. I depend on the core of Telescope, and on its demo group only for the demo browser. The shapes of the nodes use the Geometry project, which is part of Pharo. I define the packages and groups of the connector, of its demo browser and of its tests.
+I am a baseline of the Bloc connector for Telescope. I depend on the stable Bloc, the releases tagged v3.x.x. I depend on the core of Telescope, and on its demo group only for the demo browser. The shapes of the nodes use the Geometry project, which is part of Pharo. I define the packages and groups of the connector, of its demo browser and of its tests.
 "
 Class {
 	#name : 'BaselineOfTelescopeBloc',
@@ -34,8 +34,9 @@ BaselineOfTelescopeBloc >> baseline: spec [
 
 { #category : 'dependencies' }
 BaselineOfTelescopeBloc >> bloc: spec [
+	"The stable Bloc: the releases of the version 3, which are tagged v3.x.x"
 
-	spec baseline: 'Bloc' with: [ spec repository: 'github://pharo-graphics/Bloc:dev/src' ]
+	spec baseline: 'Bloc' with: [ spec repository: 'github://pharo-graphics/Bloc:v3.0.0/src' ]
 ]
 
 { #category : 'dependencies' }
