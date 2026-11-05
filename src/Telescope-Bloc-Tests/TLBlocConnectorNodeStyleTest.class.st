@@ -51,6 +51,24 @@ TLBlocConnectorNodeStyleTest >> elementOfNodeStyledWith: aLineStyle [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> openNodesOfHeights: someHeights perLine: aNumber takingAllSpace: aBlock [
+	"A node for each height, the entities being 1, 2... The nodes for which the block answers true take all the space of their line. Answers the elements"
+
+	| nodes |
+	visualization styleSheet
+		width: 20;
+		height: [ :entity | someHeights at: entity ];
+		takeAllSpace: aBlock.
+	visualization layout: ((TLLinearLayout perLine: aNumber)
+			 gap: 10;
+			 yourself).
+	nodes := (1 to: someHeights size) collect: [ :entity | visualization addNodeFromEntity: entity ].
+	connector open: visualization inWindowSized: 400 @ 300 titled: 'Take all space'.
+	connector view space settleForDuration: 1 seconds.
+	^ nodes collect: [ :node | connector elementFromTLDrawable: node ]
+]
+
+{ #category : 'tests' }
 TLBlocConnectorNodeStyleTest >> testBackgroundIsTheColorOfTheStyle [
 
 	visualization styleSheet backgroundColor: Color red.
@@ -173,6 +191,93 @@ TLBlocConnectorNodeStyleTest >> testGradientGivesEachNodeTheColorOfItsEntity [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testLayoutAppliedAgainDoesNotKeepTheStretchedHeightOfAPreviousLayout [
+	"The tallest node of a line is smaller in the next layout: the nodes taking all space follow it"
+
+	| elements |
+	elements := self openNodesOfHeights: #( 10 50 20 ) perLine: 3 takingAllSpace: [ :entity | entity = 1 ].
+	visualization layout: ((TLLinearLayout perLine: 3)
+			 gap: 10;
+			 yourself).
+	visualization update.
+	connector view space settleForDuration: 1 seconds.
+	self assert: elements first dimension equals: 20 @ 50.
+	visualization layout: ((TLLinearLayout perLine: 1)
+			 gap: 10;
+			 yourself).
+	visualization update.
+	connector view space settleForDuration: 1 seconds.
+	self assert: elements first dimension equals: 20 @ 10
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testNoNodeTakesAllSpaceByDefault [
+
+	| elements |
+	elements := self openNodesOfHeights: #( 10 50 20 ) perLine: 3 takingAllSpace: false.
+	self assert: (elements collect: #dimension) equals: {
+			(20 @ 10).
+			(20 @ 50).
+			(20 @ 20) }
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testNodeNotTakingAllSpaceKeepsItsHeight [
+
+	| elements |
+	elements := self openNodesOfHeights: #( 10 50 20 ) perLine: 3 takingAllSpace: [ :entity | entity = 1 ].
+	self assert: elements second dimension equals: 20 @ 50.
+	self assert: elements last dimension equals: 20 @ 20
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testNodeTakesTheSpaceOfItsOwnLineOnly [
+
+	| elements |
+	elements := self openNodesOfHeights: #( 10 50 20 30 ) perLine: 2 takingAllSpace: [ :entity | entity even not ].
+	self assert: elements first dimension equals: 20 @ 50.
+	self assert: elements third dimension equals: 20 @ 30
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testNodeTakingAllSpaceAnswersSo [
+
+	| elements |
+	elements := self openNodesOfHeights: #( 10 50 20 ) perLine: 3 takingAllSpace: [ :entity | entity = 1 ].
+	self assert: elements first occupyMaxSpace.
+	self deny: elements second occupyMaxSpace
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testNodeTakingAllSpaceHasItsOriginalDimensionAgainWhenAskedTo [
+
+	| elements |
+	elements := self openNodesOfHeights: #( 10 50 20 ) perLine: 3 takingAllSpace: [ :entity | entity = 1 ].
+	elements first restoreOriginalDimension.
+	self assert: elements first dimension equals: 20 @ 10
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testNodeTakingAllSpaceHasTheHeightOfTheTallestNodeOfItsLine [
+
+	| elements |
+	elements := self openNodesOfHeights: #( 10 50 20 ) perLine: 3 takingAllSpace: [ :entity | entity = 1 ].
+	self assert: elements first dimension equals: 20 @ 50.
+	self assert: elements first extent equals: 20 @ 50
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testNodeTakingAllSpaceKeepsItsHeightWhenItsStyleIsAppliedAgain [
+	"A mouse over changes the style of a node: it does not shrink back until the layout is applied again"
+
+	| elements node |
+	elements := self openNodesOfHeights: #( 10 50 20 ) perLine: 3 takingAllSpace: [ :entity | entity = 1 ].
+	node := visualization allNodes first.
+	elements first customizeFromNode: node.
+	self assert: elements first dimension equals: 20 @ 50
+]
+
+{ #category : 'tests' }
 TLBlocConnectorNodeStyleTest >> testNodeWithAZeroDimensionIsStillGenerated [
 	"A width given by a property, such as a number of attributes, can be 0"
 
@@ -185,6 +290,35 @@ TLBlocConnectorNodeStyleTest >> testNodeWithAZeroDimensionIsStillGenerated [
 	element := connector elementFromTLDrawable: node.
 	self assert: element dimension equals: 0 @ 0.
 	self assert: element outline isNotNil
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testOccupyMaximumSpaceIsTheSameAsTakeAllSpace [
+
+	| nodes |
+	visualization styleSheet
+		width: 20;
+		height: [ :entity | entity * 10 ];
+		occupyMaximumSpace.
+	visualization layout: ((TLLinearLayout perLine: 3)
+			 gap: 10;
+			 yourself).
+	nodes := (1 to: 3) collect: [ :entity | visualization addNodeFromEntity: entity ].
+	connector open: visualization inWindowSized: 400 @ 300 titled: 'Take all space'.
+	connector view space settleForDuration: 1 seconds.
+	self assert: (nodes collect: [ :node | (connector elementFromTLDrawable: node) dimension ]) equals: {
+			(20 @ 30).
+			(20 @ 30).
+			(20 @ 30) }
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testOutlineOfANodeTakingAllSpaceFollowsItsDimension [
+	"The connections meet the border of the node: its outline has to be as high as the node"
+
+	| elements |
+	elements := self openNodesOfHeights: #( 10 50 20 ) perLine: 3 takingAllSpace: [ :entity | entity = 1 ].
+	self assert: elements first outline encompassingRectangle height equals: 50
 ]
 
 { #category : 'tests' }
@@ -209,6 +343,22 @@ TLBlocConnectorNodeStyleTest >> testSolidBorderHasNoInnerBorder [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testTakeAllSpaceDemoMakesTheOddNodesAsHighAsTheTallestOfTheirLine [
+
+	| elements |
+	visualization := TLDemos exampleTakeAllSpace.
+	visualization generator: connector.
+	connector open: visualization inWindowSized: 600 @ 500 titled: 'Demo'.
+	connector view space settleForDuration: 2 seconds.
+	elements := visualization allNodes collect: [ :node | connector elementFromTLDrawable: node ].
+	"The first line has the entities 1 to 4, with the heights 55, 80, 105 and 30"
+	self assert: elements first dimension y equals: 105.
+	self assert: (elements at: 2) dimension y equals: 80.
+	self assert: (elements at: 3) dimension y equals: 105.
+	self assert: (elements at: 4) dimension y equals: 30
+]
+
+{ #category : 'tests' }
 TLBlocConnectorNodeStyleTest >> testWidthAndHeightCanDependOnTheEntity [
 
 	| small big |
@@ -220,4 +370,19 @@ TLBlocConnectorNodeStyleTest >> testWidthAndHeightCanDependOnTheEntity [
 	visualization generateWith: connector.
 	self assert: (connector elementFromTLDrawable: small) dimension equals: 20 @ 10.
 	self assert: (connector elementFromTLDrawable: big) dimension equals: 60 @ 30
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testWidthAndHeightOfANodeAreItsDimensionEvenBeforeTheLayout [
+	"The layouts of Telescope ask the nodes for their width: a Bloc element has no extent before it is laid out"
+
+	| node element |
+	node := visualization addNodeFromEntity: 1.
+	node styleSheet
+		width: 30;
+		height: 70.
+	visualization generateWith: connector.
+	element := connector elementFromTLDrawable: node.
+	self assert: element width equals: 30.
+	self assert: element height equals: 70
 ]

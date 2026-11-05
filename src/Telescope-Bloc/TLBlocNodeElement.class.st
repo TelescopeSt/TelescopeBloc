@@ -1,5 +1,5 @@
 "
-I am the Bloc element of a Telescope node. My dimension, my background and my border come from the style sheet of the node, the border being half inside and half outside of the edge, solid, dashed, dotted or double, the outline drawn a second time inside of the first one with a small gap: the colors can depend on the entity of the node, with a block or a gradient. My shape is my outline: a Geometry project shape (a polygon, a rectangle or an ellipse) built from the Telescope shape and my dimension, in my own coordinates. My Bloc geometry is derived from my outline, and the connections use my outline to find where they meet the border of the node. I have no outline when the node has no shape, and then only my label is drawn. The layouts of Telescope place a node by its center: #position: takes the center, but #position stays the top left corner of the element, because Bloc reads it to draw me. I do not clip my children, because the label of a node is drawn outside of the node. I know the elements of the connections which leave me and enter me, as my adjacent nodes are asked by the layouts of Telescope such as the tree layout. I know whether the user dragged me with the mouse, because the click which ends a drag is not a click. A composite node has its children in a group: the element of the group is inside of me, at my padding from my border, and I am as big as it and the padding (#fitToChildren). Without child, or when I am collapsed, I have the dimension of my style again. A dimension of 0 gives an outline of at least one pixel. A node can have a fixed center, which a layout does not change (#defineFixedRelativePosition:): this is what the action which memorizes the position of a node does. My label is made again when the entity of the node changes. When the label of a composite node with children displayed is at its center (#inside), it is in a strip at the top of the node: the node makes room for it above its children (#headerHeight), is as wide as it when it is wider than the children, and centers the children under it. The node makes room once, when the label is measured (#fitToChildrenWhenTheHeaderChanged), and does not follow the children the user moved. A collapsed composite, and a leaf, have their label centered over them.
+I am the Bloc element of a Telescope node. My dimension, my background and my border come from the style sheet of the node, the border being half inside and half outside of the edge, solid, dashed, dotted or double, the outline drawn a second time inside of the first one with a small gap: the colors can depend on the entity of the node, with a block or a gradient. My shape is my outline: a Geometry project shape (a polygon, a rectangle or an ellipse) built from the Telescope shape and my dimension, in my own coordinates. My Bloc geometry is derived from my outline, and the connections use my outline to find where they meet the border of the node. I have no outline when the node has no shape, and then only my label is drawn. The layouts of Telescope place a node by its center: #position: takes the center, but #position stays the top left corner of the element, because Bloc reads it to draw me. I do not clip my children, because the label of a node is drawn outside of the node. I know the elements of the connections which leave me and enter me, as my adjacent nodes are asked by the layouts of Telescope such as the tree layout. I know whether the user dragged me with the mouse, because the click which ends a drag is not a click. A composite node has its children in a group: the element of the group is inside of me, at my padding from my border, and I am as big as it and the padding (#fitToChildren). Without child, or when I am collapsed, I have the dimension of my style again. A dimension of 0 gives an outline of at least one pixel. A node can have a fixed center, which a layout does not change (#defineFixedRelativePosition:): this is what the action which memorizes the position of a node does. My label is made again when the entity of the node changes. When the label of a composite node with children displayed is at its center (#inside), it is in a strip at the top of the node: the node makes room for it above its children (#headerHeight), is as wide as it when it is wider than the children, and centers the children under it. The node makes room once, when the label is measured (#fitToChildrenWhenTheHeaderChanged), and does not follow the children the user moved. A collapsed composite, and a leaf, have their label centered over them. A node which takes all the space of its line (the takeAllSpace or occupyMaximumSpace of its style, which can depend on the entity) answers true to #occupyMaxSpace: the linear layout makes it as high as the tallest node of its line, and asks for #restoreOriginalDimension before it is applied again. Applying its style again keeps the height the layout gave it. #width and #height are the ones of the dimension, because the layouts of Telescope ask them and a Bloc element has no extent before it is laid out.
 "
 Class {
 	#name : 'TLBlocNodeElement',
@@ -16,7 +16,8 @@ Class {
 		'shape',
 		'borderStyle',
 		'fixedCenter',
-		'fittedHeaderExtent'
+		'fittedHeaderExtent',
+		'occupiesMaxSpace'
 	],
 	#category : 'Telescope-Bloc-Elements',
 	#package : 'Telescope-Bloc',
@@ -73,12 +74,13 @@ TLBlocNodeElement >> childrenPadding [
 	^ 10
 ]
 
-{ #category : 'initialization' }
+{ #category : 'styling' }
 TLBlocNodeElement >> customizeFromNode: aNode [
-	"The colors, the dimension and the shape of the style sheet can depend on the entity of the node: a block, or a gradient for the colors, gives the value of each node. It can be called again when an interaction changed the style: the previous inner border is removed, and a composite node is still as big as its children. The border is drawn with the line style of the style sheet, solid by default, half inside and half outside of the edge of the node"
+	"The colors, the dimension and the shape of the style sheet can depend on the entity of the node: a block, or a gradient for the colors, gives the value of each node. It can be called again when an interaction changed the style: the previous inner border is removed, a composite node is still as big as its children, and a node which takes all the space of its line keeps the height the layout gave it. The border is drawn with the line style of the style sheet, solid by default, half inside and half outside of the edge of the node"
 
-	| styleSheet |
+	| styleSheet previous |
 	styleSheet := aNode effectiveStyleSheet.
+	previous := dimension.
 	self beOutskirtsCentered.
 	self background: (self valueOf: #backgroundColor forNode: aNode).
 	shape := self valueOf: #shape forNode: aNode.
@@ -87,8 +89,10 @@ TLBlocNodeElement >> customizeFromNode: aNode [
 		               ifFalse: [ TLSolidLineStyle ].
 	self border: (borderStyle blocBorderPaint: (self valueOf: #borderColor forNode: aNode) width: styleSheet borderWidth).
 	ownDimension := (self valueOf: #width forNode: aNode) @ (self valueOf: #height forNode: aNode).
-	self dimension: ownDimension.
-	self updateOutline.
+	occupiesMaxSpace := (self valueOf: #takeAllSpace forNode: aNode) == true.
+	self dimension: ((occupiesMaxSpace and: [ previous isNotNil ])
+			 ifTrue: [ ownDimension x @ (previous y max: ownDimension y) ]
+			 ifFalse: [ ownDimension ]).
 	self fitToChildren
 ]
 
@@ -107,9 +111,11 @@ TLBlocNodeElement >> dimension [
 
 { #category : 'accessing' }
 TLBlocNodeElement >> dimension: aDimension [
+	"The dimension of the node, and with it its extent and its outline, where the connections meet the node. A layout changes it for the nodes which take all the space of their line"
 
 	dimension := aDimension.
-	self extent: aDimension
+	self extent: aDimension.
+	shape ifNotNil: [ self updateOutline ]
 ]
 
 { #category : 'layout' }
@@ -186,6 +192,13 @@ TLBlocNodeElement >> headerWidth [
 		  ifNotNil: [ :label | label extent x ]
 ]
 
+{ #category : 'accessing' }
+TLBlocNodeElement >> height [
+	"The height of the node, which is the one of its dimension, as its width"
+
+	^ dimension y
+]
+
 { #category : 'layout' }
 TLBlocNodeElement >> incomingAdjacentNodes [
 	"The elements of the nodes connected to this node, which the layouts of Telescope ask for, such as the tree layout"
@@ -195,11 +208,13 @@ TLBlocNodeElement >> incomingAdjacentNodes [
 
 { #category : 'initialization' }
 TLBlocNodeElement >> initialize [
-	"Labels are drawn outside the node bounds, so the node must not clip its children"
+	"Labels are drawn outside the node bounds, so the node must not clip its children. A node does not take all the space of its line until its style says so, and has no dimension until it is styled"
 
 	super initialize.
 	outgoingConnections := OrderedCollection new.
 	incomingConnections := OrderedCollection new.
+	occupiesMaxSpace := false.
+	dimension := 0 @ 0.
 	self clipChildren: false
 ]
 
@@ -224,9 +239,11 @@ TLBlocNodeElement >> labelElement [
 		  ifNone: [ nil ]
 ]
 
-{ #category : 'dimension' }
+{ #category : 'accessing' }
 TLBlocNodeElement >> occupyMaxSpace [
-	^ false
+	"Whether the node takes all the space of its line in a layout, as high as the tallest node of the line: the takeAllSpace of its style"
+
+	^ occupiesMaxSpace
 ]
 
 { #category : 'layout' }
@@ -317,13 +334,20 @@ TLBlocNodeElement >> replaceLabelWith: aLabelElementOrNil [
 	aLabelElementOrNil ifNotNil: [ :label | self addChild: label ]
 ]
 
-{ #category : 'composite' }
+{ #category : 'accessing' }
 TLBlocNodeElement >> resizeTo: aDimension [
 	"Changes the dimension, and with it the outline where the connections meet the node. Nothing is done when it does not change: a new size asks for a new layout"
 
-	dimension = aDimension ifTrue: [ ^ self ].
-	self dimension: aDimension.
-	self updateOutline
+	dimension = aDimension ifFalse: [ self dimension: aDimension ]
+]
+
+{ #category : 'accessing' }
+TLBlocNodeElement >> restoreOriginalDimension [
+	"The dimension of the style again, which a layout asks before it is applied again: a composite node is as big as its children"
+
+	childrenGroup
+		ifNil: [ self resizeTo: ownDimension ]
+		ifNotNil: [ self fitToChildren ]
 ]
 
 { #category : 'layout' }
@@ -376,4 +400,11 @@ TLBlocNodeElement >> wasDragged [
 TLBlocNodeElement >> wasDragged: aBoolean [
 
 	wasDragged := aBoolean
+]
+
+{ #category : 'accessing' }
+TLBlocNodeElement >> width [
+	"The width of the node, which is the one of its dimension: the layouts of Telescope ask it, and a Bloc element has no extent before it is laid out. Bloc advises not to redefine it: the extent of a node is always its dimension, so it does not change what Bloc sees"
+
+	^ dimension x
 ]
