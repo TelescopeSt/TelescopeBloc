@@ -1,5 +1,5 @@
 "
-I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels. I move myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. The pan and zoom handlers are installed on the root of the window while I am in it. The first time I am laid out with some content I am fitted into the window: scaled so that the content fills the window, down or up as far as the zoom allows, and centered, which #fitIntoWindow does again on request. #zoomIn and #zoomOut zoom around the center of the window, and #exportAsPngTo: and #exportAsSvgTo: write me as I am shown. I put my toolbar in the root of the window while I am in it. I do not clip my children, because the window already clips me. I let the user drag the nodes, and the panning compensates the nodes which move my content, so that the other nodes stay under the mouse. The connector is told when a node moved, to join the nodes again. I keep the legend, and I fit my content in what is at its right. After a fit, I fit myself again when my content changes, until the user pans, zooms or drags, because the content is only known after a few layouts. It finds the node under the point where a node was dropped (#dropTargetOf:at:).
+I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels. I move myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. The pan and zoom handlers are installed on the root of the window while I am in it. The first time I am laid out with some content I am fitted into the window: scaled so that the content fills the window, down or up as far as the zoom allows, and centered, which #fitIntoWindow does again on request. #zoomIn and #zoomOut zoom around the center of the window, and #exportAsPngTo: and #exportAsSvgTo: write me as I am shown. I put my toolbar in the root of the window while I am in it. I do not clip my children, because the window already clips me. I let the user drag the nodes, and the panning compensates the nodes which move my content, so that the other nodes stay under the mouse. The connector is told when a node moved, to join the nodes again. I keep the legend, and I fit my content in what is at its right. After a fit, I fit myself again when my content changes, until the user pans, zooms or drags, because the content is only known after a few layouts. It finds the node under the point where a node was dropped (#dropTargetOf:at:). The area where I am fitted (#fitArea) is the window without the strip of the legend, at its left, and the strip of the toolbar, at its top, so that the content is clear of both.
 "
 Class {
 	#name : 'TLBlocVisualization',
@@ -15,7 +15,8 @@ Class {
 		'nodesMovedAction',
 		'legend',
 		'autoFit',
-		'fittedRectangle'
+		'fittedRectangle',
+		'fittedArea'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -116,6 +117,13 @@ TLBlocVisualization >> exportAsSvgTo: aFileReference [
 		  export
 ]
 
+{ #category : 'fitting' }
+TLBlocVisualization >> fitArea [
+	"The area of the window where the visualization is fitted: the window without the strip of the legend, at its left, and the strip of the toolbar, at its top. They are measured once they are in the window"
+
+	^ self legendReservedWidth @ self toolbarReservedHeight corner: self space extent
+]
+
 { #category : 'layout' }
 TLBlocVisualization >> fitContentToWindow [
 	"Moves the visualization so that the top left corner of the nodes and of their labels sits at the margin of the window, shifted by the panning"
@@ -125,31 +133,31 @@ TLBlocVisualization >> fitContentToWindow [
 
 { #category : 'fitting' }
 TLBlocVisualization >> fitIfPendingOtherwiseKeepContentInWindow [
-	"The first layout with some content fits the visualization into the window. As long as the user did not pan, zoom or drag, it is fitted again when its content changes: the labels of new nodes are placed after the layout which measures them, so the content is only known after a few layouts. Otherwise the content stays where the panning and the zoom put it"
+	"The first layout with some content fits the visualization into the window. As long as the user did not pan, zoom or drag, it is fitted again when its content changes, or when the area it is fitted in changes because the toolbar or the legend were measured: the labels of new nodes are placed after the layout which measures them, so the content is only known after a few layouts. Otherwise the content stays where the panning and the zoom put it"
 
 	(fitPending and: [ self children isNotEmpty ]) ifTrue: [
 			fitPending := false.
 			^ self fitIntoWindow ].
-	(autoFit and: [ self contentRectangle ~= fittedRectangle ]) ifTrue: [ ^ self fitIntoWindow ].
+	(autoFit and: [ self contentRectangle ~= fittedRectangle or: [ self fitArea ~= fittedArea ] ]) ifTrue: [ ^ self fitIntoWindow ].
 	self fitContentToWindow
 ]
 
 { #category : 'fitting' }
 TLBlocVisualization >> fitIntoWindow [
-	"Scales the visualization so that all its nodes and labels fill the window, as much as the zoom allows, and centers it. The legend is at the left of the window: the visualization fills what is at its right. The panning is forgotten, and the visualization is fitted again when its content changes, until the user pans, zooms or drags"
+	"Scales the visualization so that all its nodes and labels fill the area of the window which is free, as much as the zoom allows, and centers it there. The legend is at the left of the window and the toolbar at the top: the visualization fills what is left. The panning is forgotten, and the visualization is fitted again when its content changes, until the user pans, zooms or drags"
 
-	| rectangle available ratios reserved |
+	| rectangle area ratios |
 	self space ifNil: [ ^ self ].
 	rectangle := self contentRectangle.
 	rectangle extent isZero ifTrue: [ ^ self ].
-	reserved := self legendReservedWidth.
-	available := self space extent x - reserved @ self space extent y.
-	ratios := available - (self windowMargin * 2) / (rectangle extent max: 1 @ 1).
+	area := self fitArea.
+	ratios := area extent - (self windowMargin * 2) / (rectangle extent max: 1 @ 1).
 	zoomFactor := ((ratios x min: ratios y) min: self class maximumZoom) max: self class minimumZoom.
 	self applyZoom.
-	panOffset := reserved @ 0 + (available - (rectangle extent * zoomFactor) / 2) - self windowMargin.
+	panOffset := area origin + (area extent - (rectangle extent * zoomFactor) / 2) - self windowMargin.
 	autoFit := true.
 	fittedRectangle := rectangle.
+	fittedArea := area.
 	self fitContentToWindow
 ]
 
@@ -271,6 +279,14 @@ TLBlocVisualization >> toolbar [
 	"The buttons which act on me, in the window"
 
 	^ toolbar ifNil: [ toolbar := TLBlocToolbar for: self ]
+]
+
+{ #category : 'fitting' }
+TLBlocVisualization >> toolbarReservedHeight [
+	"The height of the strip of the window which the toolbar takes at the top, when it is in the window: the toolbar is measured once it is there"
+
+	(toolbar isNil or: [ toolbar hasParent not ]) ifTrue: [ ^ 0 ].
+	^ toolbar extent y + (toolbar windowMargin * 2)
 ]
 
 { #category : 'initialization' }

@@ -120,14 +120,29 @@ TLBlocConnectorLegendTest >> testHeightAndWidthDescriptionsAreRowsOfTheLegend [
 ]
 
 { #category : 'tests' }
-TLBlocConnectorLegendTest >> testLegendDemoShowsTheDescriptionsOfTheHeightAndOfTheWidth [
+TLBlocConnectorLegendTest >> testLegendDemoShowsEveryKindOfEntryOfTheNodes [
+	"The height and the width, a gradient, then one row for each description of the dynamic entries (background, border color, shape), and a static color"
 
 	| demo |
 	demo := TLDemos exampleLegend.
 	demo generator: connector.
-	connector open: demo inWindowSized: 500 @ 400 titled: 'Legend'.
-	connector view space settleForDuration: 1 seconds.
-	self assert: self labels equals: #( 'Text explaining height' 'Text explaining width' )
+	connector open: demo inWindowSized: 900 @ 700 titled: 'Legend'.
+	connector view space settleForDuration: 2 seconds.
+	self assert: self labels equals: #( 'Text explaining height' 'Text explaining width' 'Value' 'Multiple of 10' 'Other' 'Not prime' 'Prime' 'Even' 'Odd' 'Under the mouse' )
+]
+
+{ #category : 'tests' }
+TLBlocConnectorLegendTest >> testLegendDemoSwatchesMatchTheNodes [
+
+	| demo |
+	demo := TLDemos exampleLegend.
+	demo generator: connector.
+	connector open: demo inWindowSized: 900 @ 700 titled: 'Legend'.
+	connector view space settleForDuration: 2 seconds.
+	self assert: (self rowLabeled: 'Value') swatch background paint class equals: BlLinearGradientPaint.
+	self assert: (self rowLabeled: 'Prime') swatch border paint color equals: Color blue.
+	self assert: (self rowLabeled: 'Not prime') swatch border paint color equals: Color black.
+	self assert: (self rowLabeled: 'Under the mouse') swatch background paint color equals: Color orange
 ]
 
 { #category : 'tests' }

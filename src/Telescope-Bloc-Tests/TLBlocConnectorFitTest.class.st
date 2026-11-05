@@ -84,12 +84,47 @@ TLBlocConnectorFitTest >> testChangingTheLayoutFitsTheVisualizationAgainOnceTheA
 ]
 
 { #category : 'tests' }
+TLBlocConnectorFitTest >> testContentIsFittedAgainIfTheToolbarIsMeasuredAfterTheFit [
+	"The strip depends on the size of the toolbar, which is known after the first layout: the content is still clear of it at the end, in a window which is almost as wide as the toolbar"
+
+	| toolbar |
+	visualization layout: ((TLLinearLayout perLine: 3)
+			 gap: 20;
+			 yourself).
+	visualization addNodesFromEntities: (1 to: 9).
+	connector open: visualization inWindowSized: 240 @ 240 titled: 'Fit'.
+	connector view space settleForDuration: 2 seconds.
+	toolbar := connector view toolbar boundsInSpace asRectangle.
+	self nodeBoundsInWindow do: [ :rectangle | self deny: (toolbar intersects: rectangle) ]
+]
+
+{ #category : 'tests' }
 TLBlocConnectorFitTest >> testEnlargedVisualizationStaysInTheWindow [
 
 	| window |
 	self openNodes: 12.
 	window := (0 @ 0 extent: connector view space extent) expandBy: 1.
 	self nodeBoundsInWindow do: [ :rectangle | self assert: (window containsRect: rectangle) ]
+]
+
+{ #category : 'tests' }
+TLBlocConnectorFitTest >> testFitAreaIsTheWindowWithoutTheStripsOfTheToolbarAndOfTheLegend [
+
+	| area |
+	visualization legend description: 'Dead code' forColor: Color red.
+	self openNodes: 3.
+	area := connector view fitArea.
+	self assert: area top >= connector view toolbar boundsInSpace bottom.
+	self assert: area left > 0.
+	self assert: area right equals: connector view space extent x.
+	self assert: area bottom equals: connector view space extent y
+]
+
+{ #category : 'tests' }
+TLBlocConnectorFitTest >> testFitAreaWithoutLegendStartsAtTheLeftOfTheWindow [
+
+	self openNodes: 3.
+	self assert: connector view fitArea left equals: 0
 ]
 
 { #category : 'tests' }
@@ -101,14 +136,15 @@ TLBlocConnectorFitTest >> testFitCanBeRequestedAgainAfterZoomingAndPanning [
 	connector view fitIntoWindow.
 	connector view space settleForDuration: 500 milliSeconds.
 	self assert: connector view zoom < 1.
-	self assert: (self contentCenterInWindow - (connector view space extent / 2)) abs < (2 @ 2)
+	self assert: (self contentCenterInWindow - connector view fitArea center) abs < (2 @ 2)
 ]
 
 { #category : 'tests' }
 TLBlocConnectorFitTest >> testFitCentersTheContentInTheWindow [
+	"In the area the content may fill: the window without the strips of the toolbar and of the legend"
 
 	self openNodes: 3.
-	self assert: (self contentCenterInWindow - (connector view space extent / 2)) abs < (2 @ 2)
+	self assert: (self contentCenterInWindow - connector view fitArea center) abs < (2 @ 2)
 ]
 
 { #category : 'tests' }
@@ -123,7 +159,7 @@ TLBlocConnectorFitTest >> testFitForgetsThePanningAndTheZoomWhenTheLayoutIsAppli
 	visualization update.
 	connector view space settleForDuration: 1 seconds.
 	self assertEveryNodeIsInTheWindow.
-	self assert: (self contentCenterInWindow - (connector view space extent / 2)) abs < (2 @ 2)
+	self assert: (self contentCenterInWindow - connector view fitArea center) abs < (2 @ 2)
 ]
 
 { #category : 'tests' }
@@ -142,6 +178,22 @@ TLBlocConnectorFitTest >> testFitKeepsTheContentAwayFromTheLegend [
 	connector view space settleForDuration: 1 seconds.
 	legend := (connector view space root children detect: [ :child | child class = TLBlocLegendElement ]) boundsInSpace asRectangle.
 	self nodeBoundsInWindow do: [ :rectangle | self deny: (legend intersects: rectangle) ].
+	self assertEveryNodeIsInTheWindow
+]
+
+{ #category : 'tests' }
+TLBlocConnectorFitTest >> testFitKeepsTheContentAwayFromTheToolbar [
+	"A square of nodes fills the window, so it would be under the toolbar at the top right"
+
+	| toolbar |
+	visualization layout: ((TLLinearLayout perLine: 3)
+			 gap: 20;
+			 yourself).
+	visualization addNodesFromEntities: (1 to: 9).
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Fit'.
+	connector view space settleForDuration: 1 seconds.
+	toolbar := connector view toolbar boundsInSpace asRectangle.
+	self nodeBoundsInWindow do: [ :rectangle | self deny: (toolbar intersects: rectangle) ].
 	self assertEveryNodeIsInTheWindow
 ]
 

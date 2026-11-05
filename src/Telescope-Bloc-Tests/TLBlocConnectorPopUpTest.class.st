@@ -7,6 +7,12 @@ Class {
 }
 
 { #category : 'tests' }
+TLBlocConnectorPopUpTest >> demoNode: aGroupName at: anEntity [
+
+	^ (visualization > aGroupName) allNodes detect: [ :node | node entity = anEntity ]
+]
+
+{ #category : 'tests' }
 TLBlocConnectorPopUpTest >> mouseEnter: aNode [
 
 	(connector elementFromTLDrawable: aNode) dispatchEvent: BlMouseEnterEvent new.
@@ -44,6 +50,15 @@ TLBlocConnectorPopUpTest >> openNodeWithPopUp: aPosition [
 	| action |
 	action := TLPopUpAction text: [ :entity | 'Hello ' , entity asString ] position: aPosition.
 	^ self openNodeWith: action onMouseOver
+]
+
+{ #category : 'tests' }
+TLBlocConnectorPopUpTest >> openPopUpDemo [
+
+	visualization := TLDemos examplePopUp.
+	visualization generator: connector.
+	connector open: visualization inWindowSized: 900 @ 600 titled: 'Pop up'.
+	connector view space settleForDuration: 1 seconds
 ]
 
 { #category : 'tests' }
@@ -112,6 +127,54 @@ TLBlocConnectorPopUpTest >> testOnlyOnePopUpIsShownAtATime [
 	self mouseEnter: nodes last.
 	self assert: self popUps size equals: 1.
 	self assert: self popUps first lines asArray equals: #( 'Hello 2' )
+]
+
+{ #category : 'tests' }
+TLBlocConnectorPopUpTest >> testPopUpDemoHasOneGroupForTheMouseOverAndOneForTheClick [
+
+	self openPopUpDemo.
+	self assert: (visualization > #mouseOver) allNodes size equals: 9.
+	self assert: (visualization > #click) allNodes size equals: 9
+]
+
+{ #category : 'tests' }
+TLBlocConnectorPopUpTest >> testPopUpDemoMouseOverDoesNothingInTheSecondGroupAndClickDoesNothingInTheFirst [
+
+	| node |
+	self openPopUpDemo.
+	self mouseEnter: (self demoNode: #click at: #top -> #left).
+	self assertEmpty: self popUps.
+	node := self demoNode: #mouseOver at: #top -> #left.
+	(connector elementFromTLDrawable: node) dispatchEvent: BlClickEvent new.
+	connector view space settleForDuration: 300 milliSeconds.
+	self assertEmpty: self popUps
+]
+
+{ #category : 'tests' }
+TLBlocConnectorPopUpTest >> testPopUpDemoShowsThePopUpOnAClickInTheSecondGroup [
+
+	| node |
+	self openPopUpDemo.
+	node := self demoNode: #click at: #bottom -> #right.
+	(connector elementFromTLDrawable: node) dispatchEvent: BlClickEvent new.
+	connector view space settleForDuration: 300 milliSeconds.
+	self assert: self popUps size equals: 1.
+	(connector elementFromTLDrawable: node) dispatchEvent: BlClickEvent new.
+	connector view space settleForDuration: 300 milliSeconds.
+	self assertEmpty: self popUps
+]
+
+{ #category : 'tests' }
+TLBlocConnectorPopUpTest >> testPopUpDemoShowsThePopUpWhileTheMouseIsOverANodeOfTheFirstGroup [
+
+	| node |
+	self openPopUpDemo.
+	node := self demoNode: #mouseOver at: #top -> #left.
+	self mouseEnter: node.
+	self assert: self popUps size equals: 1.
+	self assert: self popUps first lines asArray equals: { (#top -> #left) asString }.
+	self mouseLeave: node.
+	self assertEmpty: self popUps
 ]
 
 { #category : 'tests' }
