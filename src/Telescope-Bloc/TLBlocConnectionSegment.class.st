@@ -130,6 +130,14 @@ TLBlocConnectionSegment >> start [
 	^ start
 ]
 
+{ #category : 'accessing' }
+TLBlocConnectionSegment >> startDirection [
+	"The unit vector along which the line leaves the source, which an arrow at its start follows backwards, or nil when the line is empty: the direction of the first segment which is not empty"
+
+	self points overlappingPairsDo: [ :from :to | (self unitVectorOf: to - from) ifNotNil: [ :direction | ^ direction ] ].
+	^ nil
+]
+
 { #category : 'route' }
 TLBlocConnectionSegment >> translatedBy: aVector [
 	"The same route, moved: the second line of a double line is the first one, moved aside"

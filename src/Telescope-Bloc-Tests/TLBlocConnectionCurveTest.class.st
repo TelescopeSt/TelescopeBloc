@@ -273,6 +273,14 @@ TLBlocConnectionCurveTest >> testLoopStartsAndEndsOnTheBorderOfTheNodeAbove [
 ]
 
 { #category : 'tests' }
+TLBlocConnectionCurveTest >> testMiddleDirectionOfAnArcIsAlongItsChord [
+
+	| arc |
+	arc := self arcFrom: 0 @ 0 to: 100 @ 0 offset: 40.
+	self assertPoint: arc middleDirection normalized isCloseTo: 1 @ 0
+]
+
+{ #category : 'tests' }
 TLBlocConnectionCurveTest >> testMiddleOfALongTaxiIsHalfWayAlongItsLength [
 
 	| taxi length |
@@ -343,6 +351,44 @@ TLBlocConnectionCurveTest >> testParallelTaxisInOppositeDirectionsAreOnOppositeS
 		          obstacles: #(  ).
 	self assert: going start y < 20.
 	self assert: coming start y > 20
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testStartDirectionOfAStraightSegmentGoesToItsEnd [
+
+	| segment |
+	segment := TLBlocConnectionSegment from: (self square: 0 @ 0) to: (self square: 100 @ 0).
+	self assertPoint: segment startDirection isCloseTo: 1 @ 0
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testStartDirectionOfATaxiIsItsFirstSegment [
+
+	| taxi |
+	taxi := self taxiFrom: 0 @ 0 to: 100 @ 60.
+	self assertPoint: taxi startDirection isCloseTo: 1 @ 0.
+	self assertPoint: (self taxiFrom: 0 @ 0 to: 60 @ 100) startDirection isCloseTo: 0 @ 1
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testStartDirectionOfATaxiWithAnEmptyFirstSegmentIsTheNextOne [
+	"Aligned nodes: the taxi is a straight line, the segments around the turns are empty"
+
+	self assertPoint: (self taxiFrom: 0 @ 0 to: 100 @ 0) startDirection isCloseTo: 1 @ 0
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testStartDirectionOfAnArcIsTowardsItsControlPoint [
+
+	| arc |
+	arc := self arcFrom: 0 @ 0 to: 100 @ 0 offset: 40.
+	self assertPoint: arc startDirection isCloseTo: (arc control - arc start) normalized
+]
+
+{ #category : 'tests' }
+TLBlocConnectionCurveTest >> testStartDirectionOfAnEmptyRouteIsNil [
+
+	self assert: (self taxiFrom: 0 @ 0 to: 0 @ 0) startDirection isNil
 ]
 
 { #category : 'tests' }

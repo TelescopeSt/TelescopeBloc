@@ -17,6 +17,27 @@ TLBlocConnectorConnectionTest >> assertRoute: aRoute avoidsTheNodeOfEntity: anEn
 	aRoute points overlappingPairsDo: [ :from :to | self deny: (((from min: to) - 0.5 corner: (from max: to) + 0.5) intersects: rectangle) ]
 ]
 
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> centerOf: anOutline [
+
+	^ anOutline encompassingRectangle center asPoint
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> elementOfConnectionStyledBy: aBlock [
+	"The block gets the style sheet of a connection between two nodes. Answers the element of the connection"
+
+	| connection |
+	connection := (visualization addNodeFromEntity: 1) connectTo: (visualization addNodeFromEntity: 2).
+	aBlock value: connection styleSheet.
+	visualization layout: ((TLLinearLayout perLine: 2)
+			 gap: 150;
+			 yourself).
+	connector open: visualization inWindowSized: 500 @ 300 titled: 'Arrows'.
+	connector view space settleForDuration: 1 seconds.
+	^ connector elementFromTLDrawable: connection
+]
+
 { #category : 'tests - line style' }
 TLBlocConnectorConnectionTest >> elementOfConnectionStyledWith: aLineStyle [
 
@@ -95,12 +116,109 @@ TLBlocConnectorConnectionTest >> setUp [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorConnectionTest >> testArrowHasTheColorOfTheLineUnlessItHasItsOwn [
+
+	| element |
+	element := self elementOfConnectionStyledBy: [ :style |
+			           style color: Color red.
+			           style > #base shape: TLTriangle.
+			           (style > #middle)
+				           shape: TLTriangle;
+				           color: Color blue ].
+	self assert: (element arrowNamed: #base) element background paint color equals: Color red.
+	self assert: (element arrowNamed: #middle) element background paint color equals: Color blue
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testArrowIsBiggerOnAThickerLine [
+
+	| thin thick |
+	thin := (visualization addNodeFromEntity: 1) connectTo: (visualization addNodeFromEntity: 2).
+	thin styleSheet > #middle shape: TLTriangle.
+	thick := (visualization addNodeFromEntity: 3) connectTo: (visualization addNodeFromEntity: 4).
+	thick styleSheet width: 6.
+	thick styleSheet > #middle shape: TLTriangle.
+	connector open: visualization inWindowSized: 500 @ 300 titled: 'Arrows'.
+	connector view space settleForDuration: 1 seconds.
+	self assert: ((connector elementFromTLDrawable: thick) arrowNamed: #middle) element extent x > ((connector elementFromTLDrawable: thin) arrowNamed: #middle) element extent x
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testArrowWithoutShapeIsNotDrawn [
+
+	| element |
+	element := self elementOfConnectionStyledBy: [ :style | style > #base shape: TLNoShape ].
+	self assert: element arrows isEmpty
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testArrowsAreDrawnAgainWhenTheStyleChanges [
+
+	| connection element count |
+	connection := (visualization addNodeFromEntity: 1) connectTo: (visualization addNodeFromEntity: 2).
+	connection styleSheet > #middle shape: TLTriangle.
+	visualization layout: ((TLLinearLayout perLine: 2)
+			 gap: 150;
+			 yourself).
+	connector open: visualization inWindowSized: 500 @ 300 titled: 'Arrows'.
+	connector view space settleForDuration: 1 seconds.
+	element := connector elementFromTLDrawable: connection.
+	count := element children size.
+	element customizeFromConnection: connection.
+	element update.
+	self assert: element children size equals: count.
+	self assert: element arrows size equals: 1
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testArrowsFollowTheShapeOfTheirStyle [
+
+	| element |
+	element := self elementOfConnectionStyledBy: [ :style | style > #middle shape: TLCircle ].
+	self assert: (element arrowNamed: #middle) element geometry class equals: BlEllipseGeometry
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testBaseArrowIsAtTheStartOfTheLinePointingBackwards [
+
+	| element arrow |
+	element := self elementOfConnectionStyledBy: [ :style | style > #base shape: TLTriangle ].
+	arrow := element arrowNamed: #base.
+	self assert: arrow isNotNil.
+	self assert: (self tipOf: arrow outline pointing: -1 @ 0) equals: element start.
+	self assert: arrow element isNotNil.
+	self assert: arrow element parent identicalTo: element
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testBaseArrowOfACurvedConnectionFollowsItsTangent [
+
+	| element arrow direction |
+	self openConnectionsBetweenTwoNodes: 2 direction: [ :index :first :second | (first connectTo: second) styleSheet > #base shape: TLTriangle ].
+	element := connector connections first.
+	arrow := element arrowNamed: #base.
+	direction := element route startDirection negated.
+	self assert: (self tipOf: arrow outline pointing: direction) equals: element start
+]
+
+{ #category : 'tests' }
 TLBlocConnectorConnectionTest >> testBezierConnectionStaysStraightThroughTheNodeBetweenItsNodes [
 	"Only the segments curve goes around the nodes"
 
 	| element |
 	element := self openThreeNodesInARowWithSegmentsFromFirstToLast: TLBezierCurve.
 	self assert: element route class equals: TLBlocConnectionSegment
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testConnectionArrowsDemoShowsTheThreeArrows [
+
+	| arrows |
+	self openDemo: TLDemos exampleConnectionArrows.
+	arrows := connector connections flatCollect: [ :connection | connection arrows collect: #name ].
+	self assert: (arrows includes: #base).
+	self assert: (arrows includes: #middle).
+	self assert: (arrows includes: #middleReversed)
 ]
 
 { #category : 'tests' }
@@ -116,6 +234,14 @@ TLBlocConnectorConnectionTest >> testConnectionHasATriangleHeadByDefaultWhoseTip
 	self assert: element head geometry class equals: BlPolygonGeometry.
 	tip := (element headOutline vertices collect: #asPoint as: Array) detectMax: [ :point | point x ].
 	self assert: tip equals: element end
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testConnectionHasNoArrowAtItsStartOrMiddleByDefault [
+
+	| element |
+	element := self elementOfConnectionStyledBy: [ :style |  ].
+	self assert: element arrows isEmpty
 ]
 
 { #category : 'tests' }
@@ -425,11 +551,44 @@ TLBlocConnectorConnectionTest >> testLabelOfACurvedConnectionIsNotOnItsMiddle [
 	self deny: (rectangle containsPoint: element route middlePoint)
 ]
 
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testMiddleArrowIsCenteredOnTheMiddleOfTheLineAndPointsAlongIt [
+
+	| element arrow |
+	element := self elementOfConnectionStyledBy: [ :style | style > #middle shape: TLTriangle ].
+	arrow := element arrowNamed: #middle.
+	self assert: (self centerOf: arrow outline) x closeTo: element route middlePoint x.
+	self assert: (self centerOf: arrow outline) y closeTo: element route middlePoint y.
+	self assert: (self tipOf: arrow outline pointing: 1 @ 0) x > element route middlePoint x
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testMiddleArrowOfASegmentsConnectionIsOnItsMiddleSegment [
+
+	| element arrow |
+	element := self elementOfConnectionStyledBy: [ :style |
+			           style curveStyle: TLSegmentsCurve.
+			           style > #middle shape: TLTriangle ].
+	arrow := element arrowNamed: #middle.
+	self assert: (self centerOf: arrow outline) x closeTo: element route middlePoint x.
+	self assert: (self centerOf: arrow outline) y closeTo: element route middlePoint y
+]
+
 { #category : 'tests - curves' }
 TLBlocConnectorConnectionTest >> testMiddleOfThreeConnectionsStaysStraight [
 
 	self openConnectionsBetweenTwoNodes: 3 direction: [ :index :first :second | first connectTo: second ].
 	self assert: (connector connections collect: [ :connection | connection geometry class ] as: Set) size equals: 2
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testMiddleReversedArrowPointsBackwards [
+
+	| element arrow |
+	element := self elementOfConnectionStyledBy: [ :style | style > #middleReversed shape: TLTriangle ].
+	arrow := element arrowNamed: #middleReversed.
+	self assert: (self centerOf: arrow outline) x closeTo: element route middlePoint x.
+	self assert: (self tipOf: arrow outline pointing: -1 @ 0) x < element route middlePoint x
 ]
 
 { #category : 'tests - adjacency' }
@@ -697,6 +856,18 @@ TLBlocConnectorConnectionTest >> testSolidConnectionIsAnUninterruptedLine [
 	self assertEmpty: element lines
 ]
 
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testThreeArrowsAndTheHeadCanBeTogether [
+
+	| element |
+	element := self elementOfConnectionStyledBy: [ :style |
+			           style > #base shape: TLTriangle.
+			           style > #middle shape: TLTriangle.
+			           style > #middleReversed shape: TLTriangle ].
+	self assert: element arrows size equals: 3.
+	self assert: element head isNotNil
+]
+
 { #category : 'tests - adjacency' }
 TLBlocConnectorConnectionTest >> testTreeLayoutPlacesTheTargetBelowTheSource [
 
@@ -753,4 +924,11 @@ TLBlocConnectorConnectionTest >> testViewContentIncludesTheCurvesOfTheConnection
 	connector connections do: [ :element |
 			box := element measuredBounds position extent: element extent.
 			self assert: ((connector view contentRectangle expandBy: 0.01) containsRect: box) ]
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> tipOf: anOutline pointing: aVector [
+	"The vertex of the outline which is the farthest along the vector"
+
+	^ (anOutline vertices collect: #asPoint as: Array) detectMax: [ :point | point dotProduct: aVector ]
 ]

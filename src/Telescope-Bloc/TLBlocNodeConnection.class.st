@@ -1,5 +1,5 @@
 "
-I am the Bloc element of a connection between two nodes of a Telescope visualization. I am a line from the border of the outline of the source node to the border of the outline of the target node, along the line which joins their centers (see TLBlocConnectionSegment). I am in the view, in the coordinates of which the segment is computed, and my element is the box of the segment. The connector updates me once the layouts have placed the nodes. The color, the width and the line style of the line are the ones of the style sheet of the connection: solid, dashed, dotted or double, two lines on both sides of the segment, so that a double line ends where a single one does. I draw a head at the end of the line, with the shape of the head substyle: a triangle by default, and the color of the line unless the head has its own. I show the label of the connection next to the middle of the line, above it or on its right when it is vertical, and not on it. The line is the route of the curve style of the style sheet: a straight line, an arc when other connections join the same nodes (Bezier, the default of Telescope), or segments with right angles. The arrows at the start and at the middle, and the interactions are not implemented yet. #customizeFromConnection: can be called again when an interaction changed the style of the connection. A connection from a node to itself is a loop above the node (see TLBlocConnectionLoop), whatever its curve style: the loops of the same node are turned around it so that they do not overlap.
+I am the Bloc element of a connection between two nodes of a Telescope visualization. I am a line from the border of the outline of the source node to the border of the outline of the target node, along the line which joins their centers (see TLBlocConnectionSegment). I am in the view, in the coordinates of which the segment is computed, and my element is the box of the segment. The connector updates me once the layouts have placed the nodes. The color, the width and the line style of the line are the ones of the style sheet of the connection: solid, dashed, dotted or double, two lines on both sides of the segment, so that a double line ends where a single one does. I draw a head at the end of the line, with the shape of the head substyle: a triangle by default, and the color of the line unless the head has its own. I show the label of the connection next to the middle of the line, above it or on its right when it is vertical, and not on it. The line is the route of the curve style of the style sheet: a straight line, an arc when other connections join the same nodes (Bezier, the default of Telescope), or segments with right angles. The arrows at the start and at the middle, and the interactions are not implemented yet. #customizeFromConnection: can be called again when an interaction changed the style of the connection. A connection from a node to itself is a loop above the node (see TLBlocConnectionLoop), whatever its curve style: the loops of the same node are turned around it so that they do not overlap. Besides the head at the end of the line, a connection has the arrows which the substyles base (at the start, pointing into the source), middle and middleReversed (centered on the middle of the line, pointing along it or backwards) ask for when they have a shape: they are TLBlocConnectionArrow, with the color of the line unless their substyle has its own.
 "
 Class {
 	#name : 'TLBlocNodeConnection',
@@ -17,7 +17,8 @@ Class {
 		'lines',
 		'lineWidth',
 		'curveStyle',
-		'parallelOffset'
+		'parallelOffset',
+		'arrows'
 	],
 	#category : 'Telescope-Bloc-Elements',
 	#package : 'Telescope-Bloc',
@@ -31,6 +32,22 @@ TLBlocNodeConnection class >> from: aSourceElement to: aTargetElement [
 	^ self new
 		  fromNode: aSourceElement toNode: aTargetElement;
 		  yourself
+]
+
+{ #category : 'arrows' }
+TLBlocNodeConnection >> arrowNamed: aSymbol [
+	"The arrow which the substyle of that name asks for, or nil when it has no shape"
+
+	^ arrows
+		  detect: [ :arrow | arrow name = aSymbol ]
+		  ifNone: [ nil ]
+]
+
+{ #category : 'arrows' }
+TLBlocNodeConnection >> arrows [
+	"The arrows at the start and at the middle of the line, which the substyles base, middle and middleReversed of the style ask for. The head at the end is not one of them"
+
+	^ arrows
 ]
 
 { #category : 'layout' }
@@ -65,14 +82,15 @@ TLBlocNodeConnection >> createLabelFrom: aStyleSheet [
 	self addChild: label
 ]
 
-{ #category : 'initialization' }
+{ #category : 'updating' }
 TLBlocNodeConnection >> customizeFromConnection: aTLConnection [
-	"The color, the width, the line style and the curve style of the style sheet of the connection are the ones of the line, solid by default. The head is the shape of the head substyle, a triangle when it has none, with the color of the line unless the head has its own. The label is a text at the middle of the line. It can be called again when an interaction changed the style: the previous label is removed, and #update draws the line and the head again"
+	"The color, the width, the line style and the curve style of the style sheet of the connection are the ones of the line, solid by default. The head is the shape of the head substyle, a triangle when it has none, with the color of the line unless the head has its own. The arrows at the start and at the middle are the shapes of the substyles base, middle and middleReversed, when they have one. The label is a text at the middle of the line. It can be called again when an interaction changed the style: the previous label is removed, and #update draws the line, the head and the arrows again"
 
 	| styleSheet headStyle |
 	styleSheet := aTLConnection effectiveStyleSheet.
 	label ifNotNil: [ :previous | previous removeFromParent ].
 	label := nil.
+	arrows do: [ :arrow | self removeElementOf: arrow ].
 	lineStyle := (styleSheet attributes includesKey: #connectionLineStyle)
 		             ifTrue: [ styleSheet connectionLineStyle ]
 		             ifFalse: [ TLSolidLineStyle ].
@@ -86,7 +104,24 @@ TLBlocNodeConnection >> customizeFromConnection: aTLConnection [
 	headColor := (headStyle attributes includesKey: #color)
 		             ifTrue: [ headStyle color ]
 		             ifFalse: [ styleSheet color ].
+	arrows := TLBlocConnectionArrow arrowsFrom: styleSheet lineColor: styleSheet color.
 	(styleSheet attributes includesKey: #connectionLabel) ifTrue: [ self createLabelFrom: styleSheet ]
+]
+
+{ #category : 'arrows' }
+TLBlocNodeConnection >> elementFor: anOutline colored: aColor [
+	"An element of the color, with the geometry of the outline, which is in the coordinates of the view. The element is in my coordinates"
+
+	| corners topLeft bottomRight element |
+	corners := anOutline encompassingRectangle vertices collect: #asPoint as: Array.
+	topLeft := (corners collect: #x) min @ (corners collect: #y) min.
+	bottomRight := (corners collect: #x) max @ (corners collect: #y) max.
+	element := BlElement new.
+	element background: aColor.
+	element position: topLeft - self measuredBounds position.
+	element extent: (bottomRight - topLeft max: 1 @ 1).
+	element geometry: (anOutline translatedCopyBy: topLeft negated) asBlocGeometry.
+	^ element
 ]
 
 { #category : 'layout' }
@@ -124,20 +159,11 @@ TLBlocNodeConnection >> head [
 	^ head
 ]
 
-{ #category : 'layout' }
+{ #category : 'arrows' }
 TLBlocNodeConnection >> headElementFor: anOutline [
 	"An element of the color of the head, with the geometry of the outline, which is in the coordinates of the view. The element is in my coordinates"
 
-	| corners topLeft bottomRight element |
-	corners := anOutline encompassingRectangle vertices collect: #asPoint as: Array.
-	topLeft := (corners collect: #x) min @ (corners collect: #y) min.
-	bottomRight := (corners collect: #x) max @ (corners collect: #y) max.
-	element := BlElement new.
-	element background: headColor.
-	element position: topLeft - self measuredBounds position.
-	element extent: (bottomRight - topLeft max: 1 @ 1).
-	element geometry: (anOutline translatedCopyBy: topLeft negated) asBlocGeometry.
-	^ element
+	^ self elementFor: anOutline colored: headColor
 ]
 
 { #category : 'accessing' }
@@ -156,10 +182,11 @@ TLBlocNodeConnection >> headSize [
 
 { #category : 'initialization' }
 TLBlocNodeConnection >> initialize [
-	"The head and the label are outside of the box of the route. A connection alone between its nodes has no offset"
+	"The head and the label are outside of the box of the route. A connection alone between its nodes has no offset, and no arrow at its start or middle"
 
 	super initialize.
 	lines := #(  ).
+	arrows := #(  ).
 	parallelOffset := 0.
 	self clipChildren: false
 ]
@@ -280,6 +307,13 @@ TLBlocNodeConnection >> rectanglesRelativeTo: anOrigin [
 		   ifNotNil: [ :aLabel | { (topLeft + aLabel measuredBounds position extent: aLabel extent) } ])
 ]
 
+{ #category : 'arrows' }
+TLBlocNodeConnection >> removeElementOf: anArrow [
+
+	anArrow element ifNotNil: [ :arrowElement | arrowElement removeFromParent ].
+	anArrow element: nil
+]
+
 { #category : 'accessing' }
 TLBlocNodeConnection >> route [
 	"The route of the line in the coordinates of the view, which the curve style gave: nil until the connection is updated"
@@ -314,9 +348,21 @@ TLBlocNodeConnection >> update [
 	self updateAvoiding: #(  )
 ]
 
+{ #category : 'arrows' }
+TLBlocNodeConnection >> updateArrows [
+	"The arrows are drawn again on the route. They are the size of the head"
+
+	arrows do: [ :arrow |
+			self removeElementOf: arrow.
+			arrow placeOn: segment size: self headSize.
+			arrow outline ifNotNil: [ :arrowOutline |
+					arrow element: (self elementFor: arrowOutline colored: arrow color).
+					self addChild: arrow element ] ]
+]
+
 { #category : 'updating' }
 TLBlocNodeConnection >> updateAvoiding: someRectangles [
-	"Joins the borders of the nodes, once the layouts have placed them. The connection is in the view, in the coordinates of which the route is computed. The route is the one of the curve style: a straight line, an arc when other connections join the same nodes, or segments with right angles which go around the rectangles of the other nodes, in the coordinates of the view. A connection from a node to itself is a loop, whatever its curve style"
+	"Joins the borders of the nodes, once the layouts have placed them. The connection is in the view, in the coordinates of which the route is computed. The route is the one of the curve style: a straight line, an arc when other connections join the same nodes, or segments with right angles which go around the rectangles of the other nodes, in the coordinates of the view. A connection from a node to itself is a loop, whatever its curve style. The head and the arrows are drawn on the route"
 
 	| view |
 	view := self parent.
@@ -330,6 +376,7 @@ TLBlocNodeConnection >> updateAvoiding: someRectangles [
 					           obstacles: someRectangles ].
 	self placeSegment.
 	self updateHead.
+	self updateArrows.
 	self centerLabel
 ]
 
