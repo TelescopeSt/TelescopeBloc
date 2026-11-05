@@ -115,6 +115,32 @@ TLBlocConnectorTriggerTest >> testClickingTheTriggerOfTheTreeExplorerExpandsTheN
 ]
 
 { #category : 'tests' }
+TLBlocConnectorTriggerTest >> testCompositeDefaultCollapseInteractionShowsPlusThenMinus [
+
+	| composite trigger |
+	visualization styleSheet
+		width: 40;
+		height: 30;
+		compositeExpandedByDefault: false.
+	visualization childrenProperty: [ :number |
+			number < 10
+				ifTrue: [
+						{
+							(number * 10 + 1).
+							(number * 10 + 2) } ]
+				ifFalse: [ #(  ) ] ].
+	composite := visualization addNodeFromEntity: 1.
+	visualization addCompositeDefaultCollapseInteraction.
+	connector open: visualization inWindowSized: 500 @ 300 titled: 'Composite'.
+	connector view space settleForDuration: 1 seconds.
+	trigger := self triggerElementOf: composite.
+	self assert: trigger labelElement labelText equals: '+'.
+	trigger dispatchEvent: BlClickEvent new.
+	connector view space settleForDuration: 1 seconds.
+	self assert: (self triggerElementOf: composite) labelElement labelText equals: '-'
+]
+
+{ #category : 'tests' }
 TLBlocConnectorTriggerTest >> testNodeWithAShapeInteractionHasAnElementForItsTrigger [
 
 	| node trigger |
@@ -203,6 +229,29 @@ TLBlocConnectorTriggerTest >> testTriggerIsPartOfTheContentWhichTheViewFits [
 	node := self openNodeWithTrigger: self plainTrigger counting: (Array with: 0).
 	element := connector elementFromTLDrawable: node.
 	self assert: (element rectanglesRelativeTo: 0 @ 0) size >= 2
+]
+
+{ #category : 'tests' }
+TLBlocConnectorTriggerTest >> testTriggerLabelFollowsTheStateOfItsNode [
+
+	| clicks node |
+	clicks := Array with: 0.
+	visualization styleSheet
+		width: 40;
+		height: 40.
+	node := visualization addNodeFromEntity: 1.
+	visualization addInteraction: ((TLCustomAction block: [ :target |
+				  clicks at: 1 put: (clicks at: 1) + 1.
+				  target requireUpdate ]) withTriggerStyle: [ :style :element |
+				 style nodeLabel: (clicks first > 0
+						  ifTrue: [ '-' ]
+						  ifFalse: [ '+' ]) ]) onClick.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Trigger'.
+	connector view space settleForDuration: 1 seconds.
+	self assert: (self triggerElementOf: node) labelElement labelText equals: '+'.
+	(self triggerElementOf: node) dispatchEvent: BlClickEvent new.
+	connector view space settleForDuration: 1 seconds.
+	self assert: (self triggerElementOf: node) labelElement labelText equals: '-'
 ]
 
 { #category : 'tests' }
@@ -307,6 +356,16 @@ TLBlocConnectorTriggerTest >> testTriggerStyleIsMadeAgainWhenItsNodeIsUpdated [
 	(self triggerElementOf: node) dispatchEvent: BlClickEvent new.
 	connector view space settleForDuration: 1 seconds.
 	self assert: (self triggerElementOf: node) background paint color equals: Color blue
+]
+
+{ #category : 'tests' }
+TLBlocConnectorTriggerTest >> testTriggerWhoseStyleHasALabelShowsIt [
+
+	| node trigger |
+	node := self openNodeWithTrigger: [ :style :element | style nodeLabel: '+' ] counting: (Array with: 0).
+	trigger := self triggerElementOf: node.
+	self assert: trigger labelElement isNotNil.
+	self assert: trigger labelElement labelText equals: '+'
 ]
 
 { #category : 'tests' }

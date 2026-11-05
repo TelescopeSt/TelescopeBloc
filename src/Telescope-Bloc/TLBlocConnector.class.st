@@ -203,11 +203,14 @@ TLBlocConnector >> createElementConnection: aTLConnection From: fromNode to: toN
 
 { #category : 'triggers' }
 TLBlocConnector >> createElementFromTrigger: aTLShapeTrigger [
-	"A trigger is a small node element, without label, with the style of the trigger. It is a child of the element of its node, so that it follows it"
+	"A trigger is a small node element with the style of the trigger. It has a label when its style gives one, such as the + and - of the default trigger of a composite node. It is a child of the element of its node, so that it follows it"
 
-	^ TLBlocNodeElement new
-		  customizeFromNode: aTLShapeTrigger;
-		  yourself
+	| element |
+	element := TLBlocNodeElement new
+		           customizeFromNode: aTLShapeTrigger;
+		           yourself.
+	(self labelElementOf: aTLShapeTrigger) ifNotNil: [ :label | element addChild: label ].
+	^ element
 ]
 
 { #category : 'generation - legend' }
@@ -932,9 +935,12 @@ TLBlocConnector >> updateLegend: aTLLegend [
 
 { #category : 'triggers' }
 TLBlocConnector >> updateShapeTrigger: aTLShapeTrigger [
-	"The style of a trigger changed, for example because its node was expanded: its element is made again from the style"
+	"The style of a trigger changed, for example because its node was expanded: its element is made again from the style, and its label too"
 
-	(self elementFromTLDrawable: aTLShapeTrigger) customizeFromNode: aTLShapeTrigger
+	| element |
+	element := self elementFromTLDrawable: aTLShapeTrigger.
+	element customizeFromNode: aTLShapeTrigger.
+	element replaceLabelWith: (self labelElementOf: aTLShapeTrigger)
 ]
 
 { #category : 'triggers' }
