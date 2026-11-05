@@ -58,6 +58,14 @@ TLBlocConnectorCompositeTest >> elementOfEntity: anEntity [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorCompositeTest >> labelRectangleOfEntity: anEntity [
+
+	| label |
+	label := (self elementOfEntity: anEntity) children detect: [ :child | child class = TLBlocLabelElement ].
+	^ label boundsInSpace asRectangle
+]
+
+{ #category : 'tests' }
 TLBlocConnectorCompositeTest >> nodeOfEntity: anEntity [
 
 	^ visualization allNodesRecursively detect: [ :node | node entity = anEntity ]
@@ -86,6 +94,23 @@ TLBlocConnectorCompositeTest >> openWithComposite: anEntity expanded: aBoolean [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorCompositeTest >> openWithComposite: anEntity expanded: aBoolean labelPosition: aPosition [
+	"The labels of all the nodes are at the position, and the label of the composite 6 is long"
+
+	self prepareComposites.
+	visualization styleSheet
+		compositeExpandedByDefault: aBoolean;
+		nodeLabelPosition: aPosition;
+		nodeLabel: [ :number |
+				number = 6
+					ifTrue: [ 'A composite with a long label' ]
+					ifFalse: [ number asString ] ].
+	visualization addNodeFromEntity: anEntity.
+	connector open: visualization inWindowSized: 800 @ 600 titled: 'Composite'.
+	connector view space settleForDuration: 1 seconds
+]
+
+{ #category : 'tests' }
 TLBlocConnectorCompositeTest >> prepareComposites [
 	"The entity 30 has the children 6 and 5, and 6 has the children 2 and 3: the nodes of the other entities have no child. Telescope gives the same property to the children"
 
@@ -107,6 +132,16 @@ TLBlocConnectorCompositeTest >> prepareComposites [
 TLBlocConnectorCompositeTest >> rectangleOfEntity: anEntity [
 
 	^ (self elementOfEntity: anEntity) boundsInSpace asRectangle
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testChildrenAreCenteredWhenTheInsideLabelMakesTheCompositeWider [
+
+	| composite children |
+	self openWithComposite: 6 expanded: true labelPosition: #inside.
+	composite := self rectangleOfEntity: 6.
+	children := (self rectangleOfEntity: 2) merge: (self rectangleOfEntity: 3).
+	self assert: children center x closeTo: composite center x
 ]
 
 { #category : 'tests' }
@@ -234,6 +269,15 @@ TLBlocConnectorCompositeTest >> testCollapsedCompositeHasNoChildrenElement [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorCompositeTest >> testCompositeIsAsWideAsItsInsideLabel [
+	"The label is longer than the children"
+
+	self openWithComposite: 6 expanded: true labelPosition: #inside.
+	self assert: (self rectangleOfEntity: 6) width >= ((self labelRectangleOfEntity: 6) width + (10 * connector view zoom)).
+	self assert: ((self rectangleOfEntity: 6) containsRect: ((self rectangleOfEntity: 2) merge: (self rectangleOfEntity: 3)))
+]
+
+{ #category : 'tests' }
 TLBlocConnectorCompositeTest >> testCompositeIsBiggerThanItsChildren [
 
 	| composite children |
@@ -300,6 +344,106 @@ TLBlocConnectorCompositeTest >> testDraggingACompositeMovesItsChildren [
 	before := self rectangleOfEntity: 2.
 	self dragFrom: (self elementOfEntity: 6) at: 3 @ 3 by: 40 @ 30.
 	self assert: ((self rectangleOfEntity: 2) origin - before origin - (40 @ 30)) abs < (1 @ 1)
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testExpandingACompositeWithAnInsideLabelMakesRoomForTheLabel [
+
+	| composite |
+	self prepareComposites.
+	visualization styleSheet
+		compositeExpandedByDefault: false;
+		nodeLabelPosition: #inside.
+	visualization addNodeFromEntity: 6.
+	visualization addInteraction: TLExpandCollapseCompositeNodeAction onCompositeNodeWithChildren onClick.
+	connector open: visualization inWindowSized: 600 @ 500 titled: 'Composite'.
+	connector view space settleForDuration: 1 seconds.
+	composite := self elementOfEntity: 6.
+	composite dispatchEvent: BlClickEvent new.
+	connector view space settleForDuration: 1 seconds.
+	self assert: (self labelRectangleOfEntity: 6) bottom <= (self rectangleOfEntity: 2) top.
+	composite dispatchEvent: BlClickEvent new.
+	connector view space settleForDuration: 1 seconds.
+	self assert: (self labelRectangleOfEntity: 6) center closeTo: (self rectangleOfEntity: 6) center
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testInsideLabelOfACollapsedCompositeIsCenteredOverIt [
+
+	self openWithComposite: 6 expanded: false labelPosition: #inside.
+	self assert: (self labelRectangleOfEntity: 6) center closeTo: (self rectangleOfEntity: 6) center
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testInsideLabelOfACompositeDoesNotOverlapItsChildrenWhenNested [
+
+	self openWithComposite: 30 expanded: true labelPosition: #inside.
+	self assert: (self labelRectangleOfEntity: 30) bottom <= (self rectangleOfEntity: 6) top.
+	self assert: (self labelRectangleOfEntity: 30) bottom <= (self rectangleOfEntity: 5) top.
+	self assert: (self labelRectangleOfEntity: 6) bottom <= (self rectangleOfEntity: 2) top
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testInsideLabelOfACompositeIsAboveItsChildren [
+
+	self openWithComposite: 6 expanded: true labelPosition: #inside.
+	self assert: (self labelRectangleOfEntity: 6) bottom <= (self rectangleOfEntity: 2) top.
+	self assert: (self labelRectangleOfEntity: 6) bottom <= (self rectangleOfEntity: 3) top
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testInsideLabelOfACompositeIsCenteredAtItsTop [
+
+	| composite label zoom |
+	self openWithComposite: 6 expanded: true labelPosition: #inside.
+	zoom := connector view zoom.
+	composite := self rectangleOfEntity: 6.
+	label := self labelRectangleOfEntity: 6.
+	self assert: label center x closeTo: composite center x.
+	self assert: label top - composite top closeTo: 10 * zoom
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testInsideLabelOfACompositeIsInsideItsBorder [
+
+	self openWithComposite: 6 expanded: true labelPosition: #inside.
+	self assert: ((self rectangleOfEntity: 6) containsRect: (self labelRectangleOfEntity: 6))
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testInsideLabelOfACompositeStaysWhereItIsOnceSettled [
+
+	| before |
+	self openWithComposite: 6 expanded: true labelPosition: #inside.
+	before := {
+		          (self rectangleOfEntity: 6).
+		          (self labelRectangleOfEntity: 6).
+		          (self rectangleOfEntity: 2) }.
+	connector view space settleForDuration: 1 seconds.
+	self
+		assert: {
+				(self rectangleOfEntity: 6).
+				(self labelRectangleOfEntity: 6).
+				(self rectangleOfEntity: 2) }
+		equals: before
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testInsideLabelOfALeafNodeIsCenteredOverIt [
+
+	self openWithComposite: 6 expanded: true labelPosition: #inside.
+	self assert: (self labelRectangleOfEntity: 2) center closeTo: (self rectangleOfEntity: 2) center
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testLabelBelowACompositeLeavesNoStripAtItsTop [
+
+	| composite children |
+	self openWithComposite: 6 expanded: true labelPosition: #bottom.
+	composite := self rectangleOfEntity: 6.
+	children := (self rectangleOfEntity: 2) merge: (self rectangleOfEntity: 3).
+	self assert: children top - composite top closeTo: 10 * connector view zoom.
+	self assert: (self labelRectangleOfEntity: 6) top >= composite bottom
 ]
 
 { #category : 'tests' }

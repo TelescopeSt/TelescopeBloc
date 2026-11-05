@@ -1,5 +1,5 @@
 "
-I display the label of a Telescope node in a Bloc visualization, as a vertical stack of lines, because Bloc neither breaks a text at line feeds nor wraps it. Each line is a text element, centered in me. My placement is a TLPosition: I place myself so that my reversed position meets the anchor of the position on my node, with a gap. I wrap my lines to a maximum width by moving one word at a time to the next line, or I cut my text with three dots, measuring the lines after each layout. The size of my font is the label size of the style sheet of my node, because Telescope computes the width of a node from its label and its label size: I give it again to the text of a line each time the text changes. The position can be given by a block which answers a symbol such as #top. The color of the text is the text color of the style sheet, which can depend on the entity: I give it again, with the size, to the text of a line each time it changes. #looksLike: tells whether another label would look the same.
+I display the label of a Telescope node in a Bloc visualization, as a vertical stack of lines, because Bloc neither breaks a text at line feeds nor wraps it. Each line is a text element, centered in me. My placement is a TLPosition: I place myself so that my reversed position meets the anchor of the position on my node, with a gap. I wrap my lines to a maximum width by moving one word at a time to the next line, or I cut my text with three dots, measuring the lines after each layout. The size of my font is the label size of the style sheet of my node, because Telescope computes the width of a node from its label and its label size: I give it again to the text of a line each time the text changes. The position can be given by a block which answers a symbol such as #top. The color of the text is the text color of the style sheet, which can depend on the entity: I give it again, with the size, to the text of a line each time it changes. #looksLike: tells whether another label would look the same. A label at the center of a composite node with children displayed is in the strip at the top of the node, not over its children.
 "
 Class {
 	#name : 'TLBlocLabelElement',
@@ -105,6 +105,19 @@ TLBlocLabelElement >> gapVector [
 	^ 0 @ 0
 ]
 
+{ #category : 'testing' }
+TLBlocLabelElement >> isCenteredOnNode [
+	"A label at the center of its node is inside of it: on a composite node it has to leave the children free"
+
+	^ placement horizontal = #center and: [ placement vertical = #center ]
+]
+
+{ #category : 'placing' }
+TLBlocLabelElement >> isInHeaderOfItsNode [
+
+	^ self parent headerLabel == self
+]
+
 { #category : 'wrapping' }
 TLBlocLabelElement >> join: aCollection with: aSeparator [
 
@@ -173,11 +186,15 @@ TLBlocLabelElement >> onLayoutComputed [
 	wrapping = 'ellipsis' ifTrue: [ self ellipsize ]
 ]
 
-{ #category : 'placement' }
+{ #category : 'placing' }
 TLBlocLabelElement >> placeOutsideNode [
-	"Compares with the measured position, the one Bloc uses to avoid requesting the same layout again. Comparing the laid out bounds never matches, which makes an endless layout loop"
+	"Compares with the measured position, the one Bloc uses to avoid requesting the same layout again. Comparing the laid out bounds never matches, which makes an endless layout loop. The label which is inside a composite node is in the strip at its top, and the node makes room for it once the label is measured"
 
 	| offset |
+	self isInHeaderOfItsNode ifTrue: [
+			self parent fitToChildrenWhenTheHeaderChanged.
+			offset := self parent headerOffsetOfLabel.
+			^ self measuredBounds position = offset ifFalse: [ self position: offset ] ].
 	offset := self offsetForNodeExtent: self parent extent.
 	self measuredBounds position = offset ifFalse: [ self position: offset ]
 ]

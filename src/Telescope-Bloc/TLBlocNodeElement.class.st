@@ -1,5 +1,5 @@
 "
-I am the Bloc element of a Telescope node. My dimension, my background and my border come from the style sheet of the node, the border being half inside and half outside of the edge, solid, dashed, dotted or double, the outline drawn a second time inside of the first one with a small gap: the colors can depend on the entity of the node, with a block or a gradient. My shape is my outline: a Geometry project shape (a polygon, a rectangle or an ellipse) built from the Telescope shape and my dimension, in my own coordinates. My Bloc geometry is derived from my outline, and the connections use my outline to find where they meet the border of the node. I have no outline when the node has no shape, and then only my label is drawn. The layouts of Telescope place a node by its center: #position: takes the center, but #position stays the top left corner of the element, because Bloc reads it to draw me. I do not clip my children, because the label of a node is drawn outside of the node. I know the elements of the connections which leave me and enter me, as my adjacent nodes are asked by the layouts of Telescope such as the tree layout. I know whether the user dragged me with the mouse, because the click which ends a drag is not a click. A composite node has its children in a group: the element of the group is inside of me, at my padding from my border, and I am as big as it and the padding (#fitToChildren). Without child, or when I am collapsed, I have the dimension of my style again. A dimension of 0 gives an outline of at least one pixel. A node can have a fixed center, which a layout does not change (#defineFixedRelativePosition:): this is what the action which memorizes the position of a node does. My label is made again when the entity of the node changes.
+I am the Bloc element of a Telescope node. My dimension, my background and my border come from the style sheet of the node, the border being half inside and half outside of the edge, solid, dashed, dotted or double, the outline drawn a second time inside of the first one with a small gap: the colors can depend on the entity of the node, with a block or a gradient. My shape is my outline: a Geometry project shape (a polygon, a rectangle or an ellipse) built from the Telescope shape and my dimension, in my own coordinates. My Bloc geometry is derived from my outline, and the connections use my outline to find where they meet the border of the node. I have no outline when the node has no shape, and then only my label is drawn. The layouts of Telescope place a node by its center: #position: takes the center, but #position stays the top left corner of the element, because Bloc reads it to draw me. I do not clip my children, because the label of a node is drawn outside of the node. I know the elements of the connections which leave me and enter me, as my adjacent nodes are asked by the layouts of Telescope such as the tree layout. I know whether the user dragged me with the mouse, because the click which ends a drag is not a click. A composite node has its children in a group: the element of the group is inside of me, at my padding from my border, and I am as big as it and the padding (#fitToChildren). Without child, or when I am collapsed, I have the dimension of my style again. A dimension of 0 gives an outline of at least one pixel. A node can have a fixed center, which a layout does not change (#defineFixedRelativePosition:): this is what the action which memorizes the position of a node does. My label is made again when the entity of the node changes. When the label of a composite node with children displayed is at its center (#inside), it is in a strip at the top of the node: the node makes room for it above its children (#headerHeight), is as wide as it when it is wider than the children, and centers the children under it. The node makes room once, when the label is measured (#fitToChildrenWhenTheHeaderChanged), and does not follow the children the user moved. A collapsed composite, and a leaf, have their label centered over them.
 "
 Class {
 	#name : 'TLBlocNodeElement',
@@ -15,7 +15,8 @@ Class {
 		'ownDimension',
 		'shape',
 		'borderStyle',
-		'fixedCenter'
+		'fixedCenter',
+		'fittedHeaderExtent'
 	],
 	#category : 'Telescope-Bloc-Elements',
 	#package : 'Telescope-Bloc',
@@ -118,17 +119,71 @@ TLBlocNodeElement >> encompassingRectangle [
 	^ self measuredBounds position extent: dimension
 ]
 
-{ #category : 'composite' }
+{ #category : 'children' }
 TLBlocNodeElement >> fitToChildren [
-	"I am as big as my children and the space around them, which is also my padding. Their group is placed so that its top left corner is at the padding. Without child I keep the dimension of my style"
+	"I am as big as my children and the space around them, which is also my padding, and a strip at the top for my label when it is inside of me, and as wide as that label. Their group is placed under the strip, centered when I am wider than they are. Without child I keep the dimension of my style"
 
-	| rectangle padding |
+	| rectangle padding target |
 	childrenGroup ifNil: [ ^ self ].
+	fittedHeaderExtent := self headerExtent.
 	childrenGroup isEmpty ifTrue: [ ^ self resizeTo: ownDimension ].
 	rectangle := childrenGroup localRectangle.
 	padding := self childrenPadding.
-	childrenGroup element position: padding asPoint - rectangle origin.
-	self resizeTo: rectangle extent + (padding * 2)
+	self resizeTo: (rectangle extent x max: self headerWidth) + (padding * 2) @ (rectangle extent y + (padding * 2) + self headerHeight).
+	target := dimension x - rectangle extent x / 2 - rectangle origin x @ (padding + self headerHeight - rectangle origin y).
+	childrenGroup element measuredBounds position = target ifFalse: [ childrenGroup element position: target ]
+]
+
+{ #category : 'children' }
+TLBlocNodeElement >> fitToChildrenWhenTheHeaderChanged [
+	"The label of the strip is measured after the layout: the node makes room for it, once, and does not follow the children which the user moved"
+
+	self headerExtent = fittedHeaderExtent ifFalse: [ self fitToChildren ]
+]
+
+{ #category : 'children' }
+TLBlocNodeElement >> headerExtent [
+	"The extent of the label in the strip at the top of a composite node, or 0 @ 0 when there is none"
+
+	^ self headerLabel
+		  ifNil: [ 0 @ 0 ]
+		  ifNotNil: [ :label | label extent ]
+]
+
+{ #category : 'children' }
+TLBlocNodeElement >> headerHeight [
+	"The height of the strip at the top of a composite node, for its label: the label and a gap, or 0 when it has no label in the strip"
+
+	^ self headerLabel
+		  ifNil: [ 0 ]
+		  ifNotNil: [ :label | label extent y + label gapFromNode ]
+]
+
+{ #category : 'children' }
+TLBlocNodeElement >> headerLabel [
+	"The label which is in the strip at the top of a composite node: the label of a composite node with children displayed, which is at the center of the node. Otherwise nil: the other labels are outside of the node, and a node without children displayed has its label centered over it"
+
+	| label |
+	(childrenGroup isNil or: [ childrenGroup isEmpty ]) ifTrue: [ ^ nil ].
+	label := self labelElement.
+	^ (label isNotNil and: [ label isCenteredOnNode ])
+		  ifTrue: [ label ]
+		  ifFalse: [ nil ]
+]
+
+{ #category : 'children' }
+TLBlocNodeElement >> headerOffsetOfLabel [
+	"Where the label of the strip is in the node: centered, at the padding from the top"
+
+	^ dimension x - self headerLabel extent x / 2 @ self childrenPadding
+]
+
+{ #category : 'children' }
+TLBlocNodeElement >> headerWidth [
+
+	^ self headerLabel
+		  ifNil: [ 0 ]
+		  ifNotNil: [ :label | label extent x ]
 ]
 
 { #category : 'layout' }
@@ -158,6 +213,15 @@ TLBlocNodeElement >> innerBorder [
 { #category : 'accessing' }
 TLBlocNodeElement >> isNode [
 	^ true
+]
+
+{ #category : 'children' }
+TLBlocNodeElement >> labelElement [
+	"The label of the node, or nil when it has none"
+
+	^ self children
+		  detect: [ :child | child class = TLBlocLabelElement ]
+		  ifNone: [ nil ]
 ]
 
 { #category : 'dimension' }
