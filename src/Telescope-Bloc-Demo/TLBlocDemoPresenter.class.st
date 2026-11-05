@@ -1,5 +1,5 @@
 "
-I am a Spec browser of the demos of TLDemos rendered by the Bloc connector. I list the demos, filter them with the filters they declare, show the visualization in a Bloc canvas and the source of the demo below. When a demo fails, I replace the visualization by the stack of the error and I enable a button to debug it.
+I am a Spec browser of the demos of TLDemos rendered by the Bloc connector. I list the demos, filter them with the filters they declare, show the visualization in a Bloc canvas and the source of the demo below. When a demo fails, I replace the visualization by the stack of the error and I enable a button to debug it. The list shows the names of the demos for a human (TLDemoCatalogue class>>displayNameOf:, which drops the example prefix and splits the camel case), in the alphabetical order of these names, and its items are the selectors which run the demos.
 "
 Class {
 	#name : 'TLBlocDemoPresenter',
@@ -94,11 +94,11 @@ TLBlocDemoPresenter >> demoList [
 
 { #category : 'operations' }
 TLBlocDemoPresenter >> demosMatching: aFilterSymbol [
-	"The demos declaring the filter, or all the demos for #all"
+	"The demos declaring the filter, or all the demos for #all, in the alphabetical order of their names"
 
-	^ aFilterSymbol = #all
-		  ifTrue: [ TLDemoCatalogue demoSelectors ]
-		  ifFalse: [ TLDemoCatalogue demoSelectorsWithFilter: aFilterSymbol ]
+	^ (TLDemoCatalogue sortedByDisplayName: (aFilterSymbol = #all
+			    ifTrue: [ TLDemoCatalogue demoSelectors ]
+			    ifFalse: [ TLDemoCatalogue demoSelectorsWithFilter: aFilterSymbol ])) asArray
 ]
 
 { #category : 'operations' }
@@ -128,8 +128,9 @@ TLBlocDemoPresenter >> filterList [
 
 { #category : 'initialization' }
 TLBlocDemoPresenter >> initializePresenters [
+	"The list shows the names of the demos for a human, in alphabetical order, and its items are the selectors which run them"
 
-	demoList := self newList display: [ :selector | selector asString ].
+	demoList := self newList display: [ :selector | TLDemoCatalogue displayNameOf: selector ].
 	filterList := self newDropList items: { #all } , TLDemoCatalogue filterSymbols.
 	canvas := self instantiate: SpBlSpaceInMorphPresenter.
 	code := self newCode beNotEditable.
@@ -139,7 +140,7 @@ TLBlocDemoPresenter >> initializePresenters [
 		               action: [ self debugLastError ];
 		               disable;
 		               yourself.
-	demoList items: TLDemoCatalogue demoSelectors
+	demoList items: (self demosMatching: #all)
 ]
 
 { #category : 'initialization' }
