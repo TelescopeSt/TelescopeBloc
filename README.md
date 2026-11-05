@@ -3,6 +3,8 @@
 [Telescope](https://github.com/TelescopeSt/Telescope) is an engine to create visualizations: the user describes nodes, connections, layouts, styles and interactions, and a connector renders them with a graphical framework.
 TelescopeBloc is the connector which renders them with [Bloc](https://github.com/pharo-graphics/Bloc), the graphical framework of Pharo, in a Bloc window.
 
+![A Telescope visualization in Bloc, with its toolbar and shapes, curves, segments, a loop and labels](resources/overview.png)
+
 ## Install
 
 ```Smalltalk
@@ -61,6 +63,28 @@ The demo browser lists them, filters them, shows the visualization and the sourc
 - Connections: Bezier curves (arcs for parallel connections), direct lines, segments with right angles which go around the other nodes, loops for a node connected to itself, line styles, head shapes, arrows at the start and at the middle (substyles `base`, `middle` and `middleReversed`), and labels next to the line.
 - Interactions: mouse over, click, double click, right click, drop, moved, menus, pop ups, shape triggers (`triggerPosition`) and external triggers (`connector triggerExternal: interactionOrId`).
 - Legends: static and dynamic entries.
+
+### Gallery
+
+Segments which go around the nodes (`TLSegmentsCurve`):
+
+![Connections with right angles which go around the nodes in their way](resources/segments.png)
+
+Arrows at the start (`base`), at the middle (`middle`, `middleReversed`) and at the end (the head) of a connection:
+
+![Connections with arrows at their start, middle and end](resources/arrows.png)
+
+Composite nodes, with the label inside of them in a header above their children:
+
+![Nested composite nodes with their labels at their top](resources/composites.png)
+
+Nodes which take all the space of their line (`takeAllSpace`):
+
+![Nodes of different heights, the odd ones being as high as the tallest of their line](resources/take-all-space.png)
+
+Shape triggers, here the ones of the tree explorer which expand a node when they are clicked:
+
+![A tree explorer with a red trigger on each node](resources/triggers.png)
 
 ## Not implemented
 
