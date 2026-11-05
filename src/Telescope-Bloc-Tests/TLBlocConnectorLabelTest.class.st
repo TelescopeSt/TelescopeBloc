@@ -23,6 +23,27 @@ TLBlocConnectorLabelTest >> setUp [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorLabelTest >> testDefaultTextColorIsTheOneOfTheDefaultStyle [
+
+	| node |
+	node := visualization addNodeFromEntity: 'abc'.
+	visualization generateWith: connector.
+	self assert: (self textColorOfLabelOf: node) equals: TLStyleSheet default textColor
+]
+
+{ #category : 'tests' }
+TLBlocConnectorLabelTest >> testEachLineOfALabelHasTheTextColor [
+
+	| node lines |
+	visualization styleSheet textColor: Color red.
+	node := visualization addNodeFromEntity: 'first' , (String with: Character lf) , 'second'.
+	visualization generateWith: connector.
+	lines := (connector elementFromTLDrawable: node) children first children.
+	self assert: lines size equals: 2.
+	lines do: [ :line | self assert: (self textColorOfLine: line) equals: Color red ]
+]
+
+{ #category : 'tests' }
 TLBlocConnectorLabelTest >> testEllipsizedLabelFitsItsMaxWidthOnOneLine [
 
 	| node label |
@@ -36,6 +57,20 @@ TLBlocConnectorLabelTest >> testEllipsizedLabelFitsItsMaxWidthOnOneLine [
 	self assert: label extent x <= 100.
 	self assert: (label labelText endsWith: '...').
 	self assert: label children size equals: 1
+]
+
+{ #category : 'tests' }
+TLBlocConnectorLabelTest >> testEllipsizedLabelKeepsItsTextColor [
+
+	| node |
+	visualization styleSheet
+		textColor: Color red;
+		nodeLabelWrap: 'ellipsis';
+		nodeLabelMaxWidth: 60.
+	node := visualization addNodeFromEntity: 'This is a node with a very long label'.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Ellipsis label'.
+	connector view space settleForDuration: 2 seconds.
+	self assert: (self textColorOfLabelOf: node) equals: Color red
 ]
 
 { #category : 'tests' }
@@ -92,6 +127,16 @@ TLBlocConnectorLabelTest >> testLabelSizeOfTheStyleIsTheSizeOfTheFont [
 	connector open: visualization inWindowSized: 300 @ 300 titled: 'Label size'.
 	connector view space settleForDuration: 1 seconds.
 	self assert: (self labelHeightOf: big) > ((self labelHeightOf: small) * 2)
+]
+
+{ #category : 'tests' }
+TLBlocConnectorLabelTest >> testLabelTextColorIsTheTextColorOfTheStyle [
+
+	| node |
+	visualization styleSheet textColor: Color red.
+	node := visualization addNodeFromEntity: 'abc'.
+	visualization generateWith: connector.
+	self assert: (self textColorOfLabelOf: node) equals: Color red
 ]
 
 { #category : 'tests' }
@@ -155,6 +200,41 @@ TLBlocConnectorLabelTest >> testNodeWithoutLabelHasNoLabelElement [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorLabelTest >> testTextColorCanDependOnTheEntity [
+
+	| even odd |
+	visualization styleSheet
+		nodeLabel: #asString;
+		textColor: [ :entity |
+				entity even
+					ifTrue: [ Color red ]
+					ifFalse: [ Color blue ] ].
+	even := visualization addNodeFromEntity: 2.
+	odd := visualization addNodeFromEntity: 3.
+	visualization generateWith: connector.
+	self assert: (self textColorOfLabelOf: even) equals: Color red.
+	self assert: (self textColorOfLabelOf: odd) equals: Color blue
+]
+
+{ #category : 'tests' }
+TLBlocConnectorLabelTest >> testTextColorChangedByAnInteractionIsShownUntilTheMouseLeaves [
+
+	| node element before |
+	node := visualization addNodeFromEntity: 'abc'.
+	visualization addInteraction: (TLStyleCustomizationAction custom: [ :style | style textColor: Color red ]) onMouseOver.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Text color'.
+	connector view space settleForDuration: 1 seconds.
+	element := connector elementFromTLDrawable: node.
+	before := self textColorOfLabelOf: node.
+	element dispatchEvent: BlMouseEnterEvent new.
+	connector view space settleForDuration: 500 milliSeconds.
+	self assert: (self textColorOfLabelOf: node) equals: Color red.
+	element dispatchEvent: BlMouseLeaveEvent new.
+	connector view space settleForDuration: 500 milliSeconds.
+	self assert: (self textColorOfLabelOf: node) equals: before
+]
+
+{ #category : 'tests' }
 TLBlocConnectorLabelTest >> testTopLabelIsAboveItsNode [
 
 	| node label |
@@ -195,6 +275,21 @@ TLBlocConnectorLabelTest >> testWrappedLabelFitsItsMaxWidthAndGrowsInHeight [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorLabelTest >> testWrappedLabelKeepsItsTextColor [
+	"The lines are made again while the label is wrapped: they keep the color"
+
+	| node |
+	visualization styleSheet
+		textColor: Color red;
+		nodeLabelWrap: 'wrap';
+		nodeLabelMaxWidth: 100.
+	node := visualization addNodeFromEntity: 'This is a node with an automatic wrap'.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Wrap label'.
+	connector view space settleForDuration: 2 seconds.
+	(connector elementFromTLDrawable: node) children first children do: [ :line | self assert: (self textColorOfLine: line) equals: Color red ]
+]
+
+{ #category : 'tests' }
 TLBlocConnectorLabelTest >> testWrappedLinesAreCentered [
 
 	| node label |
@@ -207,4 +302,19 @@ TLBlocConnectorLabelTest >> testWrappedLinesAreCentered [
 	label := (connector elementFromTLDrawable: node) children first.
 	self assert: label children size >= 3.
 	self assert: (label children allSatisfy: [ :each | (each position x + (each extent x / 2) - (label extent x / 2)) abs < 1 ])
+]
+
+{ #category : 'tests' }
+TLBlocConnectorLabelTest >> textColorOfLabelOf: aNode [
+
+	^ self textColorOfLine: (connector elementFromTLDrawable: aNode) children first children first
+]
+
+{ #category : 'tests' }
+TLBlocConnectorLabelTest >> textColorOfLine: aLineElement [
+	"The color of the text of a line of a label, or nil when the text has none"
+
+	^ ((aLineElement text attributesAt: 1)
+		   detect: [ :attribute | attribute isKindOf: BlTextForegroundAttribute ]
+		   ifNone: [ nil ]) ifNotNil: #paint
 ]

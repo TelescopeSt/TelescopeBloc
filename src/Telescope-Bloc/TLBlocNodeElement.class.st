@@ -242,13 +242,13 @@ TLBlocNodeElement >> releaseChildren [
 
 { #category : 'initialization' }
 TLBlocNodeElement >> replaceLabelWith: aLabelElementOrNil [
-	"The label of the node changed with its entity. The same text is kept as it is: a style change, such as a highlight, does not make the label again"
+	"The label of the node changed with its entity or its style. A label which looks the same is kept as it is: a style change which does not concern it, such as a highlight of the background, does not make the label again"
 
 	| current |
 	current := self children
 		           detect: [ :child | child class = TLBlocLabelElement ]
 		           ifNone: [ nil ].
-	(current isNotNil and: [ aLabelElementOrNil isNotNil and: [ current labelText = aLabelElementOrNil labelText ] ]) ifTrue: [ ^ self ].
+	(current isNotNil and: [ aLabelElementOrNil isNotNil and: [ current looksLike: aLabelElementOrNil ] ]) ifTrue: [ ^ self ].
 	current ifNotNil: #removeFromParent.
 	aLabelElementOrNil ifNotNil: [ :label | self addChild: label ]
 ]

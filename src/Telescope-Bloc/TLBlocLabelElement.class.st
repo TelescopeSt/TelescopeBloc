@@ -1,5 +1,5 @@
 "
-I display the label of a Telescope node in a Bloc visualization, as a vertical stack of lines, because Bloc neither breaks a text at line feeds nor wraps it. Each line is a text element, centered in me. My placement is a TLPosition: I place myself so that my reversed position meets the anchor of the position on my node, with a gap. I wrap my lines to a maximum width by moving one word at a time to the next line, or I cut my text with three dots, measuring the lines after each layout. The size of my font is the label size of the style sheet of my node, because Telescope computes the width of a node from its label and its label size: I give it again to the text of a line each time the text changes. The position can be given by a block which answers a symbol such as #top.
+I display the label of a Telescope node in a Bloc visualization, as a vertical stack of lines, because Bloc neither breaks a text at line feeds nor wraps it. Each line is a text element, centered in me. My placement is a TLPosition: I place myself so that my reversed position meets the anchor of the position on my node, with a gap. I wrap my lines to a maximum width by moving one word at a time to the next line, or I cut my text with three dots, measuring the lines after each layout. The size of my font is the label size of the style sheet of my node, because Telescope computes the width of a node from its label and its label size: I give it again to the text of a line each time the text changes. The position can be given by a block which answers a symbol such as #top. The color of the text is the text color of the style sheet, which can depend on the entity: I give it again, with the size, to the text of a line each time it changes. #looksLike: tells whether another label would look the same.
 "
 Class {
 	#name : 'TLBlocLabelElement',
@@ -8,7 +8,8 @@ Class {
 		'placement',
 		'wrapping',
 		'maximumWidth',
-		'fontSize'
+		'fontSize',
+		'textColor'
 	],
 	#category : 'Telescope-Bloc-Elements',
 	#package : 'Telescope-Bloc',
@@ -32,12 +33,13 @@ TLBlocLabelElement >> addLines: aString [
 
 { #category : 'initialization' }
 TLBlocLabelElement >> configureForNode: aNode [
-	"The size of the font is the label size of the style sheet, which Telescope uses to compute the width of a node from its label. The position of the label can be given by a block, which may answer a symbol such as #top"
+	"The size of the font is the label size of the style sheet, which Telescope uses to compute the width of a node from its label, and the color of the text is its text color. The position of the label can be given by a block, which may answer a symbol such as #top"
 
 	| styleSheet labelValue |
 	styleSheet := aNode effectiveStyleSheet.
 	labelValue := (styleSheet obtainValue: #nodeLabel forEntity: aNode entity inNode: aNode) asString.
 	fontSize := styleSheet obtainValue: #labelSize forEntity: aNode entity inNode: aNode.
+	textColor := styleSheet obtainValue: #textColor forEntity: aNode entity inNode: aNode.
 	placement := TLPosition for: (styleSheet obtainValue: #nodeLabelPosition forEntity: aNode entity inNode: aNode).
 	wrapping := (styleSheet attributes includesKey: #nodeLabelWrap) ifTrue: [ styleSheet obtainValue: #nodeLabelWrap forEntity: aNode entity inNode: aNode ].
 	(#( 'wrap' 'ellipsis' ) includes: wrapping) ifTrue: [ maximumWidth := styleSheet obtainValue: #nodeLabelMaxWidth forEntity: aNode entity inNode: aNode ].
@@ -64,6 +66,13 @@ TLBlocLabelElement >> ellipsize [
 		               ifTrue: [ currentText allButLast: 3 ]
 		               ifFalse: [ currentText ].
 	visibleText ifEmpty: [ ^ self ] ifNotEmpty: [ line text: (self ropedTextOf: visibleText allButLast , '...') ]
+]
+
+{ #category : 'accessing' }
+TLBlocLabelElement >> fontSize [
+	"The size of the font of the lines"
+
+	^ fontSize
 ]
 
 { #category : 'placement' }
@@ -117,6 +126,13 @@ TLBlocLabelElement >> lineElementWith: aString [
 	line := BlTextElement new text: (self ropedTextOf: aString).
 	line constraintsDo: [ :lineConstraints | lineConstraints linear horizontal alignCenter ].
 	^ line
+]
+
+{ #category : 'accessing' }
+TLBlocLabelElement >> looksLike: anotherLabel [
+	"Whether the other label shows the same text, in the same size and the same color: there is no need to replace one by the other"
+
+	^ self labelText = anotherLabel labelText and: [ fontSize = anotherLabel fontSize and: [ textColor = anotherLabel textColor ] ]
 ]
 
 { #category : 'private' }
@@ -175,9 +191,18 @@ TLBlocLabelElement >> rectanglesRelativeTo: anOrigin [
 
 { #category : 'private' }
 TLBlocLabelElement >> ropedTextOf: aString [
-	"The text of a line, in the font size of the label: every time the text of a line changes, the size has to be given again"
+	"The text of a line, in the font size and the color of the label: every time the text of a line changes, they have to be given again"
 
-	^ fontSize
-		  ifNil: [ aString asRopedText ]
-		  ifNotNil: [ aString asRopedText fontSize: fontSize ]
+	| text |
+	text := aString asRopedText.
+	fontSize ifNotNil: [ text fontSize: fontSize ].
+	textColor ifNotNil: [ text foreground: textColor ].
+	^ text
+]
+
+{ #category : 'accessing' }
+TLBlocLabelElement >> textColor [
+	"The color of the text of the lines"
+
+	^ textColor
 ]
