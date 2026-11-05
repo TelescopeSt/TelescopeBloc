@@ -1,5 +1,5 @@
 "
-I am the legend of a Telescope visualization of Bloc: a translucent box with the entries one above the other. The visualization puts me in the window, not in itself, at its bottom left corner, so that the zoom and the panning do not move me, and it fits its content in what is at my right. I am not shown when I have no entry.
+I am the legend of a Telescope visualization of Bloc: a translucent box with the entries one above the other. The visualization puts me in the window, not in itself, at its bottom left corner, so that the zoom and the panning do not move me, and it fits its content in what is at my right. I am not shown when I have no entry. When the legend is made again, for example by a mouse over, the element stays where it is and gets the new entries (#takeEntriesOf:): a new element would be at the top of the window until it is laid out.
 "
 Class {
 	#name : 'TLBlocLegendElement',
@@ -72,6 +72,17 @@ TLBlocLegendElement >> rows [
 	"The rows of all the entries, from top to bottom"
 
 	^ self entries flatCollect: #rows
+]
+
+{ #category : 'accessing' }
+TLBlocLegendElement >> takeEntriesOf: anotherLegend [
+	"The entries of the other legend replace mine: I stay where I am, where a new element would be at the top of the window until it is laid out"
+
+	| newEntries |
+	newEntries := anotherLegend entries.
+	anotherLegend removeChildren.
+	self removeChildren.
+	self entries: newEntries
 ]
 
 { #category : 'layout' }

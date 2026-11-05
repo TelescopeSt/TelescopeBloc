@@ -243,8 +243,9 @@ TLBlocVisualization >> keepPositionWhile: aBlock [
 
 { #category : 'legend' }
 TLBlocVisualization >> legend: aLegendElement [
-	"The legend is in the window, not in me: the zoom and the panning do not move it. A legend without entries is not shown"
+	"The legend is in the window, not in me: the zoom and the panning do not move it. A legend without entries is not shown. When there is already a legend in the window it is kept and gets the new entries: a new element would be at the top of the window until it is laid out, and the legend would jump there each time it is made again, for example by a mouse over"
 
+	(legend isNotNil and: [ legend hasParent and: [ aLegendElement entries isNotEmpty ] ]) ifTrue: [ ^ legend takeEntriesOf: aLegendElement ].
 	legend ifNotNil: [ :previous | previous removeFromParent ].
 	legend := aLegendElement.
 	self installLegend

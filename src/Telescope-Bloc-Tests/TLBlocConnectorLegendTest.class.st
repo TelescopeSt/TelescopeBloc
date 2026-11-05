@@ -169,6 +169,36 @@ TLBlocConnectorLegendTest >> testLegendIsNotMovedByTheZoom [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorLegendTest >> testLegendMadeAgainByAnUpdateIsTheSameElementAtTheSamePlace [
+	"What a mouse over does: Telescope asks for an update of the legend, which is made again"
+
+	| before position |
+	visualization legend description: 'Dead' forColor: Color red.
+	self openWithNodes: 4.
+	before := self legendElement.
+	position := before measuredBounds position.
+	visualization legend requireUpdate.
+	connector updateLegend: visualization legend.
+	self assert: self legendElement identicalTo: before.
+	self assert: before measuredBounds position equals: position.
+	self assert: self labels equals: #( 'Dead' )
+]
+
+{ #category : 'tests' }
+TLBlocConnectorLegendTest >> testLegendStaysAtTheBottomWhileANodeIsUnderTheMouse [
+
+	| element position |
+	visualization legend description: 'Dead' forColor: Color red.
+	visualization addInteraction: (TLStyleCustomizationAction custom: [ :drawable | drawable color: Color red ]) onMouseOver.
+	self openWithNodes: 4.
+	position := self legendElement measuredBounds position.
+	element := connector elementFromTLDrawable: visualization allNodes first.
+	element dispatchEvent: BlMouseEnterEvent new.
+	connector view space settleForDuration: 500 milliSeconds.
+	self assert: self legendElement measuredBounds position equals: position
+]
+
+{ #category : 'tests' }
 TLBlocConnectorLegendTest >> testNodeBackgroundEntryHasARowForEachDescription [
 
 	self evenOddColors.
@@ -212,4 +242,39 @@ TLBlocConnectorLegendTest >> testThereIsNoLegendWithoutEntries [
 
 	self openWithNodes: 3.
 	self assert: self legendElement isNil
+]
+
+{ #category : 'tests' }
+TLBlocConnectorLegendTest >> testUpdatedLegendHasTheNewEntries [
+
+	visualization legend description: 'Dead' forColor: Color red.
+	self openWithNodes: 4.
+	connector view legend: (connector createLegendFrom: { (connector legendEntryWith: (BlElement new extent: 10 @ 10) label: 'other') }).
+	connector view space settleForDuration: 500 milliSeconds.
+	self assert: self legendElement entries size equals: 1.
+	self assert: self labels equals: #( 'other' )
+]
+
+{ #category : 'tests' }
+TLBlocConnectorLegendTest >> testUpdatedLegendIsTheSameElementAtTheSamePlace [
+	"Making the legend again, as a mouse over does, would show a new element at the top of the window for a frame"
+
+	| before position |
+	visualization legend description: 'Dead' forColor: Color red.
+	self openWithNodes: 4.
+	before := self legendElement.
+	position := before measuredBounds position.
+	connector view legend: (connector createLegendFrom: { (connector legendEntryWith: (BlElement new extent: 10 @ 10) label: 'other') }).
+	self assert: self legendElement identicalTo: before.
+	self assert: before measuredBounds position equals: position
+]
+
+{ #category : 'tests' }
+TLBlocConnectorLegendTest >> testUpdatedLegendStaysAtTheBottomOfTheWindow [
+
+	visualization legend description: 'Dead' forColor: Color red.
+	self openWithNodes: 4.
+	connector view legend: (connector createLegendFrom: { (connector legendEntryWith: (BlElement new extent: 10 @ 10) label: 'other') }).
+	connector view space settleForDuration: 500 milliSeconds.
+	self assert: self legendElement boundsInSpace bottom equals: 400 - self legendElement windowMargin
 ]

@@ -799,12 +799,12 @@ TLBlocConnector >> updateInteractionsOf: aDrawable [
 	self generateInteractionsOf: aDrawable targetingDrawable: aDrawable
 ]
 
-{ #category : 'updating - legend' }
+{ #category : 'updating' }
 TLBlocConnector >> updateLegend: aTLLegend [
-	"The legend is made again when something asked for it, for example when the entries changed: it depends on the nodes, which an update may have changed"
+	"The legend is made again when something asked for it, for example when the entries changed: it depends on the nodes, which an update may have changed. The element of the previous legend is not removed first: the view keeps it and gives it the new entries, so that the legend does not jump to the top of the window while a new element waits for its layout"
 
 	aTLLegend isUpdateRequired ifFalse: [ ^ self ].
-	self removeLegend: aTLLegend.
+	self unregisterShapeForDrawable: aTLLegend.
 	self generateLegend: aTLLegend.
 	aTLLegend updateDone
 ]

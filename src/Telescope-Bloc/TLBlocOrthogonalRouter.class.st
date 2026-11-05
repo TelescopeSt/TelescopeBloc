@@ -1,3 +1,6 @@
+"
+I find a route with right angles around rectangles, with Dijkstra on the grid made by the lines through the start, the end and the sides of the obstacles, which are kept at a margin. A route is the shortest in length, a bend costing as much as a few pixels, so the routes have few bends. I answer the points of the route, without the points which are on a line between their neighbors, or nil when the start or the end are enclosed. The obstacles near the start and the end are considered first, because the others are rarely in the way. A taxi route (TLBlocConnectionTaxi) asks me when it cannot go around the nodes with four points.
+"
 Class {
 	#name : 'TLBlocOrthogonalRouter',
 	#superclass : 'Object',

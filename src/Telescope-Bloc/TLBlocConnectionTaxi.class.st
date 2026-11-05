@@ -1,5 +1,5 @@
 "
-I am the route of a connection with the curve style segments of Telescope: segments with right angles, drawn with a BlPolylineGeometry. The line goes out of the source along the axis on which the nodes are the most apart, to the middle, along the other axis, then to the target, so it has two turns. The label is next to the middle segment and the head follows the last one.
+I am the route of a connection with the curve style segments of Telescope: segments with right angles, drawn with a BlPolylineGeometry. The line goes out of the source along the axis on which the nodes are the most apart, to the middle, along the other axis, then to the target, so it has two turns. It is shifted to the left of its direction by the offset which the connector gives to the connections between the same nodes, so that they do not overlap. It goes around the other nodes (the obstacles, with their labels): first its middle segment moves beside an obstacle, then it leaves along the other axis, and when four points are not enough a TLBlocOrthogonalRouter finds a line with more bends. When nothing avoids the obstacles it is the first line. The label is next to the middle segment (the one between the two turns with four points, else where half of the length is reached) and the head follows the last one.
 "
 Class {
 	#name : 'TLBlocConnectionTaxi',
