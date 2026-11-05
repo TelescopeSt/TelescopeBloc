@@ -173,6 +173,21 @@ TLBlocConnectorNodeStyleTest >> testGradientGivesEachNodeTheColorOfItsEntity [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testNodeWithAZeroDimensionIsStillGenerated [
+	"A width given by a property, such as a number of attributes, can be 0"
+
+	| node element |
+	visualization styleSheet
+		width: [ :entity | entity ];
+		height: [ :entity | entity ].
+	node := visualization addNodeFromEntity: 0.
+	visualization generateWith: connector.
+	element := connector elementFromTLDrawable: node.
+	self assert: element dimension equals: 0 @ 0.
+	self assert: element outline isNotNil
+]
+
+{ #category : 'tests' }
 TLBlocConnectorNodeStyleTest >> testShapeCanDependOnTheEntity [
 
 	| rectangle ellipse |

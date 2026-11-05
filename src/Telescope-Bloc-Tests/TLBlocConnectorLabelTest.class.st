@@ -50,6 +50,24 @@ TLBlocConnectorLabelTest >> testForcedLineReturnsGiveOneLinePerLine [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorLabelTest >> testLabelPositionCanBeABlockAnsweringASymbol [
+	"The block gets the entity and the node: a composite node with children has its label at the bottom, the others inside"
+
+	| node label |
+	visualization styleSheet
+		nodeLabel: #asString;
+		nodeLabelPosition: [ :entity :aNode |
+				entity = 1
+					ifTrue: [ #top ]
+					ifFalse: [ #inside ] ].
+	node := visualization addNodeFromEntity: 1.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Label position'.
+	connector view space settleForDuration: 1 seconds.
+	label := (connector elementFromTLDrawable: node) children first.
+	self assert: label measuredBounds position y + label extent y <= 0
+]
+
+{ #category : 'tests' }
 TLBlocConnectorLabelTest >> testLabelSizeCanDependOnTheEntity [
 
 	| small big |
@@ -102,12 +120,38 @@ TLBlocConnectorLabelTest >> testNodeDoesNotClipItsLabel [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorLabelTest >> testNodeLabelCanBeNoLabelForSomeEntities [
+
+	| shown hidden |
+	visualization styleSheet nodeLabel: [ :entity |
+			entity = 1
+				ifTrue: [ 'one' ]
+				ifFalse: [ TLNoNodeLabel ] ].
+	shown := visualization addNodeFromEntity: 1.
+	hidden := visualization addNodeFromEntity: 2.
+	visualization generateWith: connector.
+	self assert: (connector elementFromTLDrawable: shown) children size equals: 1.
+	self assertEmpty: (connector elementFromTLDrawable: hidden) children
+]
+
+{ #category : 'tests' }
 TLBlocConnectorLabelTest >> testNodeWithLabelGeneratesItsLabelText [
 
 	| node |
 	node := visualization addNodeFromEntity: 'abc'.
 	visualization generateWith: connector.
 	self assert: (connector elementFromTLDrawable: node) children first labelText equals: 'abc'
+]
+
+{ #category : 'tests' }
+TLBlocConnectorLabelTest >> testNodeWithoutLabelHasNoLabelElement [
+	"Telescope says that a node has no label with the class TLNoNodeLabel: it is not drawn as a text"
+
+	| node |
+	visualization styleSheet noNodeLabel.
+	node := visualization addNodeFromEntity: 1.
+	visualization generateWith: connector.
+	self assertEmpty: (connector elementFromTLDrawable: node) children
 ]
 
 { #category : 'tests' }
