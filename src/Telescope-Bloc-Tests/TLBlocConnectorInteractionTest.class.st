@@ -79,6 +79,34 @@ TLBlocConnectorInteractionTest >> nodeElements [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorInteractionTest >> openTwoConnectedVisualizations [
+	"As the demo: clicking a node of the first visualization colors the opposite node of the second one in red, and the other way round in green. Each visualization has its own connector and window. Answers the second visualization and its connector"
+
+	| other otherConnector |
+	other := TLVisualization new.
+	otherConnector := TLBlocConnector new.
+	otherConnector host: BlHeadlessHost default.
+	otherConnector animationDuration: 0 seconds.
+	other
+		nodeCreationStrategy: TLNodeCreationStrategy default;
+		styleSheet: TLStyleSheet default;
+		generator: otherConnector.
+	visualization styleSheet nodeLabel: #asString.
+	other styleSheet nodeLabel: #asString.
+	visualization addNodesFromEntities: (1 to: 5).
+	other addNodesFromEntities: (-5 to: -1).
+	visualization addInteraction:
+		((TLStyleCustomizationAction custom: [ :style | style backgroundColor: Color red ] target: [ :aNode | other nodeForEntity: aNode entity negated ]) updateAlso: other) onClick.
+	other addInteraction:
+		((TLStyleCustomizationAction custom: [ :style | style backgroundColor: Color green ] target: [ :aNode | visualization nodeForEntity: aNode entity negated ]) updateAlso: visualization) onClick.
+	connector open: visualization inWindowSized: 400 @ 300 titled: 'First'.
+	otherConnector open: other inWindowSized: 400 @ 300 titled: 'Second'.
+	connector view space settleForDuration: 500 milliSeconds.
+	otherConnector view space settleForDuration: 500 milliSeconds.
+	^ other -> otherConnector
+]
+
+{ #category : 'tests' }
 TLBlocConnectorInteractionTest >> openWithHighlightOnMouseOver: aCustomizationBlock [
 	"Opens a visualization of two nodes connected one to the other, where the mouse over a node or over the connection changes the style. Answers the node 1"
 
@@ -151,6 +179,24 @@ TLBlocConnectorInteractionTest >> testClickShowsAHiddenConnectionAndHidesAVisibl
 ]
 
 { #category : 'tests' }
+TLBlocConnectorInteractionTest >> testClickingANodeColorsTheOppositeNodeOfTheOtherVisualization [
+
+	| pair other otherConnector |
+	pair := self openTwoConnectedVisualizations.
+	other := pair key.
+	otherConnector := pair value.
+	[
+		| before |
+		before := (otherConnector elementFromTLDrawable: (other nodeForEntity: -3)) background paint color.
+		(connector elementFromTLDrawable: (visualization nodeForEntity: 3)) dispatchEvent: BlClickEvent new.
+		connector view space settleForDuration: 500 milliSeconds.
+		otherConnector view space settleForDuration: 500 milliSeconds.
+		self assert: (otherConnector elementFromTLDrawable: (other nodeForEntity: -3)) background paint color equals: Color red.
+		self deny: before equals: Color red.
+		self deny: (otherConnector elementFromTLDrawable: (other nodeForEntity: -2)) background paint color equals: Color red ] ensure: [ otherConnector view space ifNotNil: #close ]
+]
+
+{ #category : 'tests' }
 TLBlocConnectorInteractionTest >> testClickingANodeExpandsIt [
 
 	| node |
@@ -162,6 +208,22 @@ TLBlocConnectorInteractionTest >> testClickingANodeExpandsIt [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorInteractionTest >> testClickingAgainRestoresTheOppositeNode [
+
+	| pair other otherConnector original |
+	pair := self openTwoConnectedVisualizations.
+	other := pair key.
+	otherConnector := pair value.
+	[
+		original := (otherConnector elementFromTLDrawable: (other nodeForEntity: -3)) background paint color.
+		2 timesRepeat: [
+				(connector elementFromTLDrawable: (visualization nodeForEntity: 3)) dispatchEvent: BlClickEvent new.
+				connector view space settleForDuration: 500 milliSeconds.
+				otherConnector view space settleForDuration: 500 milliSeconds ].
+		self assert: (otherConnector elementFromTLDrawable: (other nodeForEntity: -3)) background paint color equals: original ] ensure: [ otherConnector view space ifNotNil: #close ]
+]
+
+{ #category : 'tests' }
 TLBlocConnectorInteractionTest >> testClickingAnExpandedNodeCollapsesIt [
 
 	| node |
@@ -170,6 +232,20 @@ TLBlocConnectorInteractionTest >> testClickingAnExpandedNodeCollapsesIt [
 	self click: node.
 	self assert: self nodeElements size equals: 2.
 	self assertEmpty: self connectionElements
+]
+
+{ #category : 'tests' }
+TLBlocConnectorInteractionTest >> testClickingTheOtherVisualizationColorsTheOppositeNodeGreen [
+
+	| pair other otherConnector |
+	pair := self openTwoConnectedVisualizations.
+	other := pair key.
+	otherConnector := pair value.
+	[
+		(otherConnector elementFromTLDrawable: (other nodeForEntity: -4)) dispatchEvent: BlClickEvent new.
+		otherConnector view space settleForDuration: 500 milliSeconds.
+		connector view space settleForDuration: 500 milliSeconds.
+		self assert: (connector elementFromTLDrawable: (visualization nodeForEntity: 4)) background paint color equals: Color green ] ensure: [ otherConnector view space ifNotNil: #close ]
 ]
 
 { #category : 'tests' }
