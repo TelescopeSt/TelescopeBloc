@@ -1,5 +1,5 @@
 "
-I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, slowly at first and at the end (see TLBlocSmoothEasing), and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The visualization is fitted into its window again when a layout which is applied again moves or adds a node. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet. The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back, with the animation. The menus of Telescope open at the mouse when a node is clicked with the secondary button, as Bloc elements (see TLBlocMenu). When an interaction changes the style of a node or of a connection, for example to highlight it, its element is made again from the style sheet. Closing a visualization closes its window. The pop up action, which Telescope leaves to its connectors, shows its text in a TLBlocPopUpElement near the node, while the mouse is over it or after a click. The legend of a visualization is made of the entries of Telescope, static or dynamic, as TLBlocLegendElement. The right click interaction executes its action when a node is pressed with the secondary button, and the menu of that node then does not open. The handlers of the interactions of a drawable are remembered: when its interactions change, for example because the node moved to another group, they are made again. The children of a composite node are the group of its node: #define:asParentFor: puts the element of the group inside of the element of the node, and the node is as big as its children each time their layout is applied. Collapsing a composite removes the group of its children. A node has no label element when its style says TLNoNodeLabel. A click, a right click or a menu is for the innermost node under the pointer, and a click which ends the drag of a node is not a click: a composite node does not get the clicks of its children. The moved interaction is executed with the center of the node when the user drops it. The first update after the generation does not apply the layouts again, so it does not put back the nodes which the user dragged.
+I am the connector of Telescope to Bloc. I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization. I create the node elements with their labels, I let the Telescope layouts place them, and I join the nodes with TLBlocNodeConnection lines, with a head and a label, which I update after each layout. The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node. When a layout is applied again, for example because the layout changed or because nodes were added, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, slowly at first and at the end (see TLBlocSmoothEasing), and the connections follow them. The nodes which an interaction adds, for example with a click, start from the node of the interaction and slide to their place. The visualization is fitted into its window again when a layout which is applied again moves or adds a node. The first layout is not animated, and a zero duration disables the animation. I open the visualization in a Bloc window: my windows use the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open them without a display, as the tests do. The interactions are implemented one kind after the other: for now the mouse over, whose action is executed when the mouse enters the element of a node and reversed when it leaves it, so that actions such as TLConnectAction add and remove connections, and the click, whose action is executed when the element is clicked, so that actions such as TLExpandCollapseNodesAction add and remove nodes. The other interactions and the legends are not implemented yet. The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back, with the animation. The menus of Telescope open at the mouse when a node is clicked with the secondary button, as Bloc elements (see TLBlocMenu). When an interaction changes the style of a node or of a connection, for example to highlight it, its element is made again from the style sheet. Closing a visualization closes its window. The pop up action, which Telescope leaves to its connectors, shows its text in a TLBlocPopUpElement near the node, while the mouse is over it or after a click. The legend of a visualization is made of the entries of Telescope, static or dynamic, as TLBlocLegendElement. The right click interaction executes its action when a node is pressed with the secondary button, and the menu of that node then does not open. The handlers of the interactions of a drawable are remembered: when its interactions change, for example because the node moved to another group, they are made again. The children of a composite node are the group of its node: #define:asParentFor: puts the element of the group inside of the element of the node, and the node is as big as its children each time their layout is applied. Collapsing a composite removes the group of its children. A node has no label element when its style says TLNoNodeLabel. A click, a right click or a menu is for the innermost node under the pointer, and a click which ends the drag of a node is not a click: a composite node does not get the clicks of its children. The moved interaction is executed with the center of the node when the user drops it. The first update after the generation does not apply the layouts again, so it does not put back the nodes which the user dragged. The connections which join the same two nodes are spread on both sides of the line between them (#spreadParallelConnections), so that the Bezier curves do not overlap.
 "
 Class {
 	#name : 'TLBlocConnector',
@@ -534,6 +534,22 @@ TLBlocConnector >> openInWindow: anElement named: aTitleString extent: aPoint [
 	aSpace show
 ]
 
+{ #category : 'updating' }
+TLBlocConnector >> pairOf: aConnectionElement [
+	"The two nodes of the connection, in an order which does not depend on its direction"
+
+	^ aConnectionElement fromNode identityHash <= aConnectionElement toNode identityHash
+		  ifTrue: [ aConnectionElement fromNode -> aConnectionElement toNode ]
+		  ifFalse: [ aConnectionElement toNode -> aConnectionElement fromNode ]
+]
+
+{ #category : 'updating' }
+TLBlocConnector >> parallelConnectionsSpacing [
+	"The distance in pixels between the control points of two connections which are next to each other: the curves are half of it apart"
+
+	^ 40
+]
+
 { #category : 'layout' }
 TLBlocConnector >> placeElement: anAssociation correspondingToTrigger: aTLShapeTrigger relativeToDrawable: aTLSimpleNode [
 	self shouldBeImplemented
@@ -631,6 +647,24 @@ TLBlocConnector >> showPopUpOf: aPopUpAction for: aTLDrawable [
 		position: (aPopUpAction obtainsPositionFrom: aTLDrawable)
 ]
 
+{ #category : 'updating' }
+TLBlocConnector >> spreadParallelConnections [
+	"The connections between the same two nodes, in any direction, are told their offset: a connection alone has none and the others are spread on both sides of the line between the nodes. The sign follows the direction of the connection, to the left of it when it is positive, so that two connections in opposite directions are not on the same side"
+
+	| groups |
+	groups := Dictionary new.
+	connections do: [ :connection | (groups at: (self pairOf: connection) ifAbsentPut: [ OrderedCollection new ]) add: connection ].
+	groups keysAndValuesDo: [ :pair :group |
+			group doWithIndex: [ :connection :index |
+					| offset |
+					offset := group size = 1
+						          ifTrue: [ 0 ]
+						          ifFalse: [ index - (group size + 1 / 2) * self parallelConnectionsSpacing ].
+					connection parallelOffset: (connection fromNode == pair key
+							 ifTrue: [ offset ]
+							 ifFalse: [ offset negated ]) ] ]
+]
+
 { #category : 'layout' }
 TLBlocConnector >> startPendingAnimation [
 	"The update is done and the items are at their final place. They go back to where they were, and an animation brings them to their place, slowly at first and at the end, with the connections following them. The new items start from the origin of the animation, if there is one. The places are the top left corners of the elements, so that the nodes of a group, which move with it, do not change where the group goes"
@@ -690,10 +724,11 @@ TLBlocConnector >> update: shape withRectangleShape: aTLRectangleShape [
 	self shouldBeImplemented
 ]
 
-{ #category : 'layout' }
+{ #category : 'updating' }
 TLBlocConnector >> updateConnections [
-	"The connections join the borders of their nodes, which the layouts have just placed"
+	"The connections join the borders of their nodes, which the layouts have just placed. Those which join the same two nodes are spread first, so that a Bezier curve is an arc for them"
 
+	self spreadParallelConnections.
 	connections do: [ :connection | connection update ]
 ]
 

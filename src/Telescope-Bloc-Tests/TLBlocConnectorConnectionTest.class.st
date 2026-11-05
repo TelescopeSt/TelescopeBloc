@@ -20,6 +20,28 @@ TLBlocConnectorConnectionTest >> elementOfConnectionStyledWith: aLineStyle [
 	^ connector elementFromTLDrawable: connection
 ]
 
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> openConnectionsBetweenTwoNodes: aCount direction: aBlock [
+	"Opens a visualization of the nodes 1 and 2 with the given number of connections between them. The block gets the index of a connection and its two nodes and answers the connection"
+
+	| first second |
+	first := visualization addNodeFromEntity: 1.
+	second := visualization addNodeFromEntity: 2.
+	(1 to: aCount) do: [ :index | aBlock value: index value: first value: second ].
+	connector open: visualization inWindowSized: 400 @ 300 titled: 'Curves'.
+	connector view space settleForDuration: 1 seconds
+]
+
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> openDemo: aDemo [
+	"Opens the demo in a window with the connector of the test"
+
+	visualization := aDemo.
+	visualization generator: connector.
+	connector open: visualization inWindowSized: 900 @ 600 titled: 'Demo'.
+	connector view space settleForDuration: 2 seconds
+]
+
 { #category : 'setup' }
 TLBlocConnectorConnectionTest >> setUp [
 
@@ -127,6 +149,16 @@ TLBlocConnectorConnectionTest >> testConnectionStyleDemoGeneratesAConnectionForE
 	self assert: count equals: TLSimpleShape allSubclasses size + 1
 ]
 
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> testConnectionStyleDemoSegmentsConnectionHasBends [
+	"The last nodes of the two groups are not on the same row, so the segments have a turn"
+
+	| segments |
+	self openDemo: TLDemos exampleConnectionStyle.
+	segments := connector connections detect: [ :connection | connection geometry class = BlPolylineGeometry ].
+	self assert: (segments route points collect: #y) asSet size > 1
+]
+
 { #category : 'tests' }
 TLBlocConnectorConnectionTest >> testConnectionTakesTheColorAndTheWidthOfItsStyle [
 
@@ -160,6 +192,32 @@ TLBlocConnectorConnectionTest >> testConnectionWithoutLabelHasNoLabel [
 	self assert: (connector elementFromTLDrawable: connection) label isNil
 ]
 
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> testConnectionsInBothDirectionsAreCurvedOnDifferentSides [
+
+	| forward backward |
+	self openConnectionsBetweenTwoNodes: 2 direction: [ :index :first :second |
+			index = 1
+				ifTrue: [ first connectTo: second ]
+				ifFalse: [ second connectTo: first ] ].
+	forward := connector connections first.
+	backward := connector connections last.
+	self assert: forward geometry class equals: BlBezierCurveGeometry.
+	self assert: backward geometry class equals: BlBezierCurveGeometry.
+	self assert: (forward route middlePoint - backward route middlePoint) r > 10
+]
+
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> testConnectionsInTheSameDirectionAreCurvedOnDifferentSides [
+
+	| first second |
+	self openConnectionsBetweenTwoNodes: 2 direction: [ :index :one :other | one connectTo: other ].
+	first := connector connections first.
+	second := connector connections last.
+	self assert: first geometry class equals: BlBezierCurveGeometry.
+	self assert: (first route middlePoint - second route middlePoint) r > 10
+]
+
 { #category : 'tests' }
 TLBlocConnectorConnectionTest >> testConnectorOffersEveryShapeAsAConnectionHead [
 
@@ -168,6 +226,29 @@ TLBlocConnectorConnectionTest >> testConnectorOffersEveryShapeAsAConnectionHead 
 	self assert: shapes size equals: TLSimpleShape allSubclasses size.
 	self assert: (shapes includes: TLTriangle).
 	self assert: (shapes includes: TLNoShape)
+]
+
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> testCurvedConnectionIsInsideItsBox [
+	"The box of the element has to hold the control point: nothing is drawn outside of it"
+
+	| element box |
+	self openConnectionsBetweenTwoNodes: 2 direction: [ :index :first :second | first connectTo: second ].
+	element := connector connections first.
+	box := element measuredBounds position extent: element extent.
+	element route points do: [ :point | self assert: ((box expandBy: 0.01) containsPoint: point) ]
+]
+
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> testCurvesAreInsideTheWindowAfterTheFit [
+
+	| window |
+	self openConnectionsBetweenTwoNodes: 3 direction: [ :index :first :second |
+			index even
+				ifTrue: [ second connectTo: first ]
+				ifFalse: [ first connectTo: second ] ].
+	window := (0 @ 0 extent: connector view space extent) expandBy: 1.
+	connector connections do: [ :element | self assert: (window containsRect: element boundsInSpace asRectangle) ]
 ]
 
 { #category : 'tests - line style' }
@@ -179,6 +260,13 @@ TLBlocConnectorConnectionTest >> testDashedConnectionIsMadeOfSegmentsLongerThanT
 	dashArray := element border style dashArray.
 	self assert: dashArray size equals: 2.
 	self assert: dashArray first > dashArray last
+]
+
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> testDirectCurveStaysStraightWhateverTheOtherConnections [
+
+	self openConnectionsBetweenTwoNodes: 2 direction: [ :index :first :second | (first connectTo: second) styleSheet curveStyle: TLDirectCurve ].
+	connector connections do: [ :connection | self assert: connection geometry class equals: BlLineGeometry ]
 ]
 
 { #category : 'tests - line style' }
@@ -219,6 +307,27 @@ TLBlocConnectorConnectionTest >> testDoubleConnectionIsTwoThinLinesAsThickAsASol
 	self assert: (centers first - centers last) r closeTo: width * 2 / 3.0
 ]
 
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> testDoubleLineOfACurvedConnectionIsTwoCurves [
+
+	self openConnectionsBetweenTwoNodes: 2 direction: [ :index :first :second | (first connectTo: second) styleSheet connectionLineStyle: TLDoubleLineStyle ].
+	connector connections do: [ :element |
+			self assert: element lines size equals: 2.
+			element lines do: [ :line | self assert: line geometry class equals: BlBezierCurveGeometry ] ]
+]
+
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> testHeadArrivesAtTheEndOfACurvedConnection [
+
+	| element corners box |
+	self openConnectionsBetweenTwoNodes: 2 direction: [ :index :first :second | first connectTo: second ].
+	element := connector connections first.
+	self assert: element head isNotNil.
+	corners := element headOutline encompassingRectangle vertices collect: #asPoint as: Array.
+	box := (corners collect: #x) min @ (corners collect: #y) min corner: (corners collect: #x) max @ (corners collect: #y) max.
+	self assert: ((box expandBy: 1) containsPoint: element end)
+]
+
 { #category : 'tests' }
 TLBlocConnectorConnectionTest >> testHeadFollowsTheDirectionOfADiagonalConnection [
 
@@ -253,6 +362,24 @@ TLBlocConnectorConnectionTest >> testHeadHasTheColorOfTheConnectionUnlessItHasIt
 	self assert: (connector elementFromTLDrawable: colored) head background paint color equals: Color blue
 ]
 
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> testLabelOfACurvedConnectionIsNotOnItsMiddle [
+
+	| element label rectangle |
+	self openConnectionsBetweenTwoNodes: 2 direction: [ :index :first :second | (first connectTo: second) styleSheet connectionLabel: [ 'link' ] ].
+	element := connector connections first.
+	label := element label.
+	rectangle := element measuredBounds position + label measuredBounds position extent: label extent.
+	self deny: (rectangle containsPoint: element route middlePoint)
+]
+
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> testMiddleOfThreeConnectionsStaysStraight [
+
+	self openConnectionsBetweenTwoNodes: 3 direction: [ :index :first :second | first connectTo: second ].
+	self assert: (connector connections collect: [ :connection | connection geometry class ] as: Set) size equals: 2
+]
+
 { #category : 'tests - adjacency' }
 TLBlocConnectorConnectionTest >> testNodesKnowTheirAdjacentNodesForTheLayouts [
 
@@ -284,15 +411,94 @@ TLBlocConnectorConnectionTest >> testRemovedConnectionIsForgottenByItsNodes [
 	self assertEmpty: (connector elementFromTLDrawable: target) incomingAdjacentNodes
 ]
 
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> testSegmentsCurveHasTheHeadAlongItsLastSegment [
+	"The head of a taxi is horizontal or vertical"
+
+	| element |
+	visualization layout: ((TLLinearLayout perLine: 1)
+			 gap: 100;
+			 yourself).
+	self openConnectionsBetweenTwoNodes: 1 direction: [ :index :first :second | (first connectTo: second) styleSheet curveStyle: TLSegmentsCurve ].
+	element := connector connections first.
+	self assert: element route endDirection isNotNil.
+	self assert: (element route endDirection x abs < 0.001 or: [ element route endDirection y abs < 0.001 ])
+]
+
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> testSegmentsCurveIsAPolyline [
+
+	| first second connection |
+	first := visualization addNodeFromEntity: 1.
+	second := visualization addNodeFromEntity: 2.
+	connection := first connectTo: second.
+	connection styleSheet curveStyle: TLSegmentsCurve.
+	visualization layout: ((TLLinearLayout perLine: 1)
+			 gap: 100;
+			 yourself).
+	connector open: visualization inWindowSized: 400 @ 300 titled: 'Curves'.
+	connector view space settleForDuration: 1 seconds.
+	self assert: connector connections first geometry class equals: BlPolylineGeometry
+]
+
 { #category : 'tests' }
-TLBlocConnectorConnectionTest >> testSimpleConnectionsDemoGeneratesItsSixConnections [
+TLBlocConnectorConnectionTest >> testSimpleConnectionsDemoGeneratesItsNineConnections [
 
 	| connections |
 	visualization := TLDemos exampleSimpleConnections.
 	visualization generator: connector.
 	visualization generateWith: connector.
 	connections := connector view children select: [ :each | each class == TLBlocNodeConnection ].
-	self assert: connections size equals: 6
+	self assert: connections size equals: 9
+]
+
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> testSimpleConnectionsDemoHasDirectConnectionsWhichStayStraight [
+
+	| directs |
+	self openDemo: TLDemos exampleSimpleConnections.
+	directs := connector connections select: [ :connection | connection geometry class = BlLineGeometry ].
+	self assert: directs size >= 2
+]
+
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> testSimpleConnectionsDemoSegmentsConnectionHasBends [
+
+	| segments |
+	self openDemo: TLDemos exampleSimpleConnections.
+	segments := connector connections detect: [ :connection | connection geometry class = BlPolylineGeometry ].
+	self assert: (segments route points collect: #y) asSet size > 1.
+	self assert: (segments route points collect: #x) asSet size > 1
+]
+
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> testSimpleConnectionsDemoShowsTheThreeCurveStyles [
+	"Arcs for the connections in both directions between two nodes, a polyline for the diagonal one and straight lines for the others"
+
+	| geometries |
+	self openDemo: TLDemos exampleSimpleConnections.
+	geometries := connector connections collect: [ :connection | connection geometry class ] as: Set.
+	self assert: (geometries includes: BlBezierCurveGeometry).
+	self assert: (geometries includes: BlPolylineGeometry).
+	self assert: (geometries includes: BlLineGeometry)
+]
+
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> testSimpleConnectionsDemoSpreadsTheTwoConnectionsBetweenTheSameNodes [
+
+	| arcs |
+	self openDemo: TLDemos exampleSimpleConnections.
+	arcs := connector connections select: [ :connection | connection geometry class = BlBezierCurveGeometry ].
+	self assert: arcs size equals: 2.
+	self assert: (arcs first route middlePoint - arcs last route middlePoint) r > 10
+]
+
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> testSingleConnectionIsStraightWithTheDefaultCurve [
+	"The default curve style of Telescope is Bezier, which is a straight line when the connection is alone between its nodes"
+
+	self openConnectionsBetweenTwoNodes: 1 direction: [ :index :first :second | first connectTo: second ].
+	self assert: connector connections first geometry class equals: BlLineGeometry
 ]
 
 { #category : 'tests - line style' }
@@ -349,4 +555,15 @@ TLBlocConnectorConnectionTest >> testUpdatingConnectionsDoesNotMoveTheOutlineOfT
 			(40 @ 0).
 			(40 @ 40).
 			(0 @ 40) }
+]
+
+{ #category : 'tests - curves' }
+TLBlocConnectorConnectionTest >> testViewContentIncludesTheCurvesOfTheConnections [
+	"A curve goes out of the box of the nodes: the fit of the view has to count it"
+
+	| box |
+	self openConnectionsBetweenTwoNodes: 2 direction: [ :index :first :second | first connectTo: second ].
+	connector connections do: [ :element |
+			box := element measuredBounds position extent: element extent.
+			self assert: ((connector view contentRectangle expandBy: 0.01) containsRect: box) ]
 ]

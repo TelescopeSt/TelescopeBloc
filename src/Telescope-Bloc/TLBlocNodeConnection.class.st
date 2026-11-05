@@ -1,5 +1,5 @@
 "
-I am the Bloc element of a connection between two nodes of a Telescope visualization. I am a line from the border of the outline of the source node to the border of the outline of the target node, along the line which joins their centers (see TLBlocConnectionSegment). I am in the view, in the coordinates of which the segment is computed, and my element is the box of the segment. The connector updates me once the layouts have placed the nodes. The color, the width and the line style of the line are the ones of the style sheet of the connection: solid, dashed, dotted or double, two lines on both sides of the segment, so that a double line ends where a single one does. I draw a head at the end of the line, with the shape of the head substyle: a triangle by default, and the color of the line unless the head has its own. I show the label of the connection next to the middle of the line, above it or on its right when it is vertical, and not on it. Every curve style is drawn as a straight line. The arrows at the start and at the middle, and the interactions are not implemented yet. #customizeFromConnection: can be called again when an interaction changed the style of the connection.
+I am the Bloc element of a connection between two nodes of a Telescope visualization. I am a line from the border of the outline of the source node to the border of the outline of the target node, along the line which joins their centers (see TLBlocConnectionSegment). I am in the view, in the coordinates of which the segment is computed, and my element is the box of the segment. The connector updates me once the layouts have placed the nodes. The color, the width and the line style of the line are the ones of the style sheet of the connection: solid, dashed, dotted or double, two lines on both sides of the segment, so that a double line ends where a single one does. I draw a head at the end of the line, with the shape of the head substyle: a triangle by default, and the color of the line unless the head has its own. I show the label of the connection next to the middle of the line, above it or on its right when it is vertical, and not on it. The line is the route of the curve style of the style sheet: a straight line, an arc when other connections join the same nodes (Bezier, the default of Telescope), or segments with right angles. The arrows at the start and at the middle, and the interactions are not implemented yet. #customizeFromConnection: can be called again when an interaction changed the style of the connection.
 "
 Class {
 	#name : 'TLBlocNodeConnection',
@@ -15,7 +15,9 @@ Class {
 		'label',
 		'lineStyle',
 		'lines',
-		'lineWidth'
+		'lineWidth',
+		'curveStyle',
+		'parallelOffset'
 	],
 	#category : 'Telescope-Bloc-Elements',
 	#package : 'Telescope-Bloc',
@@ -29,6 +31,12 @@ TLBlocNodeConnection class >> from: aSourceElement to: aTargetElement [
 	^ self new
 		  fromNode: aSourceElement toNode: aTargetElement;
 		  yourself
+]
+
+{ #category : 'layout' }
+TLBlocNodeConnection >> bottomRightOf: somePoints [
+
+	^ (somePoints collect: #x) max @ (somePoints collect: #y) max
 ]
 
 { #category : 'layout' }
@@ -59,7 +67,7 @@ TLBlocNodeConnection >> createLabelFrom: aStyleSheet [
 
 { #category : 'initialization' }
 TLBlocNodeConnection >> customizeFromConnection: aTLConnection [
-	"The color, the width and the line style of the style sheet of the connection are the ones of the line, solid by default. The head is the shape of the head substyle, a triangle when it has none, with the color of the line unless the head has its own. The label is a text at the middle of the line. It can be called again when an interaction changed the style: the previous label is removed, and #update draws the line and the head again"
+	"The color, the width, the line style and the curve style of the style sheet of the connection are the ones of the line, solid by default. The head is the shape of the head substyle, a triangle when it has none, with the color of the line unless the head has its own. The label is a text at the middle of the line. It can be called again when an interaction changed the style: the previous label is removed, and #update draws the line and the head again"
 
 	| styleSheet headStyle |
 	styleSheet := aTLConnection effectiveStyleSheet.
@@ -68,6 +76,7 @@ TLBlocNodeConnection >> customizeFromConnection: aTLConnection [
 	lineStyle := (styleSheet attributes includesKey: #connectionLineStyle)
 		             ifTrue: [ styleSheet connectionLineStyle ]
 		             ifFalse: [ TLSolidLineStyle ].
+	curveStyle := styleSheet curveStyle.
 	lineWidth := styleSheet width.
 	self border: (lineStyle blocBorderPaint: styleSheet color width: styleSheet width).
 	headStyle := styleSheet > #head.
@@ -147,10 +156,11 @@ TLBlocNodeConnection >> headSize [
 
 { #category : 'initialization' }
 TLBlocNodeConnection >> initialize [
-	"The head and the label are outside of the box of the segment"
+	"The head and the label are outside of the box of the route. A connection alone between its nodes has no offset"
 
 	super initialize.
 	lines := #(  ).
+	parallelOffset := 0.
 	self clipChildren: false
 ]
 
@@ -169,16 +179,15 @@ TLBlocNodeConnection >> labelGap [
 ]
 
 { #category : 'layout' }
-TLBlocNodeConnection >> lineElementFrom: start to: end [
-	"A line with the border of the connection, in its own box"
+TLBlocNodeConnection >> lineElementFor: aRoute relativeTo: aPoint [
+	"A line with the border of the connection, in its own box, at the place of the route in my coordinates"
 
-	| topLeft bottomRight |
-	topLeft := start min: end.
-	bottomRight := start max: end.
+	| topLeft |
+	topLeft := self topLeftOf: aRoute points.
 	^ BlElement new
-		  position: topLeft;
-		  extent: (bottomRight - topLeft max: 1 @ 1);
-		  geometry: (BlLineGeometry from: start - topLeft to: end - topLeft);
+		  position: topLeft - aPoint;
+		  extent: ((self bottomRightOf: aRoute points) - topLeft max: 1 @ 1);
+		  geometry: (aRoute geometryRelativeTo: topLeft);
 		  border: self border;
 		  yourself
 ]
@@ -197,39 +206,53 @@ TLBlocNodeConnection >> lines [
 	^ lines
 ]
 
+{ #category : 'accessing' }
+TLBlocNodeConnection >> parallelOffset: aNumber [
+	"The distance which spreads the connections between the same two nodes, to the left of the direction of this connection when it is positive. A Bezier curve is an arc when it is not 0"
+
+	parallelOffset := aNumber
+]
+
 { #category : 'layout' }
 TLBlocNodeConnection >> placeLinesRelativeTo: aPoint [
-	"A single line is the geometry of the element. A double line is two children, because they are outside of the box of the segment. An empty segment has no side"
+	"A single line is the geometry of the element. A double line is two children, because they are outside of the box of the route. An empty route has no side"
 
 	lines do: [ :line | line removeFromParent ].
 	lines := #(  ).
-	lineStyle hasParallelLineInBloc ifFalse: [ ^ self geometry: (BlLineGeometry from: segment start - aPoint to: segment end - aPoint) ].
+	lineStyle hasParallelLineInBloc ifFalse: [ ^ self geometry: (segment geometryRelativeTo: aPoint) ].
 	self geometry: BlEmptyGeometry new.
 	segment start = segment end ifTrue: [ ^ self ].
-	lines := { 1. -1 } collect: [ :side |
-			         | offset |
-			         offset := segment upwardNormal * (self lineGap / 2 * side).
-			         self lineElementFrom: segment start + offset - aPoint to: segment end + offset - aPoint ].
+	lines := { 1. -1 } collect: [ :side | self lineElementFor: (segment translatedBy: segment upwardNormal * (self lineGap / 2 * side)) relativeTo: aPoint ].
 	lines reverseDo: [ :line | self addChild: line at: 1 ]
 ]
 
 { #category : 'layout' }
 TLBlocNodeConnection >> placeSegment [
-	"The element is the box of the segment, at least one pixel thick, and its line goes from a corner to the opposite one. A double line has no line of its own: it is two lines on both sides of the segment"
+	"The element is the box of the points of the route, at least one pixel thick, and its line is the geometry of the route. A double line has no line of its own: it is two lines on both sides of the route"
 
-	| topLeft bottomRight |
-	topLeft := segment start min: segment end.
-	bottomRight := segment start max: segment end.
+	| topLeft |
+	topLeft := self topLeftOf: segment points.
 	self position: topLeft.
-	self extent: (bottomRight - topLeft max: 1 @ 1).
+	self extent: ((self bottomRightOf: segment points) - topLeft max: 1 @ 1).
 	self placeLinesRelativeTo: topLeft
 ]
 
 { #category : 'layout' }
 TLBlocNodeConnection >> rectanglesRelativeTo: anOrigin [
-	"A connection is between nodes, so it does not make a visualization bigger"
+	"The box of the route and the label, from the given origin: a curve goes out of the box of its nodes, and the visualization has to fit it in the window"
 
-	^ #(  )
+	| topLeft |
+	topLeft := anOrigin + self measuredBounds position.
+	^ { (topLeft extent: self extent) } , (label
+		   ifNil: [ #(  ) ]
+		   ifNotNil: [ :aLabel | { (topLeft + aLabel measuredBounds position extent: aLabel extent) } ])
+]
+
+{ #category : 'accessing' }
+TLBlocNodeConnection >> route [
+	"The route of the line in the coordinates of the view, which the curve style gave: nil until the connection is updated"
+
+	^ segment
 ]
 
 { #category : 'accessing' }
@@ -247,12 +270,18 @@ TLBlocNodeConnection >> toNode [
 ]
 
 { #category : 'layout' }
+TLBlocNodeConnection >> topLeftOf: somePoints [
+
+	^ (somePoints collect: #x) min @ (somePoints collect: #y) min
+]
+
+{ #category : 'layout' }
 TLBlocNodeConnection >> update [
-	"Joins the borders of the nodes, once the layouts have placed them. The connection is in the view, in the coordinates of which the segment is computed"
+	"Joins the borders of the nodes, once the layouts have placed them. The connection is in the view, in the coordinates of which the route is computed. The route is the one of the curve style: a straight line, an arc when other connections join the same nodes, or segments with right angles"
 
 	| view |
 	view := self parent.
-	segment := TLBlocConnectionSegment from: (fromNode outlineRelativeTo: view) to: (toNode outlineRelativeTo: view).
+	segment := curveStyle blocRouteFrom: (fromNode outlineRelativeTo: view) to: (toNode outlineRelativeTo: view) offset: parallelOffset.
 	self placeSegment.
 	self updateHead.
 	self centerLabel
@@ -260,17 +289,17 @@ TLBlocNodeConnection >> update [
 
 { #category : 'layout' }
 TLBlocNodeConnection >> updateHead [
-	"The head is drawn again at the end of the segment, pointing in its direction. There is none when the shape draws nothing, or when the segment is empty"
+	"The head is drawn again at the end of the route, pointing along it. There is none when the shape draws nothing, or when the route is empty"
 
 	| direction |
 	head ifNotNil: [ head removeFromParent ].
 	head := nil.
 	headOutline := nil.
-	direction := segment end - segment start.
-	direction = (0 @ 0) ifTrue: [ ^ self ].
+	direction := segment endDirection.
+	direction ifNil: [ ^ self ].
 	headOutline := headShape
 		               headOutlineAt: segment end
-		               direction: direction normalized
+		               direction: direction
 		               length: self headSize
 		               width: self headSize.
 	headOutline ifNil: [ ^ self ].
