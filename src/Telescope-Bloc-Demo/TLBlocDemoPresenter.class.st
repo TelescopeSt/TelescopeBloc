@@ -1,5 +1,5 @@
 "
-I am a Spec browser of the demos of TLDemos rendered by the Bloc connector. I list the demos, filter them with the filters they declare, show the visualization in a Bloc canvas and the source of the demo below. When a demo fails, I replace the visualization by the stack of the error and I enable a button to debug it. The list shows the names of the demos for a human (TLDemoCatalogue class>>displayNameOf:, which drops the example prefix and splits the camel case), in the alphabetical order of these names, and its items are the selectors which run the demos.
+I am a Spec browser of the demos of TLDemos rendered by the Bloc connector. I list the demos, filter them with the filters they declare, show the visualization in a Bloc canvas, and show the description of the demo (its tlDescription pragma) and its source below. When a demo fails, I replace the visualization by the stack of the error. The list shows the names of the demos for a human (TLDemoCatalogue class>>displayNameOf:, which drops the example prefix and splits the camel case), in the alphabetical order of these names, and its items are the selectors which run the demos.
 "
 Class {
 	#name : 'TLBlocDemoPresenter',
@@ -9,9 +9,7 @@ Class {
 		'filterList',
 		'canvas',
 		'code',
-		'errorText',
-		'debugButton',
-		'lastError'
+		'description'
 	],
 	#category : 'Telescope-Bloc-Demo-Browser',
 	#package : 'Telescope-Bloc-Demo',
@@ -54,36 +52,21 @@ TLBlocDemoPresenter >> connectPresenters [
 	filterList whenSelectedItemChangedDo: [ :filter | demoList items: (self demosMatching: filter) ]
 ]
 
-{ #category : 'accessing' }
-TLBlocDemoPresenter >> debugButton [
-	^ debugButton
-]
-
-{ #category : 'operations' }
-TLBlocDemoPresenter >> debugLastError [
-	"Opens a debugger on the context of the last error of a demo"
-
-	lastError ifNotNil: [ :error | error debug ]
-]
-
 { #category : 'layout' }
 TLBlocDemoPresenter >> defaultLayout [
-
 	^ SpPanedLayout newTopToBottom
 		  add: (SpPanedLayout newLeftToRight
 				   positionOfSlider: 300;
 				   add: (SpBoxLayout newTopToBottom
 						    add: filterList expand: false;
 						    add: demoList;
-						    add: (SpBoxLayout newLeftToRight
-								     add: debugButton expand: false;
-								     add: errorText;
-								     yourself)
-						    expand: false;
 						    yourself);
 				   add: canvas;
 				   yourself);
-		  add: code;
+		  add: (SpBoxLayout newTopToBottom
+				   add: description expand: false;
+				   add: code;
+				   yourself);
 		  yourself
 ]
 
@@ -99,6 +82,13 @@ TLBlocDemoPresenter >> demosMatching: aFilterSymbol [
 	^ (TLDemoCatalogue sortedByDisplayName: (aFilterSymbol = #all
 			    ifTrue: [ TLDemoCatalogue demoSelectors ]
 			    ifFalse: [ TLDemoCatalogue demoSelectorsWithFilter: aFilterSymbol ])) asArray
+]
+
+{ #category : 'accessing' }
+TLBlocDemoPresenter >> description [
+	"The text which describes the selected demo"
+
+	^ description
 ]
 
 { #category : 'operations' }
@@ -117,11 +107,6 @@ TLBlocDemoPresenter >> errorElementFor: anError [
 ]
 
 { #category : 'accessing' }
-TLBlocDemoPresenter >> errorText [
-	^ errorText
-]
-
-{ #category : 'accessing' }
 TLBlocDemoPresenter >> filterList [
 	^ filterList
 ]
@@ -133,13 +118,8 @@ TLBlocDemoPresenter >> initializePresenters [
 	demoList := self newList display: [ :selector | TLDemoCatalogue displayNameOf: selector ].
 	filterList := self newDropList items: { #all } , TLDemoCatalogue filterSymbols.
 	canvas := self instantiate: SpBlSpaceInMorphPresenter.
+	description := self newText beNotEditable.
 	code := self newCode beNotEditable.
-	errorText := self newText beNotEditable.
-	debugButton := self newButton
-		               label: 'Debug';
-		               action: [ self debugLastError ];
-		               disable;
-		               yourself.
 	demoList items: (self demosMatching: #all)
 ]
 
@@ -151,36 +131,31 @@ TLBlocDemoPresenter >> initializeWindow: aWindowPresenter [
 		initialExtent: 1200 @ 800
 ]
 
-{ #category : 'operations' }
+{ #category : 'running' }
 TLBlocDemoPresenter >> runDemo: aDemoSelector [
 	"Renders the demo in the canvas, or shows its error"
 
 	| connector visualization demoMethod |
-	lastError := nil.
-	debugButton disable.
-	errorText text: ''.
+	description text: (TLDemoCatalogue descriptionOf: aDemoSelector).
 	demoMethod := TLDemos class >> aDemoSelector.
 	code beForMethod: demoMethod.
 	code text: demoMethod sourceCode.
 	[
-		connector := TLBlocConnector new.
-		visualization := TLDemos perform: aDemoSelector.
-		visualization generator: connector.
-		visualization generateWith: connector.
-		canvas space root
-			removeChildren;
-			addChild: connector view ]
+	connector := TLBlocConnector new.
+	visualization := TLDemos perform: aDemoSelector.
+	visualization generator: connector.
+	visualization generateWith: connector.
+	canvas space root
+		removeChildren;
+		addChild: connector view ]
 		on: Error
 		do: [ :error | self showError: error ]
 ]
 
-{ #category : 'operations' }
+{ #category : 'running' }
 TLBlocDemoPresenter >> showError: anError [
-	"Replaces the visualization by the stack of the error, and enables the debug button"
+	"Replaces the visualization by the stack of the error"
 
-	lastError := anError.
-	errorText text: anError class name , ': ' , anError description.
-	debugButton enable.
 	canvas space root
 		removeChildren;
 		addChild: (self errorElementFor: anError)

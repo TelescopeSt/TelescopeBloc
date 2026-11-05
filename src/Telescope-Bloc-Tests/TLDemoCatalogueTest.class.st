@@ -15,6 +15,41 @@ TLDemoCatalogueTest >> testDemosCanBeSortedByTheirDisplayName [
 ]
 
 { #category : 'tests' }
+TLDemoCatalogueTest >> testDescriptionIsTheArgumentOfThePragmaOfTheDemo [
+
+	| pragma |
+	pragma := (TLDemos class >> #exampleSimpleConnections) pragmas detect: [ :each | each selector = #tlDescription: ].
+	self assert: (TLDemoCatalogue descriptionOf: #exampleSimpleConnections) equals: pragma arguments first.
+	self assert: (TLDemoCatalogue descriptionOf: #exampleSimpleConnections) isNotEmpty
+]
+
+{ #category : 'tests' }
+TLDemoCatalogueTest >> testDescriptionOfAMethodWithoutPragmaIsEmpty [
+	"A method of the class of the demos which is not a demo"
+
+	self assert: (TLDemoCatalogue descriptionOf: #connectionArrowsIn:from:to:label:) equals: ''
+]
+
+{ #category : 'tests' }
+TLDemoCatalogueTest >> testDescriptionsAreOneParagraphWhichEndsWithAFullStop [
+
+	TLDemoCatalogue demoSelectors do: [ :selector |
+			| description |
+			description := TLDemoCatalogue descriptionOf: selector.
+			self assert: (description isNotEmpty and: [ description last = $. ]) description: selector , ' does not end with a full stop'.
+			self deny: (description includes: Character cr) description: selector , ' has several lines'.
+			self deny: (description includes: Character lf) description: selector , ' has several lines' ]
+]
+
+{ #category : 'tests' }
+TLDemoCatalogueTest >> testDescriptionsOfTheDemosAreDifferent [
+
+	| descriptions |
+	descriptions := TLDemoCatalogue demoSelectors collect: [ :selector | TLDemoCatalogue descriptionOf: selector ].
+	self assert: descriptions asSet size equals: descriptions size
+]
+
+{ #category : 'tests' }
 TLDemoCatalogueTest >> testDisplayNameKeepsAnAcronymInCapitals [
 
 	self assert: (TLDemoCatalogue displayNameOf: #exampleCIStyle) equals: 'CI style'.
@@ -70,6 +105,16 @@ TLDemoCatalogueTest >> testDisplayNamesOfTheDemosAreDifferent [
 	| names |
 	names := TLDemoCatalogue demoSelectors collect: [ :selector | TLDemoCatalogue displayNameOf: selector ].
 	self assert: names asSet size equals: names size
+]
+
+{ #category : 'tests' }
+TLDemoCatalogueTest >> testEveryDemoHasADescription [
+
+	TLDemoCatalogue demoSelectors do: [ :selector |
+			| description |
+			description := TLDemoCatalogue descriptionOf: selector.
+			self assert: description isNotEmpty description: selector , ' has no description'.
+			self assert: description size > 25 description: selector , ' has a too short description' ]
 ]
 
 { #category : 'tests' }

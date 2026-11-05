@@ -1,5 +1,5 @@
 "
-I list the demos of TLDemos, the class-side methods marked with a script pragma, and the filters they declare with the tlFilter pragma. I answer no UI, so a browser can filter demos without knowing how they are found. I give the name of a demo for a human (#displayNameOf:) and sort demos by it (#sortedByDisplayName:).
+I list the demos of TLDemos, the class-side methods marked with a script pragma, the filters they declare with the tlFilter pragma and their description with the tlDescription pragma (#descriptionOf:). I answer no UI, so a browser can filter demos without knowing how they are found. I give the name of a demo for a human (#displayNameOf:) and sort demos by it (#sortedByDisplayName:).
 "
 Class {
 	#name : 'TLDemoCatalogue',
@@ -21,6 +21,16 @@ TLDemoCatalogue class >> demoSelectorsWithFilter: aFilterSymbol [
 	"The selectors of the demos declaring the given filter"
 
 	^ self demoSelectors select: [ :each | (self filtersOfDemo: each) includes: aFilterSymbol ]
+]
+
+{ #category : 'accessing' }
+TLDemoCatalogue class >> descriptionOf: aDemoSelector [
+	"The description of a demo, given by its tlDescription pragma. Answers an empty string when the demo has none."
+
+	^ (TLDemos class >> aDemoSelector) pragmas
+		detect: [ :pragma | pragma selector = #tlDescription: ]
+		ifFound: [ :pragma | pragma arguments first ]
+		ifNone: [ '' ]
 ]
 
 { #category : 'display' }
