@@ -641,6 +641,34 @@ TLBlocConnectorConnectionTest >> testRemovedConnectionIsForgottenByItsNodes [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorConnectionTest >> testRoutesGoingAroundTheNodesAreMadeOnceMoreWhenTheLayoutsAreSettled [
+	"The labels are measured after the layouts: however many times the connections are updated in a row, one more update waits for the layouts to be done"
+
+	| countingConnector nodes connection before |
+	countingConnector := TLBlocRouteCountingConnector new.
+	countingConnector host: BlHeadlessHost default.
+	countingConnector animationDuration: 0 seconds.
+	visualization generator: countingConnector.
+	visualization styleSheet
+		width: 50;
+		height: 50;
+		nodeLabel: #asString position: #bottom;
+		layout: ((TLLinearLayout perLine: 3)
+				 gap: 70;
+				 yourself).
+	nodes := (1 to: 3) collect: [ :entity | visualization addNodeFromEntity: entity ].
+	connection := nodes first connectTo: nodes last.
+	connection styleSheet curveStyle: TLSegmentsCurve.
+	countingConnector open: visualization inWindowSized: 600 @ 300 titled: 'Counting'.
+	countingConnector view space settleForDuration: 2 seconds.
+	before := countingConnector routeUpdates.
+	5 timesRepeat: [ countingConnector updateConnections ].
+	self assert: countingConnector routeUpdates equals: before + 5.
+	countingConnector view space settleForDuration: 2 seconds.
+	self assert: countingConnector routeUpdates equals: before + 6
+]
+
+{ #category : 'tests' }
 TLBlocConnectorConnectionTest >> testSegmentsConnectionAvoidsTheLabelsOfTheNodesInItsWay [
 	"The labels are measured after the first layout: the routes are made again once they are"
 
