@@ -83,12 +83,5 @@ TLBlocConnectorNavigationTest >> setUp [
 
 { #category : 'running' }
 TLBlocConnectorNavigationTest >> settle [
-	"The animation of the zoom is not a pending task of the space: it is waited for apart, and the layout of its last step after it"
-
-	connector view space settleForDuration: 1 seconds.
-	50 timesRepeat: [
-		connector view isZooming ifFalse: [
-			connector view space settleForDuration: 1 seconds.
-			^ self ].
-		connector view space settleForDuration: 20 milliSeconds ]
+	connector view space settleForDuration: 1 seconds
 ]
