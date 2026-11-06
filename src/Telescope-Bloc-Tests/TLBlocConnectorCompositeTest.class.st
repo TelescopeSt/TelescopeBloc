@@ -347,6 +347,46 @@ TLBlocConnectorCompositeTest >> testDraggingACompositeMovesItsChildren [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorCompositeTest >> testExpandingACompositeInAColumnDoesNotOverlapItsSiblings [
+	"The layouts of Telescope work in a frame turned by their angle, so the size of a composite node, as the one of the other nodes, has to be turned with it: a column asks the height of the nodes, which is not their width"
+
+	| composite |
+	self prepareComposites.
+	visualization styleSheet compositeExpandedByDefault: false.
+	visualization layout: (TLLinearLayout topToBottom gap: 10; yourself).
+	visualization addNodesFromEntities: #( 1 30 7 ).
+	visualization addInteraction: TLExpandCollapseCompositeNodeAction onCompositeNodeWithChildren onClick.
+	connector open: visualization inWindowSized: 600 @ 500 titled: 'Composite'.
+	connector view space settleForDuration: 1 seconds.
+	composite := self elementOfEntity: 30.
+	composite dispatchEvent: BlClickEvent new.
+	connector view space settleForDuration: 1 seconds.
+	self assert: composite extent y > 40.
+	#( 1 7 ) do: [ :sibling | self deny: ((self rectangleOfEntity: sibling) intersects: (self rectangleOfEntity: 30)) ]
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testExpandingACompositeInATreeDoesNotOverlapItsSiblings [
+	"The same as in a column: the tree is laid out in a frame turned by its angle"
+
+	| composite |
+	self prepareComposites.
+	visualization styleSheet compositeExpandedByDefault: false.
+	visualization layout: (TLTreeLayout topToBottom useOutgoingLinks; yourself).
+	visualization addNodesFromEntities: #( 1 30 7 ).
+	(self nodeOfEntity: 1) connectTo: (self nodeOfEntity: 30).
+	(self nodeOfEntity: 1) connectTo: (self nodeOfEntity: 7).
+	visualization addInteraction: TLExpandCollapseCompositeNodeAction onCompositeNodeWithChildren onClick.
+	connector open: visualization inWindowSized: 600 @ 500 titled: 'Composite'.
+	connector view space settleForDuration: 1 seconds.
+	composite := self elementOfEntity: 30.
+	composite dispatchEvent: BlClickEvent new.
+	connector view space settleForDuration: 1 seconds.
+	self assert: composite extent y > 40.
+	#( 1 7 ) do: [ :other | self deny: ((self rectangleOfEntity: other) intersects: (self rectangleOfEntity: 30)) ]
+]
+
+{ #category : 'tests' }
 TLBlocConnectorCompositeTest >> testExpandingACompositeWithAnInsideLabelMakesRoomForTheLabel [
 
 	| composite |
