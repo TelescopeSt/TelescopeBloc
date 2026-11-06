@@ -219,6 +219,11 @@ TLBlocNodeElement >> incomingAdjacentNodes [
 	^ incomingConnections collect: #fromNode
 ]
 
+{ #category : 'accessing' }
+TLBlocNodeElement >> incomingConnections [
+	^ incomingConnections
+]
+
 { #category : 'initialization' }
 TLBlocNodeElement >> initialize [
 	"Labels are drawn outside the node bounds, so the node must not clip its children. A node does not take all the space of its line until its style says so, and has no dimension until it is styled"
@@ -271,6 +276,11 @@ TLBlocNodeElement >> outgoingAdjacentNodes [
 	"The elements of the nodes this node is connected to, which the layouts of Telescope ask for, such as the tree layout"
 
 	^ outgoingConnections collect: #toNode
+]
+
+{ #category : 'accessing' }
+TLBlocNodeElement >> outgoingConnections [
+	^ outgoingConnections
 ]
 
 { #category : 'accessing' }

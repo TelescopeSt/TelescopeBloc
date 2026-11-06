@@ -20,7 +20,7 @@ The element of a shape trigger is made by #createElementFromTrigger: and placed 
 Its click, double click and right click are for the trigger, and their action for the node it triggers (#eventElementFor:targeting: and #actedDrawableFor:targeting:).
 The external trigger interactions are executed by #triggerExternal:, given the interaction or its id: something outside of the visualization, such as a button of the application, calls it.
 When an interaction changes the style of a node or of a connection, for example to highlight it, its element is made again from the style sheet, and so are the triggers of the node.
-The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back.
+The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back. While a node is dragged only its connections, and the ones which go around the nodes, are made again, so that a drag stays fluid with many connections.
 Legend: the legend of a visualization is made of the entries of Telescope, static or dynamic, as a TLBlocLegendElement in the window, which keeps its element when the legend is made again.
 Not implemented: #generatePopupInteraction: and #generateBasicInteraction:onNode:, which nothing calls, and the property showChildrenConnectionsOnParent, which Telescope does not define.
 "
@@ -172,7 +172,7 @@ TLBlocConnector >> configView [
 	"The connections follow the nodes the user drags"
 
 	^ TLBlocVisualization new
-		  onNodesMovedDo: [ self updateConnections ];
+		  onNodesMovedDo: [ :nodeElement | self updateConnectionsOfMovedNode: nodeElement ];
 		  yourself
 ]
 
@@ -615,6 +615,15 @@ TLBlocConnector >> legendEntryWith: aSwatch label: aString [
 		  yourself
 ]
 
+{ #category : 'updating' }
+TLBlocConnector >> nodeElementsInTheWayOfConnections [
+	"The elements of the nodes which the connections going around the nodes avoid, but not the triggers, which are on the border of their nodes. The view is not searched when no connection goes around the nodes"
+
+	^ (connections anySatisfy: [ :connection | connection avoidsOtherNodes ])
+		  ifTrue: [ view allChildrenBreadthFirstSelect: [ :element | element class == TLBlocNodeElement and: [ element isTrigger not ] ] ]
+		  ifFalse: [ #(  ) ]
+]
+
 { #category : 'accessing' }
 TLBlocConnector >> nodesShapesAvailableForConnector [
 	"The shapes a node can have: all but the ones that are only for connections"
@@ -881,8 +890,8 @@ TLBlocConnector >> updateConnectionRoutes [
 
 	| nodeElements |
 	self spreadParallelConnections.
-	nodeElements := view allChildrenBreadthFirstSelect: [ :element | element class == TLBlocNodeElement and: [ element isTrigger not ] ].
-	connections do: [ :connection | connection updateAvoiding: (connection obstaclesAmong: nodeElements) ]
+	nodeElements := self nodeElementsInTheWayOfConnections.
+	connections do: [ :connection | self updateRouteOf: connection among: nodeElements ]
 ]
 
 { #category : 'updating' }
@@ -890,6 +899,19 @@ TLBlocConnector >> updateConnections [
 	"The connections join the borders of their nodes, which the layouts have just placed. The connections which go around the nodes are made again while the nodes and their labels move, because the labels are measured and placed after the layouts and are in their way too"
 
 	self updateConnectionRoutes.
+	self watchTheObstaclesOfTheConnections
+]
+
+{ #category : 'updating' }
+TLBlocConnector >> updateConnectionsOfMovedNode: aNodeElement [
+	"The user moved the node, and its children with it: only the connections of these nodes join them again, and the ones which go around the nodes, as the node may be in their way now. The other connections cannot change, and a drag asks for an update at each move of the mouse, so they are left alone. No connection was added or removed: the parallel ones are not spread again"
+
+	| movedNodes nodeElements |
+	movedNodes := IdentitySet new.
+	aNodeElement withAllChildrenDo: [ :element | element class == TLBlocNodeElement ifTrue: [ movedNodes add: element ] ].
+	nodeElements := self nodeElementsInTheWayOfConnections.
+	connections do: [ :connection |
+		(connection avoidsOtherNodes or: [ (movedNodes includes: connection fromNode) or: [ movedNodes includes: connection toNode ] ]) ifTrue: [ self updateRouteOf: connection among: nodeElements ] ].
 	self watchTheObstaclesOfTheConnections
 ]
 
@@ -931,6 +953,15 @@ TLBlocConnector >> updateLegend: aTLLegend [
 	self unregisterShapeForDrawable: aTLLegend.
 	self generateLegend: aTLLegend.
 	aTLLegend updateDone
+]
+
+{ #category : 'updating' }
+TLBlocConnector >> updateRouteOf: aConnection among: someNodeElements [
+	"Only the connections which go around the nodes look at the rectangles of the other nodes"
+
+	aConnection updateAvoiding: (aConnection avoidsOtherNodes
+			 ifTrue: [ aConnection obstaclesAmong: someNodeElements ]
+			 ifFalse: [ #(  ) ])
 ]
 
 { #category : 'triggers' }
