@@ -576,7 +576,7 @@ TLBlocConnector >> isTrigger: aTLDrawable [
 { #category : 'updating' }
 TLBlocConnector >> keepWatchingTheObstaclesAfterTheNextLayout [
 
-	view doAfterNextLayout: [
+	view whenLayoutedDoOnce: [
 			| current |
 			current := self obstacleRectangles.
 			current = connectionObstacles
