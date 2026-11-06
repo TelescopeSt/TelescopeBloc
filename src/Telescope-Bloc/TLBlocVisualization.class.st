@@ -18,7 +18,9 @@ Class {
 		'fittedRectangle',
 		'fittedArea',
 		'autoFitOnLayout',
-		'afterLayoutActions'
+		'afterLayoutActions',
+		'zoomAnimation',
+		'zoomTarget'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -35,6 +37,13 @@ TLBlocVisualization class >> maximumZoom [
 TLBlocVisualization class >> minimumZoom [
 
 	^ 0.1
+]
+
+{ #category : 'zoom' }
+TLBlocVisualization class >> zoomDuration [
+	"How long the zoom takes to reach its target"
+
+	^ 150 milliSeconds
 ]
 
 { #category : 'layout' }
@@ -240,6 +249,13 @@ TLBlocVisualization >> installNavigationHandlers [
 	self installLegend
 ]
 
+{ #category : 'zoom' }
+TLBlocVisualization >> isZooming [
+	"The zoom is moving to its target"
+
+	^ zoomAnimation isNotNil
+]
+
 { #category : 'dragging' }
 TLBlocVisualization >> keepPositionWhile: aBlock [
 	"The visualization stays where it is while the block moves nodes. It is anchored to the top left corner of its content, which a node dragged to the left or to the top moves: the panning compensates, so the other nodes do not move under the mouse. The user took over: the visualization is not fitted again by itself"
@@ -299,6 +315,11 @@ TLBlocVisualization >> panBy: aPoint [
 	autoFit := false.
 	panOffset := panOffset + aPoint.
 	self fitContentToWindow
+]
+
+{ #category : 'accessing' }
+TLBlocVisualization >> panOffset [
+	^ panOffset
 ]
 
 { #category : 'legend' }
@@ -384,4 +405,31 @@ TLBlocVisualization >> zoomOut [
 	"Zooms around the center of the window"
 
 	self zoomBy: 1 / 1.25 around: self space extent / 2
+]
+
+{ #category : 'zoom' }
+TLBlocVisualization >> zoomSmoothlyBy: aFactor around: aPoint [
+	"Brings the zoom to its target in a short animation instead of jumping. The target is the one of the animation in progress, if there is one, so that the events of a trackpad, which come faster than the animation, add up. The point under the given position of the window stays where it is. A new animation replaces the one in progress, which ignores its steps from then on and ends by itself"
+
+	| start target animation |
+	start := zoomFactor.
+	target := ((zoomTarget ifNil: [ zoomFactor ]) * aFactor min: self class maximumZoom) max: self class minimumZoom.
+	zoomTarget := target.
+	animation := BlNumberTransition new.
+	animation
+		from: 0;
+		to: 1;
+		duration: self class zoomDuration;
+		onStepDo: [ :progress |
+			| newZoom |
+			zoomAnimation == animation ifTrue: [
+				newZoom := progress >= 1
+					           ifTrue: [ target ]
+					           ifFalse: [ start * ((target / start) raisedTo: progress) ].
+				self zoomBy: newZoom / zoomFactor around: aPoint.
+				progress >= 1 ifTrue: [
+					zoomTarget := nil.
+					zoomAnimation := nil ] ] ].
+	zoomAnimation := animation.
+	self addAnimation: animation
 ]

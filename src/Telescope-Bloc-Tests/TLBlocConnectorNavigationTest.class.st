@@ -83,6 +83,5 @@ TLBlocConnectorNavigationTest >> setUp [
 
 { #category : 'running' }
 TLBlocConnectorNavigationTest >> settle [
-
 	connector view space settleForDuration: 1 seconds
 ]
