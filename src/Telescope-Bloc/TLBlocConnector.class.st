@@ -221,12 +221,13 @@ TLBlocConnector >> createElementLegendItemFrom: aTLLegendItem [
 
 { #category : 'generation - node' }
 TLBlocConnector >> createElementNodeFromNode: aNode [
-	"The node has a label unless its style gives none"
+	"The node has a label unless its style gives none. The style sheet of the node is computed once: it merges the ones of its parents, and a visualization has thousands of nodes"
 
-	| blocElement |
+	| blocElement styleSheet |
+	styleSheet := aNode effectiveStyleSheet.
 	blocElement := TLBlocNodeElement new.
-	blocElement customizeFromNode: aNode.
-	(self labelElementOf: aNode) ifNotNil: [ :label | blocElement addChild: label ].
+	blocElement customizeFromNode: aNode styleSheet: styleSheet.
+	(self labelElementOf: aNode styleSheet: styleSheet) ifNotNil: [ :label | blocElement addChild: label ].
 	^ blocElement
 ]
 
@@ -592,11 +593,17 @@ TLBlocConnector >> keepWatchingTheObstaclesAfterTheNextLayout [
 
 { #category : 'generation - node' }
 TLBlocConnector >> labelElementOf: aNode [
-	"The label of the node, or nil when its style gives none: Telescope says so with the class TLNoNodeLabel, which is not a text to draw"
+	"The label of the node, or nil when its style gives none"
 
-	| styleSheet |
-	styleSheet := aNode effectiveStyleSheet.
-	^ ((styleSheet attributes includesKey: #nodeLabel) and: [ (styleSheet obtainValue: #nodeLabel forEntity: aNode entity inNode: aNode) ~~ TLNoNodeLabel ]) ifTrue: [ TLBlocLabelElement forNode: aNode ]
+	^ self labelElementOf: aNode styleSheet: aNode effectiveStyleSheet
+]
+
+{ #category : 'generation - node' }
+TLBlocConnector >> labelElementOf: aNode styleSheet: styleSheet [
+	"The label of the node, made from its effective style sheet, or nil when its style gives none: Telescope says so with the class TLNoNodeLabel, which is not a text to draw"
+
+	^ ((styleSheet attributes includesKey: #nodeLabel) and: [ (styleSheet obtainValue: #nodeLabel forEntity: aNode entity inNode: aNode) ~~ TLNoNodeLabel ]) ifTrue: [
+		  TLBlocLabelElement forNode: aNode styleSheet: styleSheet ]
 ]
 
 { #category : 'updating' }
