@@ -92,10 +92,11 @@ TLBlocNodeConnection >> createLabelFrom: aStyleSheet [
 
 { #category : 'updating' }
 TLBlocNodeConnection >> customizeFromConnection: aTLConnection [
-	"The color, the width, the line style and the curve style of the style sheet of the connection are the ones of the line, solid by default. The head is the shape of the head substyle, a triangle when it has none, with the color of the line unless the head has its own. The arrows at the start and at the middle are the shapes of the substyles base, middle and middleReversed, when they have one. The label is a text at the middle of the line. It can be called again when an interaction changed the style: the previous label is removed, and #update draws the line, the head and the arrows again"
+	"The color, the width, the line style and the curve style of the style sheet of the connection are the ones of the line, solid by default. The head is the shape of the head substyle, a triangle when it has none, with the color of the line unless the head has its own. The arrows at the start and at the middle are the shapes of the substyles base, middle and middleReversed, when they have one. The label is a text at the middle of the line. It can be called again when an interaction changed the style: the previous label is removed, and #update draws the line, the head and the arrows again. The connection does not join its nodes as its new style says yet: it has to be made again (see #isJoiningTheNodesWhereTheyAre)"
 
 	| styleSheet headStyle |
 	styleSheet := aTLConnection effectiveStyleSheet.
+	placesWhenJoined := nil.
 	label ifNotNil: [ :previous | previous removeFromParent ].
 	label := nil.
 	arrows do: [ :arrow | self removeElementOf: arrow ].
@@ -270,9 +271,11 @@ TLBlocNodeConnection >> parallelOffset [
 
 { #category : 'accessing' }
 TLBlocNodeConnection >> parallelOffset: aNumber [
-	"The distance which spreads the connections between the same two nodes, to the left of the direction of this connection when it is positive. A Bezier curve is an arc when it is not 0"
+	"The distance which spreads the connections between the same two nodes, to the left of the direction of this connection when it is positive. A Bezier curve is an arc when it is not 0. A new offset means a new route: the connection has to be made again (see #isJoiningTheNodesWhereTheyAre)"
 
-	parallelOffset := aNumber
+	parallelOffset = aNumber ifTrue: [ ^ self ].
+	parallelOffset := aNumber.
+	placesWhenJoined := nil
 ]
 
 { #category : 'layout' }
@@ -301,13 +304,15 @@ TLBlocNodeConnection >> placeSegment [
 
 { #category : 'updating' }
 TLBlocNodeConnection >> placesOfTheNodes [
-	"Where the nodes are in the view, and how big: what the route depends on"
+	"Where the nodes are in the view, how big they are and their outlines, where the line meets them: what the route depends on, with the style of the connection and its parallel offset"
 
 	^ {
 		  (fromNode topLeftRelativeTo: self parent).
 		  fromNode dimension.
+		  fromNode outline.
 		  (toNode topLeftRelativeTo: self parent).
-		  toNode dimension }
+		  toNode dimension.
+		  toNode outline }
 ]
 
 { #category : 'updating' }
