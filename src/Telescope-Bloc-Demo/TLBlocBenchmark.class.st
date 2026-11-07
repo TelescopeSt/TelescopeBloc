@@ -7,6 +7,7 @@ I measure how long TelescopeBloc takes to show a visualization, to find what is 
 - render: the average of a few draws of the window on a Cairo canvas, as a host draws it, without converting it to a Form.
 - dragStep: the average of a step of a drag of the first node, with the layouts it asks for.
 - hover: the mouse enters the first node and leaves it, with the interactions it triggers.
+- pan: the average of a step of a pan, the drawing of the window included, the first step, which fills the composition layer of the content, too.
 #report answers the durations as a text, and #runAll the report of every demo with the benchmark filter.
 Use it with the profiler to look for what to optimize: MessageTally spyOn: [ TLBlocBenchmark reportOf: #exampleBenchmarkManyNodes ].
 "
@@ -68,6 +69,16 @@ TLBlocBenchmark >> dragStepOf: aNodeElement in: aConnector [
 ]
 
 { #category : 'measuring' }
+TLBlocBenchmark >> drawDurationOf: aSpace [
+	"Draws the window once on a Cairo canvas, as its host does, without converting it to a Form, and answers how long the drawing took"
+
+	| canvas |
+	canvas := AeCanvas extent: aSpace extent.
+	canvas clippingRectangle: (0 @ 0 extent: aSpace extent).
+	^ [ canvas restoreContextAfter: [ aSpace root aeFullDrawOn: canvas ] ] timeToRun
+]
+
+{ #category : 'measuring' }
 TLBlocBenchmark >> hoverOf: aNodeElement in: aConnector [
 	"The mouse enters the node and leaves it, and Bloc waits for the interactions to change the style, like a user passing over the node. Answers the duration"
 
@@ -97,6 +108,7 @@ TLBlocBenchmark >> measure: aBlockBuildingTheVisualization [
 	numberOfConnections := connector connections size.
 	measures at: #dragStep put: (self dragStepOf: (connector elementFromTLDrawable: visualization allNodes first) in: connector).
 	measures at: #hover put: (self hoverOf: (connector elementFromTLDrawable: visualization allNodes first) in: connector).
+	measures at: #pan put: (self panOf: connector).
 	connector view space close.
 	BlHeadlessHost default settle.
 	^ measures
@@ -117,17 +129,30 @@ TLBlocBenchmark >> numberOfNodes [
 ]
 
 { #category : 'measuring' }
+TLBlocBenchmark >> panOf: aConnector [
+	"Pans the visualization like the mouse dragging the background, and draws the window after each step. Answers the average duration of a step, the first one included: it is the one which fills the composition layer of the content"
+
+	| steps view total |
+	steps := 10.
+	view := aConnector view.
+	total := 0 milliSeconds.
+	view startPanning.
+	steps timesRepeat: [
+			total := total + [
+				         view panBy: 3 @ 2.
+				         view space settleForDuration: 60 seconds ] timeToRun + (self drawDurationOf: view space) ].
+	view stopPanning.
+	^ total / steps
+]
+
+{ #category : 'measuring' }
 TLBlocBenchmark >> renderOf: aSpace [
-	"Draws the window on a Cairo canvas, as its host does, and answers the average duration of a few draws. The window is not converted to a Form, which costs more than drawing it and which a host does not do"
+	"The average duration of a few draws of the window. The window is not converted to a Form, which costs more than drawing it and which a host does not do"
 
 	| draws total |
 	draws := 5.
 	total := 0 milliSeconds.
-	draws timesRepeat: [
-			| canvas |
-			canvas := AeCanvas extent: aSpace extent.
-			canvas clippingRectangle: (0 @ 0 extent: aSpace extent).
-			total := total + [ canvas restoreContextAfter: [ aSpace root aeFullDrawOn: canvas ] ] timeToRun ].
+	draws timesRepeat: [ total := total + (self drawDurationOf: aSpace) ].
 	^ total / draws
 ]
 

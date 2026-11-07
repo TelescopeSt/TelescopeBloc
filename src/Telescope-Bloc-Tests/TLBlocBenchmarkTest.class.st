@@ -24,7 +24,7 @@ TLBlocBenchmarkTest >> testMeasureAnswersTheDurationOfEachPhase [
 
 	| measures |
 	measures := TLBlocBenchmark new measure: [ TLVisualization fromEntities: (1 to: 20) ].
-	self assert: measures keys asArray equals: #( #build #generate #firstFrame #render #dragStep #hover ).
+	self assert: measures keys asArray equals: #( #build #generate #firstFrame #render #dragStep #hover #pan ).
 	measures do: [ :duration | self assert: duration >= 0 milliSeconds ]
 ]
 
@@ -57,5 +57,5 @@ TLBlocBenchmarkTest >> testReportNamesThePhasesAndTheSizes [
 	benchmark := TLBlocBenchmark new.
 	benchmark measure: [ TLVisualization fromEntities: (1 to: 5) ].
 	report := benchmark report.
-	#( 'build' 'generate' 'first frame' 'render' 'drag step' 'hover' '5 nodes' ) do: [ :expected | self assert: (report includesSubstring: expected) ]
+	#( 'build' 'generate' 'first frame' 'render' 'drag step' 'hover' 'pan' '5 nodes' ) do: [ :expected | self assert: (report includesSubstring: expected) ]
 ]

@@ -30,7 +30,7 @@ TLBlocConnectorShapeTest >> testAllShapesDemoGeneratesEachShapeSmokeTest [
 	demo := TLDemos exampleAllShapes.
 	demo generator: connector.
 	demo generateWith: connector.
-	self assert: connector view children size equals: 15
+	self assert: connector view content children size equals: 15
 ]
 
 { #category : 'tests' }

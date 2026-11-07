@@ -58,9 +58,9 @@ TLBlocConnectorGroupTest >> testGradientDemoGeneratesItsTwoGroupsWithTheirColors
 	visualization := TLDemos exampleGradient.
 	visualization generator: connector.
 	visualization generateWith: connector.
-	self assert: connector view children size equals: 2.
-	colorElements := connector view children first children.
-	grayElements := connector view children last children.
+	self assert: connector view content children size equals: 2.
+	colorElements := connector view content children first children.
+	grayElements := connector view content children last children.
 	self assert: colorElements size equals: 60.
 	self assert: grayElements size equals: 10.
 	self assert: colorElements first background paint color equals: MDLColor red.
@@ -206,8 +206,8 @@ TLBlocConnectorGroupTest >> testNodesOfASubGroupAreInsideTheElementOfTheGroup [
 	visualization generateWith: connector.
 	groupElement := connector elementFromTLDrawable: group.
 	self assert: groupElement element children size equals: 3.
-	self assert: connector view children size equals: 1.
-	self assert: connector view children first identicalTo: groupElement element
+	self assert: connector view content children size equals: 1.
+	self assert: connector view content children first identicalTo: groupElement element
 ]
 
 { #category : 'tests' }

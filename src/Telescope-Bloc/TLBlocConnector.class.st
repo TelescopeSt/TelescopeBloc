@@ -83,7 +83,8 @@ TLBlocConnector >> actedDrawableFor: aTLDrawable targeting: aTargetDrawable [
 
 { #category : 'generation - connection' }
 TLBlocConnector >> addElementConnectionInView: element [
-	self view addChild: element.
+
+	self view content addChild: element.
 	connections add: element.
 	element fromNode registerConnection: element.
 	element toNode registerConnection: element
@@ -111,7 +112,8 @@ TLBlocConnector >> addElementLegendItemInView: legendItem [
 
 { #category : 'view' }
 TLBlocConnector >> addElementNodeInView: element [
-	self view addChild: element
+
+	self view content addChild: element
 ]
 
 { #category : 'generation - interaction' }
@@ -659,9 +661,9 @@ TLBlocConnector >> nodesShapesAvailableForConnector [
 
 { #category : 'updating' }
 TLBlocConnector >> obstacleRectangles [
-	"The rectangles of the nodes and of their labels, in the coordinates of the view, which the connections with segments go around"
+	"The rectangles of the nodes and of their labels, in the coordinates of the content of the view, the ones of the connections, which the connections with segments go around"
 
-	^ (view allChildrenBreadthFirstSelect: [ :element | element class == TLBlocNodeElement and: [ element isTrigger not ] ]) collect: [ :element | element rectangleWithLabelRelativeTo: view ]
+	^ (view allChildrenBreadthFirstSelect: [ :element | element class == TLBlocNodeElement and: [ element isTrigger not ] ]) collect: [ :element | element rectangleWithLabelRelativeTo: view content ]
 ]
 
 { #category : 'opening' }

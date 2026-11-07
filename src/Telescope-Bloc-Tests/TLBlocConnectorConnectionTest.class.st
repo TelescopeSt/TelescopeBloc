@@ -254,7 +254,7 @@ TLBlocConnectorConnectionTest >> testConnectionIsAnElementOfTheView [
 	visualization generateWith: connector.
 	element := connector elementFromTLDrawable: connection.
 	self assert: element class equals: TLBlocNodeConnection.
-	self assert: (connector view children includes: element)
+	self assert: (connector view content children includes: element)
 ]
 
 { #category : 'tests - line style' }
@@ -323,7 +323,7 @@ TLBlocConnectorConnectionTest >> testConnectionStyleDemoGeneratesAConnectionForE
 	visualization := TLDemos exampleConnectionStyle.
 	visualization generator: connector.
 	visualization generateWith: connector.
-	count := (connector view children select: [ :each | each class == TLBlocNodeConnection ]) size.
+	count := (connector view content children select: [ :each | each class == TLBlocNodeConnection ]) size.
 	self assert: count equals: TLSimpleShape allSubclasses size + 1
 ]
 
@@ -811,7 +811,7 @@ TLBlocConnectorConnectionTest >> testSimpleConnectionsDemoGeneratesItsTenConnect
 	visualization := TLDemos exampleSimpleConnections.
 	visualization generator: connector.
 	visualization generateWith: connector.
-	connections := connector view children select: [ :each | each class == TLBlocNodeConnection ].
+	connections := connector view content children select: [ :each | each class == TLBlocNodeConnection ].
 	self assert: connections size equals: 10
 ]
 
