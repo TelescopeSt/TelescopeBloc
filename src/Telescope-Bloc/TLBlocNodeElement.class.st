@@ -135,6 +135,17 @@ TLBlocNodeElement >> encompassingRectangle [
 ]
 
 { #category : 'children' }
+TLBlocNodeElement >> fitParentCompositesToTheirChildren [
+	"A node moved inside of a composite node, which always fits its children, and so do the composite nodes around that one"
+
+	| composite |
+	composite := self parentComposite.
+	[ composite isNil ] whileFalse: [
+			composite fitToChildrenWhereTheyAre.
+			composite := composite parentComposite ]
+]
+
+{ #category : 'children' }
 TLBlocNodeElement >> fitToChildren [
 	"I am as big as my children and the space around them, which is also my padding, and a strip at the top for my label when it is inside of me, and as wide as that label. Their group is placed under the strip, centered when I am wider than they are. Without child I keep the dimension of my style"
 
@@ -154,6 +165,17 @@ TLBlocNodeElement >> fitToChildrenWhenTheHeaderChanged [
 	"The label of the strip is measured after the layout: the node makes room for it, once, and does not follow the children which the user moved"
 
 	self headerExtent = fittedHeaderExtent ifFalse: [ self fitToChildren ]
+]
+
+{ #category : 'children' }
+TLBlocNodeElement >> fitToChildrenWhereTheyAre [
+	"I fit my children as #fitToChildren does, but they stay where they are in the view: when fitting moves their group inside of me, I move the opposite way. This is for a child which the user drags, that must stay under the mouse"
+
+	| groupPosition |
+	childrenGroup ifNil: [ ^ self ].
+	groupPosition := childrenGroup element measuredBounds position.
+	self fitToChildren.
+	self placeAt: self placement + (groupPosition - childrenGroup element measuredBounds position)
 ]
 
 { #category : 'triggers' }
@@ -301,6 +323,15 @@ TLBlocNodeElement >> outlineRelativeTo: anAncestor [
 	"A copy of the outline of the node, in the coordinates of an ancestor, without moving the outline of the node. A node without a shape has the rectangle of its dimension"
 
 	^ (outline ifNil: [ GRectangle origin: 0 @ 0 corner: dimension ]) translatedCopyBy: (self topLeftRelativeTo: anAncestor)
+]
+
+{ #category : 'children' }
+TLBlocNodeElement >> parentComposite [
+	"The composite node which contains me, or nil when I am not inside of one: my parent is the element of its group of children"
+
+	^ self parent ifNotNil: [ :container |
+			  container parent ifNotNil: [ :candidate |
+					  (candidate class == TLBlocNodeElement and: [ candidate childrenElement == container ]) ifTrue: [ candidate ] ] ]
 ]
 
 { #category : 'triggers' }

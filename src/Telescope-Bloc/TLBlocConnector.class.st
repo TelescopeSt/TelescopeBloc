@@ -1,28 +1,47 @@
 "
 I am the connector of Telescope to Bloc.
 I generate a Bloc element for each Telescope drawable of a visualization, and I add them to a TLBlocVisualization, the view of the visualization.
-I open the visualization in a Bloc window: it uses the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open it without a display, as the tests do.
-Closing a visualization closes its window.
-Nodes: I create the node elements (TLBlocNodeElement) with their labels, and I let the Telescope layouts place them.
-The children of a composite node are the group of its node: #define:asParentFor: puts the element of the group inside of the element of the node, and the node is as big as its children each time their layout is applied.
-The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node.
-Connections: I join the nodes with TLBlocNodeConnection lines, with a head, optional arrows, and a label, which I update after each layout.
-The route of a line is given by the curve style of its style sheet, and the connections which join the same two nodes are spread (#spreadParallelConnections).
-Layout updates: the first layout is not animated and fits the visualization into the window.
-When a layout is applied again, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, and a zero duration disables the animation.
-The nodes which an interaction adds start from the node of the interaction and slide to their place.
-The visualization is fitted again into its window when a layout which is applied again moves or adds a node, unless its auto fit is turned off.
-Interactions: the mouse over, click, double click, right click, drop, moved, multi choice and simple menu, pop up, shape trigger and external trigger interactions are implemented.
-The handlers of the interactions of a drawable are remembered, and made again when its interactions change, for example because the node moved to another group: always add them with #addHandlerOn:to:for:do:.
-A click, a right click or a menu is for the innermost node under the pointer, and a click which ends the drag of a node is not a click.
-The menus of Telescope open at the mouse as Bloc elements (TLBlocMenu), and the pop up action shows its text in a TLBlocPopUpElement near the node.
-The element of a shape trigger is made by #createElementFromTrigger: and placed in its node by #placeElement:correspondingToTrigger:relativeToDrawable:.
-Its click, double click and right click are for the trigger, and their action for the node it triggers (#eventElementFor:targeting: and #actedDrawableFor:targeting:).
-The external trigger interactions are executed by #triggerExternal:, given the interaction or its id: something outside of the visualization, such as a button of the application, calls it.
-When an interaction changes the style of a node or of a connection, for example to highlight it, its element is made again from the style sheet, and so are the triggers of the node.
-The user can drag the nodes: the connections follow them, and a layout which is applied again puts them back. While a node is dragged only the connections which do not join their nodes where they are, and the ones which go around the nodes, are made again, so that a drag stays fluid with many connections.
-Legend: the legend of a visualization is made of the entries of Telescope, static or dynamic, as a TLBlocLegendElement in the window, which keeps its element when the legend is made again.
-Not implemented: #generatePopupInteraction: and #generateBasicInteraction:onNode:, which nothing calls, and the property showChildrenConnectionsOnParent, which Telescope does not define.
+
+Window
+- I open the visualization in a Bloc window.
+- It uses the default host of Bloc, or the host given with #host:, for example BlHeadlessHost default to open it without a display, as the tests do.
+- Closing a visualization closes its window.
+
+Nodes
+- I create the node elements (TLBlocNodeElement) with their labels, and I let the Telescope layouts place them.
+- The children of a composite node are the group of its node: #define:asParentFor: puts the element of the group inside of the element of the node, and the node is as big as its children each time their layout is applied.
+- The nodes of a sub-group are moved inside a TLBlocGroupElement, and a TLBlocGroup lets the layouts place the group as one node.
+
+Connections
+- I join the nodes with TLBlocNodeConnection lines, with a head, optional arrows, and a label, which I update after each layout.
+- The route of a line is given by the curve style of its style sheet.
+- The connections which join the same two nodes are spread (#spreadParallelConnections).
+
+Layout updates
+- The first layout is not animated and fits the visualization into the window.
+- When a layout is applied again, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default. A zero duration disables the animation.
+- The nodes which an interaction adds start from the node of the interaction and slide to their place.
+- The visualization is fitted again into its window when a layout which is applied again moves or adds a node, unless its auto fit is turned off.
+
+Interactions
+- The mouse over, click, double click, right click, drop, moved, multi choice and simple menu, pop up, shape trigger and external trigger interactions are implemented.
+- The handlers of the interactions of a drawable are remembered, and made again when its interactions change, for example because the node moved to another group: always add them with #addHandlerOn:to:for:do:.
+- A click, a right click or a menu is for the innermost node under the pointer, and a click which ends the drag of a node is not a click.
+- The menus of Telescope open at the mouse as Bloc elements (TLBlocMenu), and the pop up action shows its text in a TLBlocPopUpElement near the node.
+- The element of a shape trigger is made by #createElementFromTrigger: and placed in its node by #placeElement:correspondingToTrigger:relativeToDrawable:. Its click, double click and right click are for the trigger, and their action for the node it triggers (#eventElementFor:targeting: and #actedDrawableFor:targeting:).
+- The external trigger interactions are executed by #triggerExternal:, given the interaction or its id: something outside of the visualization, such as a button of the application, calls it.
+- When an interaction changes the style of a node or of a connection, for example to highlight it, its element is made again from the style sheet, and so are the triggers of the node.
+
+Dragging
+- The user can drag the nodes: the connections follow them, a composite node always fits the children which are dragged, and a layout which is applied again puts them back.
+- While a node is dragged only the connections which do not join their nodes where they are, and the ones which go around the nodes, are made again, so that a drag stays fluid with many connections.
+
+Legend
+- The legend of a visualization is made of the entries of Telescope, static or dynamic, as a TLBlocLegendElement in the window, which keeps its element when the legend is made again.
+
+Not implemented
+- #generatePopupInteraction: and #generateBasicInteraction:onNode:, which nothing calls.
+- The property showChildrenConnectionsOnParent, which Telescope does not define.
 "
 Class {
 	#name : 'TLBlocConnector',
