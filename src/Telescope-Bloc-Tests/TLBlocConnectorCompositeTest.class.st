@@ -326,14 +326,70 @@ TLBlocConnectorCompositeTest >> testConnectionBetweenChildrenJoinsThemInsideTheC
 ]
 
 { #category : 'tests' }
-TLBlocConnectorCompositeTest >> testDraggingAChildDoesNotMoveItsComposite [
+TLBlocConnectorCompositeTest >> testDraggingAChildBackInsideItsCompositeShrinksTheComposite [
+	"The composite always fits its children: it is as before when the child is back where it was"
+
+	| before child |
+	self openWithComposite: 6 expanded: true.
+	before := self rectangleOfEntity: 6.
+	child := self elementOfEntity: 2.
+	self dragFrom: child at: 3 @ 3 by: 150 @ 90.
+	self assert: (self rectangleOfEntity: 6) width > before width.
+	self dragFrom: child at: 3 @ 3 by: -150 @ -90.
+	self assert: (self rectangleOfEntity: 6) extent closeTo: before extent.
+	self assert: ((self rectangleOfEntity: 6) containsRect: (self rectangleOfEntity: 2))
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testDraggingAChildBeyondTheTopLeftCornerOfItsCompositeExpandsTheCompositeAndKeepsTheChildUnderTheMouse [
+	"The composite grows on the left and on the top by moving itself: the children stay where the user put them"
 
 	| composite before |
 	self openWithComposite: 6 expanded: true.
-	composite := self elementOfEntity: 6.
-	before := self rectangleOfEntity: 6.
+	before := self rectangleOfEntity: 2.
+	self dragFrom: (self elementOfEntity: 2) at: 3 @ 3 by: -100 @ -80.
+	composite := self rectangleOfEntity: 6.
+	self assert: (composite containsRect: (self rectangleOfEntity: 2)).
+	self assert: (composite containsRect: (self rectangleOfEntity: 3)).
+	self assert: ((self rectangleOfEntity: 2) origin - before origin - (-100 @ -80)) abs < (1 @ 1)
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testDraggingAChildDoesNotMoveItsSiblings [
+	"The composite fits its children, so it can move, but the other children stay where they are"
+
+	| sibling before |
+	self openWithComposite: 6 expanded: true.
+	before := self rectangleOfEntity: 3.
 	self dragFrom: (self elementOfEntity: 2) at: 3 @ 3 by: 20 @ 20.
-	self assert: (self rectangleOfEntity: 6) equals: before
+	sibling := self rectangleOfEntity: 3.
+	self assert: (sibling origin - before origin) abs < (1 @ 1)
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testDraggingAChildOfANestedCompositeExpandsAllItsParents [
+
+	| child |
+	self openWithComposite: 30 expanded: true.
+	self dragFrom: (self elementOfEntity: 2) at: 3 @ 3 by: 250 @ 200.
+	child := self rectangleOfEntity: 2.
+	self assert: ((self rectangleOfEntity: 6) containsRect: child).
+	self assert: ((self rectangleOfEntity: 30) containsRect: (self rectangleOfEntity: 6)).
+	self assert: ((self rectangleOfEntity: 30) containsRect: (self rectangleOfEntity: 5))
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testDraggingAChildOutsideItsCompositeExpandsTheComposite [
+	"The composite always contains its children, with its padding"
+
+	| composite |
+	self openWithComposite: 6 expanded: true.
+	self dragFrom: (self elementOfEntity: 2) at: 3 @ 3 by: 150 @ 90.
+	composite := self rectangleOfEntity: 6.
+	self assert: (composite containsRect: (self rectangleOfEntity: 2)).
+	self assert: (composite containsRect: (self rectangleOfEntity: 3)).
+	self assert: composite right - (self rectangleOfEntity: 2) right >= 5.
+	self assert: composite bottom - (self rectangleOfEntity: 2) bottom >= 5
 ]
 
 { #category : 'tests' }
