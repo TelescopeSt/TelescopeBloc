@@ -161,10 +161,11 @@ TLBlocVisualization >> exportAsSvgTo: aFileReference [
 
 { #category : 'event handling' }
 TLBlocVisualization >> findMouseEventTargetAt: aPoint [
-	"While the user pans, the mouse events are for the background, and the nodes are not looked for under the mouse. Looking for them goes through all of them, and their bounds in the window change at each step of the pan, which Bloc computes again for each move of the mouse: with thousands of nodes the window would only show a few frames per second"
+	"The element under the point of the window which the mouse events are for, as Bloc finds it, but in my coordinates. Bloc compares the point with the bounds of each element in the window, which a pan or a zoom changes: it computes them again for all the nodes at the next move of the mouse, which takes milliseconds with thousands of nodes. The point is converted once into my coordinates, then into the ones of each child, whose bounds a pan or a zoom does not change.
+	While the user pans, the mouse events are for the background, and the nodes are not looked for under the mouse at all"
 
 	panning ifTrue: [ ^ nil ].
-	^ super findMouseEventTargetAt: aPoint
+	^ self mouseEventTargetIn: self at: (self globalPointToLocal: aPoint)
 ]
 
 { #category : 'fitting' }
@@ -305,6 +306,30 @@ TLBlocVisualization >> legendReservedWidth [
 
 	(legend isNil or: [ legend hasParent not ]) ifTrue: [ ^ 0 ].
 	^ legend extent x + (legend windowMargin * 2)
+]
+
+{ #category : 'event handling' }
+TLBlocVisualization >> mouseEventTargetIn: anElement at: aLocalPoint [
+	"The deepest element among the element and its children which the mouse events at the point, in the coordinates of the element, are for, or nil. The same rules as BlElement>>#findMouseEventTargetAt:: the children above the others first, the children only when they handle the mouse events, and only inside of the element when it clips them. A child without transformation only moves the point by its position"
+
+	| wantsEvent pointForChildren |
+	anElement isVisible ifFalse: [ ^ nil ].
+	wantsEvent := anElement containsPoint: aLocalPoint.
+	(anElement shouldChildrenHandleMouseEvents not or: [ anElement hasChildren not ]) ifTrue: [
+			^ (wantsEvent and: [ anElement shouldHandleMouseEvents ])
+				  ifTrue: [ anElement ]
+				  ifFalse: [ nil ] ].
+	(anElement clipChildren and: [ wantsEvent not ]) ifTrue: [ ^ nil ].
+	pointForChildren := anElement localPointToChildren: aLocalPoint.
+	anElement children sortedByElevation reverseDo: [ :child |
+			| pointInChild |
+			pointInChild := child transformation isIdentity
+				                ifTrue: [ pointForChildren - child position ]
+				                ifFalse: [ child parentPointToLocal: aLocalPoint ].
+			(self mouseEventTargetIn: child at: pointInChild) ifNotNil: [ :target | ^ target ] ].
+	^ (wantsEvent and: [ anElement shouldHandleMouseEvents ])
+		  ifTrue: [ anElement ]
+		  ifFalse: [ nil ]
 ]
 
 { #category : 'dragging' }
