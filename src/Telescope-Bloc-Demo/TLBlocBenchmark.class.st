@@ -4,8 +4,9 @@ I measure how long TelescopeBloc takes to show a visualization, to find what is 
 - build: the block, which builds the model of Telescope.
 - generate: the connector makes the Bloc elements and opens the window.
 - firstFrame: Bloc lays the elements out until the window is settled.
-- render: the window is drawn on a Form.
+- render: the average of a few draws of the window on a Cairo canvas, as a host draws it, without converting it to a Form.
 - dragStep: the average of a step of a drag of the first node, with the layouts it asks for.
+- hover: the mouse enters the first node and leaves it, with the interactions it triggers.
 #report answers the durations as a text, and #runAll the report of every demo with the benchmark filter.
 Use it with the profiler to look for what to optimize: MessageTally spyOn: [ TLBlocBenchmark reportOf: #exampleBenchmarkManyNodes ].
 "
@@ -91,7 +92,7 @@ TLBlocBenchmark >> measure: aBlockBuildingTheVisualization [
 	visualization generator: connector.
 	self time: #generate of: [ connector open: visualization inWindowSized: 1000 @ 800 titled: 'Benchmark' ].
 	self time: #firstFrame of: [ connector view space settleForDuration: 120 seconds ].
-	self time: #render of: [ connector view space root asForm ].
+	measures at: #render put: (self renderOf: connector view space).
 	numberOfNodes := visualization allNodesRecursively size.
 	numberOfConnections := connector connections size.
 	measures at: #dragStep put: (self dragStepOf: (connector elementFromTLDrawable: visualization allNodes first) in: connector).
@@ -113,6 +114,21 @@ TLBlocBenchmark >> numberOfNodes [
 	"The number of nodes of the last visualization measured, the nodes inside of composite nodes included"
 
 	^ numberOfNodes
+]
+
+{ #category : 'measuring' }
+TLBlocBenchmark >> renderOf: aSpace [
+	"Draws the window on a Cairo canvas, as its host does, and answers the average duration of a few draws. The window is not converted to a Form, which costs more than drawing it and which a host does not do"
+
+	| draws total |
+	draws := 5.
+	total := 0 milliSeconds.
+	draws timesRepeat: [
+			| canvas |
+			canvas := AeCanvas extent: aSpace extent.
+			canvas clippingRectangle: (0 @ 0 extent: aSpace extent).
+			total := total + [ canvas restoreContextAfter: [ aSpace root aeFullDrawOn: canvas ] ] timeToRun ].
+	^ total / draws
 ]
 
 { #category : 'reporting' }
