@@ -18,7 +18,8 @@ Class {
 		'lineWidth',
 		'curveStyle',
 		'parallelOffset',
-		'arrows'
+		'arrows',
+		'placesWhenJoined'
 	],
 	#category : 'Telescope-Bloc-Elements',
 	#package : 'Telescope-Bloc',
@@ -198,6 +199,13 @@ TLBlocNodeConnection >> initialize [
 	self clipChildren: false
 ]
 
+{ #category : 'updating' }
+TLBlocNodeConnection >> isJoiningTheNodesWhereTheyAre [
+	"Whether the nodes are where they were when I joined them: false if I never did, or if something moved or resized a node since, for example a composite node which fits its children"
+
+	^ self parent isNotNil and: [ placesWhenJoined = self placesOfTheNodes ]
+]
+
 { #category : 'accessing' }
 TLBlocNodeConnection >> label [
 	"The text element of the label of the connection, or nil when the connection has no label"
@@ -292,6 +300,17 @@ TLBlocNodeConnection >> placeSegment [
 ]
 
 { #category : 'updating' }
+TLBlocNodeConnection >> placesOfTheNodes [
+	"Where the nodes are in the view, and how big: what the route depends on"
+
+	^ {
+		  (fromNode topLeftRelativeTo: self parent).
+		  fromNode dimension.
+		  (toNode topLeftRelativeTo: self parent).
+		  toNode dimension }
+]
+
+{ #category : 'updating' }
 TLBlocNodeConnection >> rectangleOfNode: aNodeElement in: aView [
 	"The rectangle of the node and of its label, in the coordinates of the view"
 
@@ -376,6 +395,7 @@ TLBlocNodeConnection >> updateAvoiding: someRectangles [
 					           to: (toNode outlineRelativeTo: view)
 					           offset: parallelOffset
 					           obstacles: someRectangles ].
+	placesWhenJoined := self placesOfTheNodes.
 	self placeSegment.
 	self updateHead.
 	self updateArrows.

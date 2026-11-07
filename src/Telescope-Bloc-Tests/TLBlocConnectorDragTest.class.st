@@ -170,6 +170,24 @@ TLBlocConnectorDragTest >> testDraggingANodeDoesNotPanTheVisualization [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorDragTest >> testDraggingANodeJoinsAgainTheConnectionsOfTheNodesWhichMovedMeanwhile [
+	"Something else than the drag moves a node, for example a composite node which fits its children once a label is measured: its connections must not stay where the node was"
+
+	| nodes connection lastElement routeFollowingTheNodes |
+	nodes := visualization allNodes.
+	connection := nodes second connectTo: nodes last.
+	visualization update.
+	self settle.
+	lastElement := connector elementFromTLDrawable: nodes last.
+	lastElement placeAt: lastElement placement + (0 @ 50).
+	self settle.
+	self drag: self nodeElement by: 0 @ 10.
+	routeFollowingTheNodes := (connector elementFromTLDrawable: connection) route points.
+	connector updateConnectionRoutes.
+	self assert: (connector elementFromTLDrawable: connection) route points equals: routeFollowingTheNodes
+]
+
+{ #category : 'tests' }
 TLBlocConnectorDragTest >> testDraggingANodeJoinsAgainTheConnectionsWhichGoAroundTheNodes [
 	"A connection with segments goes around the nodes in its way, and the node which moves may be in it"
 
