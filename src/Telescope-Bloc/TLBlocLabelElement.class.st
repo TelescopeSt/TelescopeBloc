@@ -19,8 +19,15 @@ Class {
 { #category : 'instance creation' }
 TLBlocLabelElement class >> forNode: aNode [
 
+	^ self forNode: aNode styleSheet: aNode effectiveStyleSheet
+]
+
+{ #category : 'instance creation' }
+TLBlocLabelElement class >> forNode: aNode styleSheet: aStyleSheet [
+	"The label of a node, made from the effective style sheet of the node"
+
 	^ self new
-		  configureForNode: aNode;
+		  configureForNode: aNode styleSheet: aStyleSheet;
 		  yourself
 ]
 
@@ -33,10 +40,16 @@ TLBlocLabelElement >> addLines: aString [
 
 { #category : 'initialization' }
 TLBlocLabelElement >> configureForNode: aNode [
-	"The size of the font is the label size of the style sheet, which Telescope uses to compute the width of a node from its label, and the color of the text is its text color. The position of the label can be given by a block, which may answer a symbol such as #top"
+	"See #configureForNode:styleSheet:, with the effective style sheet of the node"
 
-	| styleSheet labelValue |
-	styleSheet := aNode effectiveStyleSheet.
+	self configureForNode: aNode styleSheet: aNode effectiveStyleSheet
+]
+
+{ #category : 'initialization' }
+TLBlocLabelElement >> configureForNode: aNode styleSheet: styleSheet [
+	"The style sheet is the effective one of the node. The size of the font is the label size of the style sheet, which Telescope uses to compute the width of a node from its label, and the color of the text is its text color. The position of the label can be given by a block, which may answer a symbol such as #top"
+
+	| labelValue |
 	labelValue := (styleSheet obtainValue: #nodeLabel forEntity: aNode entity inNode: aNode) asString.
 	fontSize := styleSheet obtainValue: #labelSize forEntity: aNode entity inNode: aNode.
 	textColor := styleSheet obtainValue: #textColor forEntity: aNode entity inNode: aNode.

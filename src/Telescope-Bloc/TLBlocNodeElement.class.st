@@ -77,20 +77,26 @@ TLBlocNodeElement >> childrenPadding [
 
 { #category : 'styling' }
 TLBlocNodeElement >> customizeFromNode: aNode [
-	"The colors, the dimension and the shape of the style sheet can depend on the entity of the node: a block, or a gradient for the colors, gives the value of each node. It can be called again when an interaction changed the style: the previous inner border is removed, a composite node is still as big as its children, and a node which takes all the space of its line keeps the height the layout gave it. The border is drawn with the line style of the style sheet, solid by default, half inside and half outside of the edge of the node"
+	"See #customizeFromNode:styleSheet:, with the effective style sheet of the node"
 
-	| styleSheet previous |
-	styleSheet := aNode effectiveStyleSheet.
+	self customizeFromNode: aNode styleSheet: aNode effectiveStyleSheet
+]
+
+{ #category : 'styling' }
+TLBlocNodeElement >> customizeFromNode: aNode styleSheet: styleSheet [
+	"The style sheet is the effective one of the node, given because merging the style sheets of the parents of a node costs. The colors, the dimension and the shape of the style sheet can depend on the entity of the node: a block, or a gradient for the colors, gives the value of each node. It can be called again when an interaction changed the style: the previous inner border is removed, a composite node is still as big as its children, and a node which takes all the space of its line keeps the height the layout gave it. The border is drawn with the line style of the style sheet, solid by default, half inside and half outside of the edge of the node"
+
+	| previous |
 	previous := dimension.
 	self beOutskirtsCentered.
-	self background: (self valueOf: #backgroundColor forNode: aNode).
-	shape := self valueOf: #shape forNode: aNode.
+	self background: (self valueOf: #backgroundColor in: styleSheet forNode: aNode).
+	shape := self valueOf: #shape in: styleSheet forNode: aNode.
 	borderStyle := (styleSheet attributes includesKey: #borderStyle)
 		               ifTrue: [ styleSheet borderStyle ]
 		               ifFalse: [ TLSolidLineStyle ].
-	self border: (borderStyle blocBorderPaint: (self valueOf: #borderColor forNode: aNode) width: styleSheet borderWidth).
-	ownDimension := (self valueOf: #width forNode: aNode) @ (self valueOf: #height forNode: aNode).
-	occupiesMaxSpace := (self valueOf: #takeAllSpace forNode: aNode) == true.
+	self border: (borderStyle blocBorderPaint: (self valueOf: #borderColor in: styleSheet forNode: aNode) width: styleSheet borderWidth).
+	ownDimension := (self valueOf: #width in: styleSheet forNode: aNode) @ (self valueOf: #height in: styleSheet forNode: aNode).
+	occupiesMaxSpace := (self valueOf: #takeAllSpace in: styleSheet forNode: aNode) == true.
 	self dimension: ((occupiesMaxSpace and: [ previous isNotNil ])
 			 ifTrue: [ ownDimension x @ (previous y max: ownDimension y) ]
 			 ifFalse: [ ownDimension ]).
@@ -219,6 +225,11 @@ TLBlocNodeElement >> incomingAdjacentNodes [
 	^ incomingConnections collect: #fromNode
 ]
 
+{ #category : 'accessing' }
+TLBlocNodeElement >> incomingConnections [
+	^ incomingConnections
+]
+
 { #category : 'initialization' }
 TLBlocNodeElement >> initialize [
 	"Labels are drawn outside the node bounds, so the node must not clip its children. A node does not take all the space of its line until its style says so, and has no dimension until it is styled"
@@ -271,6 +282,11 @@ TLBlocNodeElement >> outgoingAdjacentNodes [
 	"The elements of the nodes this node is connected to, which the layouts of Telescope ask for, such as the tree layout"
 
 	^ outgoingConnections collect: #toNode
+]
+
+{ #category : 'accessing' }
+TLBlocNodeElement >> outgoingConnections [
+	^ outgoingConnections
 ]
 
 { #category : 'accessing' }
@@ -450,7 +466,14 @@ TLBlocNodeElement >> updateOutline [
 TLBlocNodeElement >> valueOf: aProperty forNode: aNode [
 	"The value of a property of the style sheet of the node, evaluated for the entity of the node"
 
-	^ aNode effectiveStyleSheet obtainValue: aProperty forEntity: aNode entity inNode: aNode
+	^ self valueOf: aProperty in: aNode effectiveStyleSheet forNode: aNode
+]
+
+{ #category : 'styling' }
+TLBlocNodeElement >> valueOf: aProperty in: aStyleSheet forNode: aNode [
+	"The value of a property of a style sheet, which is the effective one of the node, evaluated for the entity of the node. Merging the style sheets of the parents of a node costs, so the one the caller has is given"
+
+	^ aStyleSheet obtainValue: aProperty forEntity: aNode entity inNode: aNode
 ]
 
 { #category : 'dragging' }

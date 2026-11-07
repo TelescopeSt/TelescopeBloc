@@ -170,6 +170,22 @@ TLBlocConnectorDragTest >> testDraggingANodeDoesNotPanTheVisualization [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorDragTest >> testDraggingANodeJoinsAgainTheConnectionsWhichGoAroundTheNodes [
+	"A connection with segments goes around the nodes in its way, and the node which moves may be in it"
+
+	| nodes joinedToTheNode other routeBefore |
+	nodes := visualization allNodes.
+	joinedToTheNode := nodes first connectTo: nodes second.
+	other := nodes second connectTo: nodes last.
+	other styleSheet curveStyle: TLSegmentsCurve.
+	visualization update.
+	self settle.
+	routeBefore := (connector elementFromTLDrawable: other) route.
+	self drag: self nodeElement by: 0 @ 80.
+	self deny: (connector elementFromTLDrawable: other) route == routeBefore
+]
+
+{ #category : 'tests' }
 TLBlocConnectorDragTest >> testDraggingANodeMovesIt [
 
 	| node before |
@@ -177,6 +193,24 @@ TLBlocConnectorDragTest >> testDraggingANodeMovesIt [
 	before := node measuredBounds position.
 	self drag: node by: 60 @ 40.
 	self assert: node measuredBounds position equals: before + (60 @ 40)
+]
+
+{ #category : 'tests' }
+TLBlocConnectorDragTest >> testDraggingANodeOnlyJoinsAgainTheConnectionsOfThatNode [
+	"The other connections cannot change, and a drag asks for an update at each move of the mouse"
+
+	| nodes joinedToTheNode other routesBefore |
+	nodes := visualization allNodes.
+	joinedToTheNode := nodes first connectTo: nodes second.
+	other := nodes second connectTo: nodes last.
+	visualization update.
+	self settle.
+	routesBefore := {
+		                joinedToTheNode.
+		                other } collect: [ :connection | (connector elementFromTLDrawable: connection) route ].
+	self drag: self nodeElement by: 0 @ 80.
+	self deny: (connector elementFromTLDrawable: joinedToTheNode) route == routesBefore first.
+	self assert: (connector elementFromTLDrawable: other) route identicalTo: routesBefore last
 ]
 
 { #category : 'tests' }

@@ -142,6 +142,19 @@ TLBlocConnectorNodeStyleTest >> testBordersOfADoubleBorderAreOverTheirEdgesToo [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testCreatingTheElementOfANodeWithALabelComputesItsStyleSheetOnce [
+	"The element, its label and the decision to have a label all read the same style sheet"
+
+	| node |
+	visualization styleSheet nodeLabel: #asString.
+	node := TLSimpleNodeCountingStyleSheets new.
+	node entity: 1.
+	node parent: visualization.
+	connector createElementNodeFromNode: node.
+	self assert: node styleSheetComputations equals: 1
+]
+
+{ #category : 'tests' }
 TLBlocConnectorNodeStyleTest >> testDashedBorderIsDashed [
 
 	self assert: (self borderStyleOfNodeStyledWith: TLDashedLineStyle) isDashed
@@ -219,6 +232,18 @@ TLBlocConnectorNodeStyleTest >> testNoNodeTakesAllSpaceByDefault [
 			(20 @ 10).
 			(20 @ 50).
 			(20 @ 20) }
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNodeStyleTest >> testNodeElementComputesTheStyleSheetOfItsNodeOnce [
+	"The style sheet of a node merges the ones of its parents: it is costly with thousands of nodes"
+
+	| node element |
+	node := TLSimpleNodeCountingStyleSheets new.
+	node parent: visualization.
+	element := TLBlocNodeElement new.
+	element customizeFromNode: node.
+	self assert: node styleSheetComputations equals: 1
 ]
 
 { #category : 'tests' }

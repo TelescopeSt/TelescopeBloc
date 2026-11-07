@@ -285,14 +285,15 @@ TLBlocVisualization >> nodeElementsOf: anElement do: aBlock [
 ]
 
 { #category : 'dragging' }
-TLBlocVisualization >> nodesMoved [
+TLBlocVisualization >> nodesMoved: aNodeElement [
+	"The user moved the node with the mouse: the connections of the node, and of its children which move with it, follow"
 
-	nodesMovedAction value
+	nodesMovedAction cull: aNodeElement
 ]
 
 { #category : 'dragging' }
 TLBlocVisualization >> onNodesMovedDo: aBlock [
-	"What happens when the user moved a node with the mouse: the connector joins the nodes again"
+	"What happens when the user moved a node with the mouse: the block is given the element of the node, and the connector joins its connections again"
 
 	nodesMovedAction := aBlock
 ]

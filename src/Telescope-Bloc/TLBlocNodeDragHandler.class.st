@@ -49,7 +49,7 @@ TLBlocNodeDragHandler >> mouseMoveEvent: anEvent [
 	node wasDragged: true.
 	visualization keepPositionWhile: [ node placeAt: node placement + (pendingMove / visualization zoom) ].
 	pendingMove := 0 @ 0.
-	visualization nodesMoved
+	visualization nodesMoved: node
 ]
 
 { #category : 'events' }
