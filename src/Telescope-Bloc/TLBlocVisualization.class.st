@@ -1,5 +1,5 @@
 "
-I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels and the connections are in my #content, an element which is never transformed. I translate myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. Both are my transformation, not my position: zooming and panning do not lay out my nodes and their labels again. While the user pans (#startPanning and #stopPanning), my content is in a composition layer: Bloc paints what it drew once at the new place instead of drawing all the nodes at each step, unless the content is too big in the window for the memory of the layer (#contentFitsInACompositionLayer). The pan and zoom handlers are installed on the root of the window while I am in it. The first time I am laid out with some content I am fitted into the window: scaled so that the content fills the window, down or up as far as the zoom allows, and centered, which #fitIntoWindow does again on request. #zoomIn and #zoomOut zoom around the center of the window, and #exportAsPngTo: and #exportAsSvgTo: write me as I am shown. I put my toolbar in the root of the window while I am in it. I do not clip my children, because the window already clips me. I let the user drag the nodes, and the panning compensates the nodes which move my content, so that the other nodes stay under the mouse. The connector is told when a node moved, to join the nodes again. I keep the legend, and I fit my content in what is at its right. After a fit, I fit myself again when my content changes, until the user pans, zooms or drags, because the content is only known after a few layouts. It finds the node under the point where a node was dropped (#dropTargetOf:at:). The area where I am fitted (#fitArea) is the window without the strip of the legend, at its left, and the strip of the toolbar, at its top, so that the content is clear of both.
+I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels and the connections are in my #content, an element which is never transformed. I translate myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. Both are my transformation, not my position: zooming and panning do not lay out my nodes and their labels again. While the user pans (#startPanning and #stopPanning), my content is in a composition layer: Bloc paints what it drew once at the new place instead of drawing all the nodes at each step, unless the content is too big in the window for the memory of the layer (#contentFitsInACompositionLayer), and the nodes are not looked for under the mouse, so that the mouse events go to the background. The pan and zoom handlers are installed on the root of the window while I am in it. The first time I am laid out with some content I am fitted into the window: scaled so that the content fills the window, down or up as far as the zoom allows, and centered, which #fitIntoWindow does again on request. #zoomIn and #zoomOut zoom around the center of the window, and #exportAsPngTo: and #exportAsSvgTo: write me as I am shown. I put my toolbar in the root of the window while I am in it. I do not clip my children, because the window already clips me. I let the user drag the nodes, and the panning compensates the nodes which move my content, so that the other nodes stay under the mouse. The connector is told when a node moved, to join the nodes again. I keep the legend, and I fit my content in what is at its right. After a fit, I fit myself again when my content changes, until the user pans, zooms or drags, because the content is only known after a few layouts. It finds the node under the point where a node was dropped (#dropTargetOf:at:). The area where I am fitted (#fitArea) is the window without the strip of the legend, at its left, and the strip of the toolbar, at its top, so that the content is clear of both.
 "
 Class {
 	#name : 'TLBlocVisualization',
@@ -21,7 +21,8 @@ Class {
 		'zoomAnimation',
 		'zoomTarget',
 		'placedContentTopLeft',
-		'content'
+		'content',
+		'panning'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -158,6 +159,14 @@ TLBlocVisualization >> exportAsSvgTo: aFileReference [
 		  export
 ]
 
+{ #category : 'event handling' }
+TLBlocVisualization >> findMouseEventTargetAt: aPoint [
+	"While the user pans, the mouse events are for the background, and the nodes are not looked for under the mouse. Looking for them goes through all of them, and their bounds in the window change at each step of the pan, which Bloc computes again for each move of the mouse: with thousands of nodes the window would only show a few frames per second"
+
+	panning ifTrue: [ ^ nil ].
+	^ super findMouseEventTargetAt: aPoint
+]
+
 { #category : 'fitting' }
 TLBlocVisualization >> fitArea [
 	"The area of the window where the visualization is fitted: the window without the strip of the legend, at its left, and the strip of the toolbar, at its top. They are measured once they are in the window"
@@ -230,6 +239,7 @@ TLBlocVisualization >> initialize [
 	fitPending := true.
 	autoFit := false.
 	autoFitOnLayout := true.
+	panning := false.
 	nodesMovedAction := [ ].
 	panHandler := TLBlocPanHandler on: self.
 	zoomHandler := TLBlocZoomHandler on: self.
@@ -362,8 +372,9 @@ TLBlocVisualization >> removeLegend [
 
 { #category : 'navigation' }
 TLBlocVisualization >> startPanning [
-	"The user started to drag the background. While the content only moves, Bloc can paint what it drew once instead of drawing all the nodes at each step: the content gets a composition layer, unless it is too big in the window, because the layer is as big as the content and zoomed in it would take too much memory"
+	"The user started to drag the background. While the content only moves, Bloc can paint what it drew once instead of drawing all the nodes at each step: the content gets a composition layer, unless it is too big in the window, because the layer is as big as the content and zoomed in it would take too much memory. The nodes are not looked for under the mouse until the pan ends (see #findMouseEventTargetAt:)"
 
+	panning := true.
 	self contentFitsInACompositionLayer ifTrue: [ content beInSingleCompositionLayer ]
 ]
 
@@ -371,6 +382,7 @@ TLBlocVisualization >> startPanning [
 TLBlocVisualization >> stopPanning [
 	"The user released the background. Out of a pan, a change of the content, such as a highlight or a drag, would draw the whole layer again: the content is drawn without a layer, and its surface is released"
 
+	panning := false.
 	content beWithoutCompositionLayer.
 	content detachCompositionLayer
 ]

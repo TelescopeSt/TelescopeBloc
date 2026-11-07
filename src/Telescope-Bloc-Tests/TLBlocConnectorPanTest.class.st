@@ -62,6 +62,36 @@ TLBlocConnectorPanTest >> testMovingWithoutPressingDoesNotPan [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorPanTest >> testNodesAreLookedForUnderTheMouseAgainAfterThePan [
+
+	| root node |
+	root := connector view space root.
+	node := connector view content children detect: [ :child | child class == TLBlocNodeElement ].
+	self pressAt: 50 @ 50 on: root.
+	self moveTo: 80 @ 70 on: root.
+	self settle.
+	self releaseAt: 80 @ 70 on: root.
+	self settle.
+	self assert: (root findMouseEventTargetAt: node boundsInSpace center) identicalTo: node
+]
+
+{ #category : 'tests' }
+TLBlocConnectorPanTest >> testNodesAreNotLookedForUnderTheMouseWhilePanning [
+	"Looking for the element under the mouse goes through all the nodes, whose bounds in the window change at each step of a pan: the window would only show a few frames per second. During a pan the mouse events are for the background"
+
+	| root node center |
+	root := connector view space root.
+	node := connector view content children detect: [ :child | child class == TLBlocNodeElement ].
+	center := node boundsInSpace center.
+	self assert: (root findMouseEventTargetAt: center) identicalTo: node.
+	self pressAt: 50 @ 50 on: root.
+	self moveTo: 80 @ 70 on: root.
+	self settle.
+	center := node boundsInSpace center.
+	self assert: (root findMouseEventTargetAt: center) identicalTo: root
+]
+
+{ #category : 'tests' }
 TLBlocConnectorPanTest >> testPanningAZoomedInVisualizationHasNoCompositionLayer [
 	"The layer is as big as the content in the window: zoomed in, it would take too much memory"
 

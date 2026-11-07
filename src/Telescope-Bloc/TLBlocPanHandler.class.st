@@ -22,6 +22,13 @@ TLBlocPanHandler >> eventsToHandle [
 		  BlMouseUpEvent }
 ]
 
+{ #category : 'initialization' }
+TLBlocPanHandler >> initialize [
+
+	super initialize.
+	panning := false
+]
+
 { #category : 'events' }
 TLBlocPanHandler >> mouseDownEvent: anEvent [
 	"Panning starts only on the background: a press on a node is not for me. The positions are the ones in the window, not the ones on the desktop"
@@ -34,7 +41,7 @@ TLBlocPanHandler >> mouseMoveEvent: anEvent [
 	"The pan starts with the first move, not with the press: a click on the background does not prepare the visualization for a pan"
 
 	lastPosition ifNotNil: [ :previousPosition |
-			panning == true ifFalse: [
+			panning ifFalse: [
 					panning := true.
 					visualization startPanning ].
 			visualization panBy: anEvent position - previousPosition.
@@ -44,7 +51,7 @@ TLBlocPanHandler >> mouseMoveEvent: anEvent [
 { #category : 'events' }
 TLBlocPanHandler >> mouseUpEvent: anEvent [
 
-	panning == true ifTrue: [ visualization stopPanning ].
+	panning ifTrue: [ visualization stopPanning ].
 	panning := false.
 	lastPosition := nil
 ]
