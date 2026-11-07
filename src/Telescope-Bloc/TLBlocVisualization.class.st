@@ -1,5 +1,5 @@
 "
-I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels. I move myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. The pan and zoom handlers are installed on the root of the window while I am in it. The first time I am laid out with some content I am fitted into the window: scaled so that the content fills the window, down or up as far as the zoom allows, and centered, which #fitIntoWindow does again on request. #zoomIn and #zoomOut zoom around the center of the window, and #exportAsPngTo: and #exportAsSvgTo: write me as I am shown. I put my toolbar in the root of the window while I am in it. I do not clip my children, because the window already clips me. I let the user drag the nodes, and the panning compensates the nodes which move my content, so that the other nodes stay under the mouse. The connector is told when a node moved, to join the nodes again. I keep the legend, and I fit my content in what is at its right. After a fit, I fit myself again when my content changes, until the user pans, zooms or drags, because the content is only known after a few layouts. It finds the node under the point where a node was dropped (#dropTargetOf:at:). The area where I am fitted (#fitArea) is the window without the strip of the legend, at its left, and the strip of the toolbar, at its top, so that the content is clear of both.
+I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels. I translate myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. Both are my transformation, not my position: zooming and panning do not lay out my nodes and their labels again. The pan and zoom handlers are installed on the root of the window while I am in it. The first time I am laid out with some content I am fitted into the window: scaled so that the content fills the window, down or up as far as the zoom allows, and centered, which #fitIntoWindow does again on request. #zoomIn and #zoomOut zoom around the center of the window, and #exportAsPngTo: and #exportAsSvgTo: write me as I am shown. I put my toolbar in the root of the window while I am in it. I do not clip my children, because the window already clips me. I let the user drag the nodes, and the panning compensates the nodes which move my content, so that the other nodes stay under the mouse. The connector is told when a node moved, to join the nodes again. I keep the legend, and I fit my content in what is at its right. After a fit, I fit myself again when my content changes, until the user pans, zooms or drags, because the content is only known after a few layouts. It finds the node under the point where a node was dropped (#dropTargetOf:at:). The area where I am fitted (#fitArea) is the window without the strip of the legend, at its left, and the strip of the toolbar, at its top, so that the content is clear of both.
 "
 Class {
 	#name : 'TLBlocVisualization',
@@ -19,7 +19,8 @@ Class {
 		'fittedArea',
 		'autoFitOnLayout',
 		'zoomAnimation',
-		'zoomTarget'
+		'zoomTarget',
+		'placedContentTopLeft'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -43,15 +44,6 @@ TLBlocVisualization class >> zoomDuration [
 	"How long the zoom takes to reach its target"
 
 	^ 150 milliSeconds
-]
-
-{ #category : 'layout' }
-TLBlocVisualization >> applyZoom [
-
-	self transformDo: [ :builder |
-			builder
-				topLeftOrigin;
-				scaleBy: zoomFactor @ zoomFactor ]
 ]
 
 { #category : 'fitting' }
@@ -149,9 +141,9 @@ TLBlocVisualization >> fitArea [
 
 { #category : 'layout' }
 TLBlocVisualization >> fitContentToWindow [
-	"Moves the visualization so that the top left corner of the nodes and of their labels sits at the margin of the window, shifted by the panning"
+	"Moves the content so that its top left corner sits at the margin of the window, shifted by the panning"
 
-	self position: self basePosition + panOffset
+	self placeContentWithTopLeft: self contentTopLeft
 ]
 
 { #category : 'fitting' }
@@ -165,7 +157,7 @@ TLBlocVisualization >> fitIfPendingOtherwiseKeepContentInWindow [
 	self fitContentToWindow
 ]
 
-{ #category : 'fitting' }
+{ #category : 'layout' }
 TLBlocVisualization >> fitIntoWindow [
 	"Scales the visualization so that all its nodes and labels fill the area of the window which is free, as much as the zoom allows, and centers it there. The legend is at the left of the window and the toolbar at the top: the visualization fills what is left. The panning is forgotten, and the visualization is fitted again when its content changes, until the user pans, zooms or drags"
 
@@ -176,7 +168,6 @@ TLBlocVisualization >> fitIntoWindow [
 	area := self fitArea.
 	ratios := area extent - (self windowMargin * 2) / (rectangle extent max: 1 @ 1).
 	zoomFactor := ((ratios x min: ratios y) min: self class maximumZoom) max: self class minimumZoom.
-	self applyZoom.
 	panOffset := area origin + (area extent - (rectangle extent * zoomFactor) / 2) - self windowMargin.
 	autoFit := true.
 	fittedRectangle := rectangle.
@@ -251,7 +242,7 @@ TLBlocVisualization >> keepPositionWhile: aBlock [
 
 	| keptPosition |
 	autoFit := false.
-	keptPosition := self measuredBounds position.
+	keptPosition := self basePosition + panOffset.
 	aBlock value.
 	panOffset := keptPosition - self basePosition.
 	self fitContentToWindow
@@ -300,16 +291,35 @@ TLBlocVisualization >> onNodesMovedDo: aBlock [
 
 { #category : 'navigation' }
 TLBlocVisualization >> panBy: aPoint [
-	"Moves the visualization by the given distance, and keeps the distance for the next layouts. The user took over: the visualization is not fitted again by itself"
+	"Moves the visualization by the given distance, and keeps the distance for the next layouts. The user took over: the visualization is not fitted again by itself. The content does not change: the top left corner of the last placement is reused"
 
 	autoFit := false.
 	panOffset := panOffset + aPoint.
-	self fitContentToWindow
+	self placeContentWithTopLeft: self placedContentTopLeft
 ]
 
 { #category : 'accessing' }
 TLBlocVisualization >> panOffset [
 	^ panOffset
+]
+
+{ #category : 'layout' }
+TLBlocVisualization >> placeContentWithTopLeft: aContentTopLeft [
+	"Translates and scales me so that the top left corner of my content, the one given, sits at the margin of the window, shifted by the panning. Only my transformation changes, not my position: my nodes and their labels are not laid out again, which makes the zoom and the panning fluid with many nodes. The content is scaled first, then translated. The corner is remembered: the zoom and the panning do not change the content, they reuse it"
+
+	placedContentTopLeft := aContentTopLeft.
+	self transformDo: [ :builder |
+			builder
+				topLeftOrigin;
+				scaleBy: zoomFactor @ zoomFactor;
+				translateBy: self windowMargin @ self windowMargin - (aContentTopLeft * zoomFactor) + panOffset ]
+]
+
+{ #category : 'layout' }
+TLBlocVisualization >> placedContentTopLeft [
+	"The top left corner of the content when I was last placed. The content only changes with a layout, which places me again, or with a drag, which computes it again: the zoom and the panning can reuse it instead of going through all the nodes"
+
+	^ placedContentTopLeft ifNil: [ self contentTopLeft ]
 ]
 
 { #category : 'legend' }
@@ -360,17 +370,17 @@ TLBlocVisualization >> zoom [
 
 { #category : 'navigation' }
 TLBlocVisualization >> zoomBy: aFactor around: aPoint [
-	"Scales the visualization, within the limits of the zoom, and keeps the point under the given position of the window where it is. The user took over: the visualization is not fitted again by itself"
+	"Scales the visualization, within the limits of the zoom, and keeps the point under the given position of the window where it is. The user took over: the visualization is not fitted again by itself. The content is the same whatever the zoom: the top left corner of the last placement is reused"
 
-	| newZoom ratio currentPosition |
+	| newZoom ratio topLeft currentPosition |
 	autoFit := false.
 	newZoom := (zoomFactor * aFactor min: self class maximumZoom) max: self class minimumZoom.
 	ratio := newZoom / zoomFactor.
-	currentPosition := self basePosition + panOffset.
+	topLeft := self placedContentTopLeft.
+	currentPosition := self windowMargin @ self windowMargin - (topLeft * zoomFactor) + panOffset.
 	zoomFactor := newZoom.
-	panOffset := aPoint - (ratio * (aPoint - currentPosition)) - self basePosition.
-	self applyZoom.
-	self fitContentToWindow
+	panOffset := aPoint - (ratio * (aPoint - currentPosition)) - (self windowMargin @ self windowMargin - (topLeft * zoomFactor)).
+	self placeContentWithTopLeft: topLeft
 ]
 
 { #category : 'accessing' }

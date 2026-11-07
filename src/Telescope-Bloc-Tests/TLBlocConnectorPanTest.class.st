@@ -28,12 +28,12 @@ TLBlocConnectorPanTest >> testDraggingTheBackgroundPansTheVisualization [
 
 	| root before |
 	root := connector view space root.
-	before := connector view position.
+	before := self originOfTheView.
 	self pressAt: 50 @ 50 on: root.
 	self moveTo: 80 @ 70 on: root.
 	self releaseAt: 80 @ 70 on: root.
 	self settle.
-	self assert: connector view position equals: before + (30 @ 20)
+	self assert: self originOfTheView equals: before + (30 @ 20)
 ]
 
 { #category : 'tests' }
@@ -62,16 +62,24 @@ TLBlocConnectorPanTest >> testMovingWithoutPressingDoesNotPan [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorPanTest >> testPanningDoesNotLayOutTheVisualizationAgain [
+	"The panning only changes the transformation of the visualization, as the zoom does"
+
+	connector view panBy: 30 @ 20.
+	self deny: connector view space isLayoutRequested
+]
+
+{ #category : 'tests' }
 TLBlocConnectorPanTest >> testPanningKeepsTheOffsetAfterALayout [
 
 	| root before |
 	root := connector view space root.
-	before := connector view position.
+	before := self originOfTheView.
 	self pressAt: 50 @ 50 on: root.
 	self moveTo: 80 @ 70 on: root.
 	self releaseAt: 80 @ 70 on: root.
 	self settle.
 	connector view requestLayout.
 	self settle.
-	self assert: connector view position equals: before + (30 @ 20)
+	self assert: self originOfTheView equals: before + (30 @ 20)
 ]

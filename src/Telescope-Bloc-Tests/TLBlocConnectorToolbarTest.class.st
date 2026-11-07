@@ -17,7 +17,7 @@ TLBlocConnectorToolbarTest >> click: aLabel [
 TLBlocConnectorToolbarTest >> contentPointUnderTheCenterOfTheWindow [
 	"The point of the visualization, in its own coordinates, which is at the center of the window"
 
-	^ connector view space extent / 2 - connector view measuredBounds position / connector view zoom
+	^ connector view space extent / 2 - self originOfTheView / connector view zoom
 ]
 
 { #category : 'tests' }
