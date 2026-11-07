@@ -22,7 +22,8 @@ Class {
 		'zoomTarget',
 		'placedContentTopLeft',
 		'content',
-		'panning'
+		'panning',
+		'placedTransformation'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -371,14 +372,22 @@ TLBlocVisualization >> panOffset [
 
 { #category : 'layout' }
 TLBlocVisualization >> placeContentWithTopLeft: aContentTopLeft [
-	"Translates and scales me so that the top left corner of my content, the one given, sits at the margin of the window, shifted by the panning. Only my transformation changes, not my position: my nodes and their labels are not laid out again, which makes the zoom and the panning fluid with many nodes. The content is scaled first, then translated. The corner is remembered: the zoom and the panning do not change the content, they reuse it"
+	"Translates and scales me so that the top left corner of my content, the one given, sits at the margin of the window, shifted by the panning. Only my transformation changes, not my position: my nodes and their labels are not laid out again, which makes the zoom and the panning fluid with many nodes. The content is scaled first, then translated. The corner is remembered: the zoom and the panning do not change the content, they reuse it.
+	A drag places the content at each move of the mouse, mostly at the same place: the transformation is only changed when it differs, because changing it, even to the same one, makes Bloc draw all the nodes again"
 
+	| translation aTransformation |
 	placedContentTopLeft := aContentTopLeft.
+	translation := (self basePositionFor: aContentTopLeft) + panOffset.
+	aTransformation := {
+		                  zoomFactor.
+		                  translation }.
+	aTransformation = placedTransformation ifTrue: [ ^ self ].
+	placedTransformation := aTransformation.
 	self transformDo: [ :builder |
 			builder
 				topLeftOrigin;
 				scaleBy: zoomFactor @ zoomFactor;
-				translateBy: (self basePositionFor: aContentTopLeft) + panOffset ]
+				translateBy: translation ]
 ]
 
 { #category : 'layout' }

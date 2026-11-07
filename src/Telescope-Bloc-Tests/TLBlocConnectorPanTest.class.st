@@ -171,6 +171,17 @@ TLBlocConnectorPanTest >> testPanningWithACompositionLayerDrawsTheSameAsWithout 
 ]
 
 { #category : 'tests' }
+TLBlocConnectorPanTest >> testPlacingTheContentAtTheSamePlaceDoesNotRedrawIt [
+	"A drag places the content again at each move of the mouse, mostly at the same place: changing the transformation of the visualization, even to the same one, makes Bloc draw all the nodes again"
+
+	| space |
+	space := connector view space.
+	space clearDirtyElements.
+	connector view panBy: 0 @ 0.
+	self deny: space hasDirtyElements
+]
+
+{ #category : 'tests' }
 TLBlocConnectorPanTest >> testReleasingTheMouseEndsTheCompositionLayer [
 	"Out of a pan, a change of the content, such as a highlight, would draw the whole layer again"
 
