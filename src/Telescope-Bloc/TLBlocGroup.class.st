@@ -33,10 +33,11 @@ TLBlocGroup class >> withElements: aCollection [
 
 { #category : 'adding' }
 TLBlocGroup >> addAllFirstUnlessAlreadyPresent: someNodesOrGroups [
-	"Telescope adds to a group the nodes which an update put in it, for example a node which moved from another group. Like #addElement:, this moves their Bloc element inside the element of the group, otherwise the node would stay in the element of its old group, and be placed in the coordinates of the old group"
+	"Telescope adds to a group the nodes which an update put in it, for example a node which moved from another group. Like #addElement:, this moves their Bloc element inside the element of the group, otherwise the node would stay in the element of its old group, and be placed in the coordinates of the old group. The items already in the group are found in a set: searching the group for each item made an update quadratic"
 
-	| newItems |
-	newItems := someNodesOrGroups reject: [ :item | self includes: item ].
+	| present newItems |
+	present := self asIdentitySet.
+	newItems := someNodesOrGroups reject: [ :item | present includes: item ].
 	newItems do: [ :item | self moveInsideElement: item ].
 	self addAllFirst: newItems
 ]
