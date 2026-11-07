@@ -63,7 +63,14 @@ TLBlocVisualization >> autoFitOnLayout: aBoolean [
 TLBlocVisualization >> basePosition [
 	"Where the visualization sits so that the top left corner of its nodes and labels is at the margin of the window, before the panning. The zoom scales the corner"
 
-	^ self windowMargin @ self windowMargin - (self contentTopLeft * zoomFactor)
+	^ self basePositionFor: self contentTopLeft
+]
+
+{ #category : 'layout' }
+TLBlocVisualization >> basePositionFor: aContentTopLeft [
+	"Where the visualization sits so that the given top left corner of its content is at the margin of the window, before the panning. The zoom scales the corner"
+
+	^ self windowMargin @ self windowMargin - (aContentTopLeft * zoomFactor)
 ]
 
 { #category : 'fitting' }
@@ -238,14 +245,15 @@ TLBlocVisualization >> isZooming [
 
 { #category : 'dragging' }
 TLBlocVisualization >> keepPositionWhile: aBlock [
-	"The visualization stays where it is while the block moves nodes. It is anchored to the top left corner of its content, which a node dragged to the left or to the top moves: the panning compensates, so the other nodes do not move under the mouse. The user took over: the visualization is not fitted again by itself"
+	"The visualization stays where it is while the block moves nodes. It is anchored to the top left corner of its content, which a node dragged to the left or to the top moves: the panning compensates, so the other nodes do not move under the mouse. The user took over: the visualization is not fitted again by itself. The corner before the move is the one of the last placement, and the one after it is computed once"
 
-	| keptPosition |
+	| keptPosition topLeft |
 	autoFit := false.
-	keptPosition := self basePosition + panOffset.
+	keptPosition := (self basePositionFor: self placedContentTopLeft) + panOffset.
 	aBlock value.
-	panOffset := keptPosition - self basePosition.
-	self fitContentToWindow
+	topLeft := self contentTopLeft.
+	panOffset := keptPosition - (self basePositionFor: topLeft).
+	self placeContentWithTopLeft: topLeft
 ]
 
 { #category : 'legend' }
@@ -312,7 +320,7 @@ TLBlocVisualization >> placeContentWithTopLeft: aContentTopLeft [
 			builder
 				topLeftOrigin;
 				scaleBy: zoomFactor @ zoomFactor;
-				translateBy: self windowMargin @ self windowMargin - (aContentTopLeft * zoomFactor) + panOffset ]
+				translateBy: (self basePositionFor: aContentTopLeft) + panOffset ]
 ]
 
 { #category : 'layout' }
@@ -377,9 +385,9 @@ TLBlocVisualization >> zoomBy: aFactor around: aPoint [
 	newZoom := (zoomFactor * aFactor min: self class maximumZoom) max: self class minimumZoom.
 	ratio := newZoom / zoomFactor.
 	topLeft := self placedContentTopLeft.
-	currentPosition := self windowMargin @ self windowMargin - (topLeft * zoomFactor) + panOffset.
+	currentPosition := (self basePositionFor: topLeft) + panOffset.
 	zoomFactor := newZoom.
-	panOffset := aPoint - (ratio * (aPoint - currentPosition)) - (self windowMargin @ self windowMargin - (topLeft * zoomFactor)).
+	panOffset := aPoint - (ratio * (aPoint - currentPosition)) - (self basePositionFor: topLeft).
 	self placeContentWithTopLeft: topLeft
 ]
 
