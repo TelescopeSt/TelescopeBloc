@@ -23,7 +23,7 @@ TLBlocTheme class >> colorSelectors [
 	"The colors which a theme gives"
 
 	^ #( #canvasColor #panelColor #panelBorderColor #legendColor #textColor #iconColor #buttonColor #buttonHoverColor #toggledButtonColor #toggledButtonHoverColor #menuColor #menuHoverColor
-	     #popUpColor #popUpBorderColor #popUpTextColor #popUpShadowColor #swatchOutlineColor )
+	     #popUpColor #popUpBorderColor #popUpTextColor #popUpShadowColor #swatchOutlineColor #gridColor )
 ]
 
 { #category : 'instance creation' }
@@ -56,6 +56,13 @@ TLBlocTheme >> buttonHoverColor [
 { #category : 'accessing' }
 TLBlocTheme >> canvasColor [
 	"The background of the window, behind the visualization"
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'accessing' }
+TLBlocTheme >> gridColor [
+	"The dots of the grid of the canvas"
 
 	^ self subclassResponsibility
 ]

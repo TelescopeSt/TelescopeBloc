@@ -28,6 +28,12 @@ TLBlocLightTheme >> canvasColor [
 ]
 
 { #category : 'accessing' }
+TLBlocLightTheme >> gridColor [
+
+	^ Color gray alpha: 0.2
+]
+
+{ #category : 'accessing' }
 TLBlocLightTheme >> iconColor [
 
 	^ Color darkGray

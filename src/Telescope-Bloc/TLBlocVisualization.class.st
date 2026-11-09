@@ -1,5 +1,5 @@
 "
-I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels and the connections are in my #content, an element which is never transformed. I translate myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. Both are my transformation, not my position: zooming and panning do not lay out my nodes and their labels again. While the user pans (#startPanning and #stopPanning), my content is in a composition layer: Bloc paints what it drew once at the new place instead of drawing all the nodes at each step, unless the content is too big in the window for the memory of the layer (#contentFitsInACompositionLayer), and the nodes are not looked for under the mouse, so that the mouse events go to the background. The pan and zoom handlers are installed on the root of the window while I am in it. The first time I am laid out with some content I am fitted into the window: scaled so that the content fills the window, down or up as far as the zoom allows, and centered, which #fitIntoWindow does again on request. #zoomIn and #zoomOut zoom around the center of the window, and #exportAsPngTo: and #exportAsSvgTo: write me as I am shown. I put my toolbar in the root of the window while I am in it. I do not clip my children, because the window already clips me. I let the user drag the nodes, and the panning compensates the nodes which move my content, so that the other nodes stay under the mouse. The connector is told when a node moved, to join the nodes again. I keep the legend, and I fit my content in what is at its right. After a fit, I fit myself again when my content changes, until the user pans, zooms or drags, because the content is only known after a few layouts. It finds the node under the point where a node was dropped (#dropTargetOf:at:). The area where I am fitted (#fitArea) is the window without the strip of the legend, at its left, and the strip of the toolbar, at its top, so that the content is clear of both.
+I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels and the connections are in my #content, an element which is never transformed. I translate myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. Both are my transformation, not my position: zooming and panning do not lay out my nodes and their labels again. While the user pans (#startPanning and #stopPanning), my content is in a composition layer: Bloc paints what it drew once at the new place instead of drawing all the nodes at each step, unless the content is too big in the window for the memory of the layer (#contentFitsInACompositionLayer), and the nodes are not looked for under the mouse, so that the mouse events go to the background. The pan and zoom handlers are installed on the root of the window while I am in it. The first time I am laid out with some content I am fitted into the window: scaled so that the content fills the window, down or up as far as the zoom allows, and centered, which #fitIntoWindow does again on request. #zoomIn and #zoomOut zoom around the center of the window, and #exportAsPngTo: and #exportAsSvgTo: write me as I am shown. I put my toolbar in the root of the window while I am in it. I do not clip my children, because the window already clips me. I let the user drag the nodes, and the panning compensates the nodes which move my content, so that the other nodes stay under the mouse. The connector is told when a node moved, to join the nodes again. I keep the legend, and I fit my content in what is at its right. After a fit, I fit myself again when my content changes, until the user pans, zooms or drags, because the content is only known after a few layouts. It finds the node under the point where a node was dropped (#dropTargetOf:at:). The area where I am fitted (#fitArea) is the window without the strip of the legend, at its left, and the strip of the toolbar, at its top, so that the content is clear of both. While I am in a window, a grid of dots (TLBlocGridElement) is behind me in it, unless #gridVisible: turned it off: it follows my panning and my zoom.
 "
 Class {
 	#name : 'TLBlocVisualization',
@@ -24,7 +24,9 @@ Class {
 		'content',
 		'panning',
 		'placedTransformation',
-		'theme'
+		'theme',
+		'grid',
+		'gridVisible'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -228,6 +230,19 @@ TLBlocVisualization >> fitOnNextLayoutIfAutoFit [
 	autoFitOnLayout ifTrue: [ self fitOnNextLayout ]
 ]
 
+{ #category : 'accessing' }
+TLBlocVisualization >> gridVisible [
+
+	^ gridVisible ifNil: [ true ]
+]
+
+{ #category : 'accessing' }
+TLBlocVisualization >> gridVisible: aBoolean [
+	"Whether the window shows a grid of dots behind me, which follows my panning and my zoom (see TLBlocGridElement). It does by default"
+
+	gridVisible := aBoolean
+]
+
 { #category : 'initialization' }
 TLBlocVisualization >> initialize [
 	"The window already clips the visualization, so nodes and labels placed outside the default extent must still be drawn. The nodes and the connections are in my content, which is never transformed: my transformation pans and zooms it. The visualization is fitted into the window the first time it is laid out, and again when a layout is applied again unless the auto fit is turned off."
@@ -253,6 +268,15 @@ TLBlocVisualization >> initialize [
 	self addEventHandlerOn: BlElementRemovedFromSceneGraphEvent do: [ :event | self uninstallNavigationHandlers ]
 ]
 
+{ #category : 'navigation' }
+TLBlocVisualization >> installGrid [
+	"The grid is behind everything in the window"
+
+	(self gridVisible and: [ grid isNil or: [ grid hasParent not ] ]) ifFalse: [ ^ self ].
+	grid := TLBlocGridElement for: self.
+	self space root addChild: grid at: 1
+]
+
 { #category : 'legend' }
 TLBlocVisualization >> installLegend [
 	"Adds the legend to the window when I am in one, unless it has no entry"
@@ -263,14 +287,15 @@ TLBlocVisualization >> installLegend [
 
 { #category : 'initialization' }
 TLBlocVisualization >> installNavigationHandlers [
-	"The mouse events of the background and of the nodes arrive on the root of the window, which also holds the toolbar and the legend"
+	"The mouse events of the background and of the nodes arrive on the root of the window, which also holds the toolbar, the legend and the grid"
 
 	{
 		panHandler.
 		zoomHandler.
 		dragHandler } do: [ :handler | self space root addEventHandlerIfNotPresent: handler ].
 	self toolbar hasParent ifFalse: [ self space root addChild: self toolbar ].
-	self installLegend
+	self installLegend.
+	self installGrid
 ]
 
 { #category : 'zoom' }
@@ -404,21 +429,22 @@ TLBlocVisualization >> panOffset [
 { #category : 'layout' }
 TLBlocVisualization >> placeContentWithTopLeft: aContentTopLeft [
 	"Translates and scales me so that the top left corner of my content, the one given, sits at the margin of the window, shifted by the panning. Only my transformation changes, not my position: my nodes and their labels are not laid out again, which makes the zoom and the panning fluid with many nodes. The content is scaled first, then translated. The corner is remembered: the zoom and the panning do not change the content, they reuse it.
-	A drag places the content at each move of the mouse, mostly at the same place: the transformation is only changed when it differs, because changing it, even to the same one, makes Bloc draw all the nodes again"
+	A drag places the content at each move of the mouse, mostly at the same place: the transformation is only changed when it differs, because changing it, even to the same one, makes Bloc draw all the nodes again. The grid follows the content: it is drawn again"
 
 	| translation aTransformation |
 	placedContentTopLeft := aContentTopLeft.
 	translation := (self basePositionFor: aContentTopLeft) + panOffset.
 	aTransformation := {
-		                  zoomFactor.
-		                  translation }.
+		                   zoomFactor.
+		                   translation }.
 	aTransformation = placedTransformation ifTrue: [ ^ self ].
 	placedTransformation := aTransformation.
 	self transformDo: [ :builder |
 			builder
 				topLeftOrigin;
 				scaleBy: zoomFactor @ zoomFactor;
-				translateBy: translation ]
+				translateBy: translation ].
+	grid ifNotNil: [ :element | element invalidate ]
 ]
 
 { #category : 'layout' }
@@ -496,7 +522,8 @@ TLBlocVisualization >> uninstallNavigationHandlers [
 		zoomHandler.
 		dragHandler } do: [ :handler | handler uninstall ].
 	toolbar ifNotNil: [ :element | element removeFromParent ].
-	legend ifNotNil: [ :element | element removeFromParent ]
+	legend ifNotNil: [ :element | element removeFromParent ].
+	grid ifNotNil: [ :element | element removeFromParent ]
 ]
 
 { #category : 'layout' }

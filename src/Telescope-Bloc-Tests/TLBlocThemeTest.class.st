@@ -42,6 +42,12 @@ TLBlocThemeTest >> testDefaultThemeIsTheLightOne [
 ]
 
 { #category : 'tests' }
+TLBlocThemeTest >> testEveryThemeGivesAColorToItsGrid [
+
+	TLBlocTheme available do: [ :theme | self assert: theme gridColor isColor ]
+]
+
+{ #category : 'tests' }
 TLBlocThemeTest >> testEveryThemeGivesAllItsColors [
 
 	TLBlocTheme available do: [ :theme | TLBlocTheme colorSelectors do: [ :selector | self assert: (theme perform: selector) isColor description: theme name , ' has no ' , selector ] ]

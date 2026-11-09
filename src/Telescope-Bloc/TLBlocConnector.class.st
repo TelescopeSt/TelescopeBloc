@@ -39,6 +39,7 @@ Dragging
 Theme
 - The colors of the window, of the toolbar, of the legend, of the menus and of the pop ups come from a TLBlocTheme, the light one by default. #theme: gives another one, such as TLBlocDarkTheme, before the visualization is opened.
 - The colors of the nodes, of their labels and of the connections are the ones of the style sheet of the visualization: a theme does not change them.
+- A grid of dots behind the visualization follows its panning and its zoom, in the grid color of the theme. It is shown unless the setting Grid of dots of Telescope Bloc is off (TLBlocConnector class>>#gridVisible:), and #gridVisible:, before the visualization is opened, shows it or not whatever the setting.
 
 Legend
 - The legend of a visualization is made of the entries of Telescope, static or dynamic, as a TLBlocLegendElement in the window, which keeps its element when the legend is made again.
@@ -65,16 +66,55 @@ Class {
 		'externalInteractions',
 		'connectionObstacles',
 		'stableLayoutCount',
-		'theme'
+		'theme',
+		'gridVisible'
+	],
+	#classVars : [
+		'GridVisible'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
 	#tag : 'Core'
 }
 
+{ #category : 'settings' }
+TLBlocConnector class >> defaultGridVisible [
+	"Whether the visualizations show a grid of dots behind them, unless the setting or their connector says otherwise"
+
+	^ true
+]
+
+{ #category : 'settings' }
+TLBlocConnector class >> gridVisible [
+	"Whether the visualizations show a grid of dots behind them, unless their connector says otherwise (see #gridVisible:). It is the setting Grid of dots of Telescope Bloc"
+
+	^ GridVisible ifNil: [ self defaultGridVisible ]
+]
+
+{ #category : 'settings' }
+TLBlocConnector class >> gridVisible: aBoolean [
+
+	GridVisible := aBoolean
+]
+
 { #category : 'accessing' }
 TLBlocConnector class >> priority [
 	^ 50
+]
+
+{ #category : 'settings' }
+TLBlocConnector class >> settingsOn: aBuilder [
+	"The settings of Telescope Bloc, in their own group of the settings browser. The default value of a setting is the one its getter answers when it was never set"
+
+	<systemsettings>
+	(aBuilder group: #telescopeBloc)
+		label: 'Telescope Bloc';
+		description: 'Settings of the Bloc connector of Telescope';
+		with: [
+				(aBuilder setting: #gridVisible)
+					target: self;
+					label: 'Grid of dots';
+					description: 'Show a grid of dots behind the visualizations, which follows their panning and their zoom. A connector can still show it or not with #gridVisible:' ]
 ]
 
 { #category : 'triggers' }
@@ -199,6 +239,7 @@ TLBlocConnector >> configView [
 
 	^ TLBlocVisualization new
 		  theme: self theme;
+		  gridVisible: self gridVisible;
 		  onNodesMovedDo: [ self updateOutdatedConnections ];
 		  yourself
 ]
@@ -576,6 +617,19 @@ TLBlocConnector >> generateTLStyleSheetLegendEntry: aTLStyleSheetLegendEntry [
 TLBlocConnector >> generateTLWidthLegendEntry: aTLWidthLegendEntry [
 
 	^ self legendEntryWith: (TLBlocLegendSwatch widthArrowColored: self theme iconColor) label: aTLWidthLegendEntry label
+]
+
+{ #category : 'theme' }
+TLBlocConnector >> gridVisible [
+
+	^ gridVisible ifNil: [ self class gridVisible ]
+]
+
+{ #category : 'theme' }
+TLBlocConnector >> gridVisible: aBoolean [
+	"Whether the window shows a grid of dots behind the visualization, which follows its panning and its zoom. Without it, the setting Grid of dots of Telescope Bloc decides (see TLBlocConnector class>>#gridVisible). It is set before the visualization is opened"
+
+	gridVisible := aBoolean
 ]
 
 { #category : 'accessing' }

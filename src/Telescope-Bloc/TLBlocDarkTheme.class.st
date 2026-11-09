@@ -28,6 +28,12 @@ TLBlocDarkTheme >> canvasColor [
 ]
 
 { #category : 'accessing' }
+TLBlocDarkTheme >> gridColor [
+
+	^ Color white alpha: 0.08
+]
+
+{ #category : 'accessing' }
 TLBlocDarkTheme >> iconColor [
 
 	^ Color r: 0.7 g: 0.72 b: 0.76
