@@ -6,12 +6,23 @@ Class {
 	#superclass : 'BlElement',
 	#instVars : [
 		'window',
-		'resizeHandler'
+		'resizeHandler',
+		'theme'
 	],
 	#category : 'Telescope-Bloc-Legend',
 	#package : 'Telescope-Bloc',
 	#tag : 'Legend'
 }
+
+{ #category : 'theme' }
+TLBlocLegendElement >> applyTheme [
+	"The background, the border and the texts of the rows"
+
+	self
+		background: self theme legendColor;
+		border: (BlBorder paint: self theme panelBorderColor width: 1).
+	self rows do: [ :row | row textColor: self theme textColor ]
+]
 
 { #category : 'accessing' }
 TLBlocLegendElement >> entries [
@@ -23,7 +34,8 @@ TLBlocLegendElement >> entries [
 { #category : 'accessing' }
 TLBlocLegendElement >> entries: someEntryElements [
 
-	someEntryElements do: [ :entry | self addChild: entry ]
+	someEntryElements do: [ :entry | self addChild: entry ].
+	self applyTheme
 ]
 
 { #category : 'initialization' }
@@ -42,11 +54,10 @@ TLBlocLegendElement >> initialize [
 				 bottom: 8
 				 right: 12);
 		geometry: (BlRoundedRectangleGeometry cornerRadius: 6);
-		background: (Color white alpha: 0.9);
-		border: (BlBorder paint: Color lightGray width: 1);
 		addEventHandlerOn: BlElementLayoutComputedEvent do: [ :event | self placeInWindow ];
 		addEventHandlerOn: BlElementAddedToSceneGraphEvent do: [ :event | self installInWindow ];
-		addEventHandlerOn: BlElementRemovedFromSceneGraphEvent do: [ :event | self uninstallFromWindow ]
+		addEventHandlerOn: BlElementRemovedFromSceneGraphEvent do: [ :event | self uninstallFromWindow ].
+	self applyTheme
 ]
 
 { #category : 'layout' }
@@ -83,6 +94,21 @@ TLBlocLegendElement >> takeEntriesOf: anotherLegend [
 	anotherLegend removeChildren.
 	self removeChildren.
 	self entries: newEntries
+]
+
+{ #category : 'theme' }
+TLBlocLegendElement >> theme [
+	"The theme which gives my colors: the default one unless I was given another one"
+
+	^ theme ifNil: [ theme := TLBlocTheme default ]
+]
+
+{ #category : 'theme' }
+TLBlocLegendElement >> theme: aTheme [
+	"Given before the entries: their texts have the color of the theme"
+
+	theme := aTheme.
+	self applyTheme
 ]
 
 { #category : 'layout' }
