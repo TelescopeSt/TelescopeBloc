@@ -36,6 +36,10 @@ Dragging
 - The user can drag the nodes: the connections follow them, a composite node always fits the children which are dragged, and a layout which is applied again puts them back.
 - While a node is dragged only the connections which do not join their nodes where they are, and the ones which go around the nodes, are made again, so that a drag stays fluid with many connections.
 
+Theme
+- The colors of the window, of the toolbar, of the legend, of the menus and of the pop ups come from a TLBlocTheme, the light one by default. #theme: gives another one, such as TLBlocDarkTheme, before the visualization is opened.
+- The colors of the nodes, of their labels and of the connections are the ones of the style sheet of the visualization: a theme does not change them.
+
 Legend
 - The legend of a visualization is made of the entries of Telescope, static or dynamic, as a TLBlocLegendElement in the window, which keeps its element when the legend is made again.
 
@@ -60,7 +64,8 @@ Class {
 		'generatedInteractions',
 		'externalInteractions',
 		'connectionObstacles',
-		'stableLayoutCount'
+		'stableLayoutCount',
+		'theme'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -193,6 +198,7 @@ TLBlocConnector >> configView [
 	"The connections follow the nodes the user drags"
 
 	^ TLBlocVisualization new
+		  theme: self theme;
 		  onNodesMovedDo: [ self updateOutdatedConnections ];
 		  yourself
 ]
@@ -268,6 +274,7 @@ TLBlocConnector >> createLegendFrom: legendItems [
 	"The legend is a box with the elements of its entries, one above the other"
 
 	^ TLBlocLegendElement new
+		  theme: self theme;
 		  entries: legendItems;
 		  yourself
 ]
@@ -278,6 +285,7 @@ TLBlocConnector >> createMenuFor: aTLDrawable [
 
 	| menu element |
 	menu := TLBlocMenu new.
+	menu theme: self theme.
 	element := self elementFromTLDrawable: aTLDrawable.
 	self
 		addHandlerOn: BlMouseDownEvent
@@ -477,7 +485,9 @@ TLBlocConnector >> generateMultiChoiceMenuInteraction: aTLMultiChoiceMenuInterac
 TLBlocConnector >> generateNodeBackgroundLegendEntry: aTLNodeBackgroundLegendEntry [
 	"A row for each description, with the background of the first node which has it"
 
-	^ self dynamicLegendEntry: aTLNodeBackgroundLegendEntry swatchFor: [ :node | TLBlocLegendSwatch color: (self elementFromTLDrawable: node) background paint color ]
+	^ self
+		  dynamicLegendEntry: aTLNodeBackgroundLegendEntry
+		  swatchFor: [ :node | TLBlocLegendSwatch color: (self elementFromTLDrawable: node) background paint color outline: self theme swatchOutlineColor ]
 ]
 
 { #category : 'generation-legendEntry' }
@@ -528,25 +538,25 @@ TLBlocConnector >> generateTLBorderColorLegendEntry: aTLBorderColorLegendEntry [
 TLBlocConnector >> generateTLBorderShapeLegendEntry: aTLBorderShapeLegendEntry [
 	"The shape is only an outline: it is a border shape"
 
-	^ self legendEntryWith: (TLBlocLegendSwatch shape: aTLBorderShapeLegendEntry styleSheet shape background: Color transparent border: Color black) label: aTLBorderShapeLegendEntry label
+	^ self legendEntryWith: (TLBlocLegendSwatch shape: aTLBorderShapeLegendEntry styleSheet shape background: Color transparent border: self theme textColor) label: aTLBorderShapeLegendEntry label
 ]
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateTLColorLegendEntry: aTLColorLegendEntry [
 
-	^ self legendEntryWith: (TLBlocLegendSwatch color: aTLColorLegendEntry color) label: aTLColorLegendEntry label
+	^ self legendEntryWith: (TLBlocLegendSwatch color: aTLColorLegendEntry color outline: self theme swatchOutlineColor) label: aTLColorLegendEntry label
 ]
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateTLGradientLegendEntry: aTLGradientLegendEntry [
 
-	^ self legendEntryWith: (TLBlocLegendSwatch gradient: aTLGradientLegendEntry gradient) label: aTLGradientLegendEntry label
+	^ self legendEntryWith: (TLBlocLegendSwatch gradient: aTLGradientLegendEntry gradient outline: self theme swatchOutlineColor) label: aTLGradientLegendEntry label
 ]
 
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateTLHeightLegendEntry: aTLHeightLegendEntry [
 
-	^ self legendEntryWith: TLBlocLegendSwatch heightArrow label: aTLHeightLegendEntry label
+	^ self legendEntryWith: (TLBlocLegendSwatch heightArrowColored: self theme iconColor) label: aTLHeightLegendEntry label
 ]
 
 { #category : 'generation-legendEntry' }
@@ -565,7 +575,7 @@ TLBlocConnector >> generateTLStyleSheetLegendEntry: aTLStyleSheetLegendEntry [
 { #category : 'generation-legendEntry' }
 TLBlocConnector >> generateTLWidthLegendEntry: aTLWidthLegendEntry [
 
-	^ self legendEntryWith: TLBlocLegendSwatch widthArrow label: aTLWidthLegendEntry label
+	^ self legendEntryWith: (TLBlocLegendSwatch widthArrowColored: self theme iconColor) label: aTLWidthLegendEntry label
 ]
 
 { #category : 'accessing' }
@@ -682,7 +692,7 @@ TLBlocConnector >> openInWindow: anElement named: aTitleString extent: aPoint [
 		          extent: aPoint;
 		          title: aTitleString.
 	host ifNotNil: [ aSpace host: host ].
-	aSpace root background: Color white.
+	aSpace root background: self theme canvasColor.
 	aSpace root addChild: anElement.
 	aSpace show
 ]
@@ -819,6 +829,7 @@ TLBlocConnector >> showPopUpOf: aPopUpAction for: aTLDrawable [
 		showText: (aPopUpAction obtain: aPopUpAction textBlock on: aTLDrawable entity) asString
 		near: (self elementFromTLDrawable: aTLDrawable)
 		position: (aPopUpAction obtainsPositionFrom: aTLDrawable)
+		theme: self theme
 ]
 
 { #category : 'updating' }
@@ -868,6 +879,20 @@ TLBlocConnector >> startPendingAnimation [
 				             self updateConnections ];
 		             yourself.
 	view addAnimation: animation
+]
+
+{ #category : 'theme' }
+TLBlocConnector >> theme [
+	"The theme which gives my colors: the default one unless I was given another one"
+
+	^ theme ifNil: [ theme := TLBlocTheme default ]
+]
+
+{ #category : 'theme' }
+TLBlocConnector >> theme: aTheme [
+	"The theme of the window, of the toolbar, of the legend, of the menus and of the pop ups (see TLBlocTheme). It is given to the elements when they are made: it is set before the visualization is opened"
+
+	theme := aTheme
 ]
 
 { #category : 'generation - interaction' }

@@ -7,12 +7,21 @@ Class {
 	#instVars : [
 		'menu',
 		'popup',
-		'openedItem'
+		'openedItem',
+		'theme'
 	],
 	#category : 'Telescope-Bloc-Menu',
 	#package : 'Telescope-Bloc',
 	#tag : 'Menu'
 }
+
+{ #category : 'theme' }
+TLBlocMenuElement >> applyTheme [
+
+	self
+		background: self theme menuColor;
+		border: (BlBorder paint: self theme panelBorderColor width: 1)
+]
 
 { #category : 'initialization' }
 TLBlocMenuElement >> initialize [
@@ -26,9 +35,8 @@ TLBlocMenuElement >> initialize [
 				layoutConstraints vertical fitContent ];
 		padding: (BlInsets all: 3);
 		geometry: (BlRoundedRectangleGeometry cornerRadius: 5);
-		background: Color white;
-		border: (BlBorder paint: Color lightGray width: 1);
-		addEventHandlerOn: BlElementLayoutComputedEvent do: [ :event | self keepInWindow ]
+		addEventHandlerOn: BlElementLayoutComputedEvent do: [ :event | self keepInWindow ].
+	self applyTheme
 ]
 
 { #category : 'accessing' }
@@ -57,6 +65,7 @@ TLBlocMenuElement >> menu: aMenu popup: aPopup [
 	popup := aPopup.
 	aMenu entries do: [ :entry |
 			self addChild: (TLBlocMenuItemElement new
+					 theme: self theme;
 					 entry: entry;
 					 yourself) ]
 ]
@@ -78,4 +87,19 @@ TLBlocMenuElement >> openedItem: aMenuItemElement [
 TLBlocMenuElement >> popup [
 
 	^ popup
+]
+
+{ #category : 'theme' }
+TLBlocMenuElement >> theme [
+	"The theme which gives my colors: the default one unless I was given another one"
+
+	^ theme ifNil: [ theme := TLBlocTheme default ]
+]
+
+{ #category : 'theme' }
+TLBlocMenuElement >> theme: aTheme [
+	"Given before the menu: its lines have the same theme"
+
+	theme := aTheme.
+	self applyTheme
 ]

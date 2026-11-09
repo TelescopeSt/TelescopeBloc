@@ -5,7 +5,8 @@ Class {
 	#name : 'TLBlocMenuItemElement',
 	#superclass : 'BlElement',
 	#instVars : [
-		'entry'
+		'entry',
+		'theme'
 	],
 	#category : 'Telescope-Bloc-Menu',
 	#package : 'Telescope-Bloc',
@@ -25,7 +26,7 @@ TLBlocMenuItemElement >> entry: aMenuEntry [
 
 	entry := aMenuEntry.
 	self addChild: (BlTextElement new
-			 text: (aMenuEntry label asString asRopedText fontSize: 13);
+			 text: ((aMenuEntry label asString asRopedText fontSize: 13) foreground: self theme textColor);
 			 yourself).
 	aMenuEntry hasSubmenu ifTrue: [
 			self addChild: (BlElement new
@@ -34,7 +35,7 @@ TLBlocMenuItemElement >> entry: aMenuEntry [
 									  (0 @ 0).
 									  (6 @ 5).
 									  (0 @ 10) });
-					 background: Color darkGray;
+					 background: self theme iconColor;
 					 margin: (BlInsets left: 14);
 					 yourself) ]
 ]
@@ -49,7 +50,7 @@ TLBlocMenuItemElement >> hover [
 { #category : 'accessing' }
 TLBlocMenuItemElement >> hoverColor [
 
-	^ Color veryLightGray
+	^ self theme menuHoverColor
 ]
 
 { #category : 'initialization' }
@@ -81,4 +82,18 @@ TLBlocMenuItemElement >> initialize [
 TLBlocMenuItemElement >> label [
 
 	^ entry label
+]
+
+{ #category : 'theme' }
+TLBlocMenuItemElement >> theme [
+	"The theme which gives my colors: the default one unless I was given another one"
+
+	^ theme ifNil: [ theme := TLBlocTheme default ]
+]
+
+{ #category : 'theme' }
+TLBlocMenuItemElement >> theme: aTheme [
+	"Given before the entry: its text and its arrow have the colors of the theme"
+
+	theme := aTheme
 ]

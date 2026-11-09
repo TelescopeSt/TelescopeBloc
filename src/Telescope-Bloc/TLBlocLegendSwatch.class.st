@@ -22,33 +22,33 @@ TLBlocLegendSwatch class >> borderColor: aColor [
 ]
 
 { #category : 'instance creation' }
-TLBlocLegendSwatch class >> color: aColor [
-	"A small rounded box filled with the color"
+TLBlocLegendSwatch class >> color: aColor outline: anOutlineColor [
+	"A small rounded box filled with the color, with the outline color of the theme"
 
 	^ self new
 		  extent: 26 @ 14;
 		  geometry: (BlRoundedRectangleGeometry cornerRadius: 3);
 		  background: aColor;
-		  border: (BlBorder paint: (Color black alpha: 0.3) width: 1);
+		  border: (BlBorder paint: anOutlineColor width: 1);
 		  yourself
 ]
 
 { #category : 'instance creation' }
-TLBlocLegendSwatch class >> gradient: aGradient [
-	"A horizontal bar with the colors of the gradient, at the places of their levels"
+TLBlocLegendSwatch class >> gradient: aGradient outline: anOutlineColor [
+	"A horizontal bar with the colors of the gradient, at the places of their levels, with the outline color of the theme"
 
 	^ self new
 		  extent: 30 @ 12;
 		  geometry: (BlRoundedRectangleGeometry cornerRadius: 3);
 		  background:
 			  (BlLinearGradientPaint horizontal stops: (aGradient levelForColors collect: [ :levelAndColor | (aGradient percentageForLevel: levelAndColor key) -> levelAndColor value asColor ] as: Array));
-		  border: (BlBorder paint: (Color black alpha: 0.3) width: 1);
+		  border: (BlBorder paint: anOutlineColor width: 1);
 		  yourself
 ]
 
 { #category : 'instance creation' }
-TLBlocLegendSwatch class >> heightArrow [
-	"An arrow with a head at both ends, vertical"
+TLBlocLegendSwatch class >> heightArrowColored: aColor [
+	"An arrow with a head at both ends, vertical, of the color: the icon color of the theme"
 
 	^ self new
 		  extent: 10 @ 16;
@@ -63,7 +63,7 @@ TLBlocLegendSwatch class >> heightArrow [
 						   (4 @ 11).
 						   (4 @ 5).
 						   (0 @ 5) });
-		  background: Color darkGray;
+		  background: aColor;
 		  yourself
 ]
 
@@ -94,8 +94,8 @@ TLBlocLegendSwatch class >> shape: aShape background: aBackgroundColor border: a
 ]
 
 { #category : 'instance creation' }
-TLBlocLegendSwatch class >> widthArrow [
-	"An arrow with a head at both ends, horizontal"
+TLBlocLegendSwatch class >> widthArrowColored: aColor [
+	"An arrow with a head at both ends, horizontal, of the color: the icon color of the theme"
 
 	^ self new
 		  extent: 22 @ 10;
@@ -110,6 +110,6 @@ TLBlocLegendSwatch class >> widthArrow [
 						   (17 @ 6).
 						   (5 @ 6).
 						   (5 @ 10) });
-		  background: Color darkGray;
+		  background: aColor;
 		  yourself
 ]

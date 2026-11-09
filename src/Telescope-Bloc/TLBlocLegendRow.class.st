@@ -83,3 +83,12 @@ TLBlocLegendRow >> swatchCellWidth [
 
 	^ 30
 ]
+
+{ #category : 'accessing' }
+TLBlocLegendRow >> textColor: aColor [
+	"The color of the text which describes the swatch"
+
+	(self children
+		 detect: [ :child | child class = BlTextElement ]
+		 ifNone: [ nil ]) ifNotNil: [ :textElement | textElement text: ((label asRopedText fontSize: 12) foreground: aColor) ]
+]

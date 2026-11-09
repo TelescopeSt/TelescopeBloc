@@ -25,7 +25,7 @@ TLBlocToolbarToggleButton >> activate [
 TLBlocToolbarToggleButton >> hoverColor [
 
 	^ isOn
-		  ifTrue: [ Color r: 0.68 g: 0.82 b: 0.98 ]
+		  ifTrue: [ self theme toggledButtonHoverColor ]
 		  ifFalse: [ super hoverColor ]
 ]
 
@@ -60,6 +60,6 @@ TLBlocToolbarToggleButton >> isToggle [
 TLBlocToolbarToggleButton >> restColor [
 
 	^ isOn
-		  ifTrue: [ Color r: 0.78 g: 0.88 b: 1.0 ]
+		  ifTrue: [ self theme toggledButtonColor ]
 		  ifFalse: [ super restColor ]
 ]

@@ -23,7 +23,8 @@ Class {
 		'placedContentTopLeft',
 		'content',
 		'panning',
-		'placedTransformation'
+		'placedTransformation',
+		'theme'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -449,6 +450,20 @@ TLBlocVisualization >> stopPanning [
 	panning := false.
 	content beWithoutCompositionLayer.
 	content detachCompositionLayer
+]
+
+{ #category : 'theme' }
+TLBlocVisualization >> theme [
+	"The theme which gives my colors: the default one unless I was given another one"
+
+	^ theme ifNil: [ theme := TLBlocTheme default ]
+]
+
+{ #category : 'theme' }
+TLBlocVisualization >> theme: aTheme [
+	"The theme of my toolbar and of the window I am in, given by the connector (see TLBlocConnector>>#theme:)"
+
+	theme := aTheme
 ]
 
 { #category : 'toolbar' }

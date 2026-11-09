@@ -9,7 +9,8 @@ Class {
 		'action',
 		'icon',
 		'tooltip',
-		'tooltipTask'
+		'tooltipTask',
+		'theme'
 	],
 	#category : 'Telescope-Bloc-Elements',
 	#package : 'Telescope-Bloc',
@@ -45,10 +46,23 @@ TLBlocToolbarButton >> addDownArrow [
 						         (4 @ 10).
 						         (0 @ 5).
 						         (3 @ 5) });
-		        background: Color darkGray;
+		        background: self theme iconColor;
 		        margin: (BlInsets left: 5);
 		        yourself.
 	self addChild: icon
+]
+
+{ #category : 'theme' }
+TLBlocToolbarButton >> applyTheme [
+	"The background, the border, the text and the arrow"
+
+	self
+		background: self restColor;
+		border: (BlBorder paint: self theme panelBorderColor width: 1).
+	(self children
+		 detect: [ :child | child class = BlTextElement ]
+		 ifNone: [ nil ]) ifNotNil: [ :textElement | textElement text: self labelText ].
+	icon ifNotNil: [ :arrow | arrow background: self theme iconColor ]
 ]
 
 { #category : 'accessing' }
@@ -61,7 +75,7 @@ TLBlocToolbarButton >> hideTooltip [
 { #category : 'accessing' }
 TLBlocToolbarButton >> hoverColor [
 
-	^ Color veryLightGray
+	^ self theme buttonHoverColor
 ]
 
 { #category : 'icon' }
@@ -92,11 +106,10 @@ TLBlocToolbarButton >> initialize [
 				 right: 8);
 		margin: (BlInsets all: 2);
 		geometry: (BlRoundedRectangleGeometry cornerRadius: 4);
-		background: self restColor;
-		border: (BlBorder paint: Color lightGray width: 1);
 		addEventHandlerOn: BlMouseEnterEvent do: [ :event | self background: self hoverColor ];
 		addEventHandlerOn: BlMouseLeaveEvent do: [ :event | self background: self restColor ];
-		addEventHandlerOn: BlClickEvent do: [ :event | self activate ]
+		addEventHandlerOn: BlClickEvent do: [ :event | self activate ].
+	self applyTheme
 ]
 
 { #category : 'accessing' }
@@ -119,14 +132,21 @@ TLBlocToolbarButton >> label: aString action: aBlock [
 	label := aString.
 	action := aBlock.
 	self addChild: (BlTextElement new
-			 text: (aString asRopedText fontSize: 13);
+			 text: self labelText;
 			 yourself)
+]
+
+{ #category : 'accessing' }
+TLBlocToolbarButton >> labelText [
+	"The label in the size and the color of the text of the buttons"
+
+	^ (label asRopedText fontSize: 13) foreground: self theme textColor
 ]
 
 { #category : 'accessing' }
 TLBlocToolbarButton >> restColor [
 
-	^ Color white
+	^ self theme buttonColor
 ]
 
 { #category : 'accessing' }
@@ -144,7 +164,26 @@ TLBlocToolbarButton >> scheduleTooltip [
 { #category : 'accessing' }
 TLBlocToolbarButton >> showTooltip [
 
-	self space ifNotNil: [ TLBlocPopUpElement showText: tooltip near: self position: TLPosition bottom ]
+	self space ifNotNil: [
+			TLBlocPopUpElement
+				showText: tooltip
+				near: self
+				position: TLPosition bottom
+				theme: self theme ]
+]
+
+{ #category : 'theme' }
+TLBlocToolbarButton >> theme [
+	"The theme which gives my colors: the default one unless I was given another one"
+
+	^ theme ifNil: [ theme := TLBlocTheme default ]
+]
+
+{ #category : 'theme' }
+TLBlocToolbarButton >> theme: aTheme [
+
+	theme := aTheme.
+	self applyTheme
 ]
 
 { #category : 'accessing' }

@@ -6,7 +6,8 @@ Class {
 	#superclass : 'BlElement',
 	#instVars : [
 		'resizeHandler',
-		'window'
+		'window',
+		'theme'
 	],
 	#category : 'Telescope-Bloc-Elements',
 	#package : 'Telescope-Bloc',
@@ -19,6 +20,7 @@ TLBlocToolbar class >> for: aVisualization [
 
 	| toolbar |
 	toolbar := self new.
+	toolbar theme: aVisualization theme.
 	(toolbar addButton: 'Fit' action: [ aVisualization fitIntoWindow ]) tooltip: 'Fit' , String cr , 'Scales and centers the visualization to fill the window'.
 	(toolbar addToggleButton: 'Auto' action: [ :isOn | aVisualization autoFitOnLayout: isOn ])
 		isOn: aVisualization autoFitOnLayout;
@@ -40,6 +42,7 @@ TLBlocToolbar >> addButton: aString action: aBlock [
 
 	| button |
 	button := TLBlocToolbarButton label: aString action: aBlock.
+	button theme: self theme.
 	self addChild: button.
 	^ button
 ]
@@ -50,8 +53,17 @@ TLBlocToolbar >> addToggleButton: aString action: aBlock [
 
 	| button |
 	button := TLBlocToolbarToggleButton label: aString action: aBlock.
+	button theme: self theme.
 	self addChild: button.
 	^ button
+]
+
+{ #category : 'theme' }
+TLBlocToolbar >> applyTheme [
+
+	self
+		background: self theme panelColor;
+		border: (BlBorder paint: self theme panelBorderColor width: 1)
 ]
 
 { #category : 'export' }
@@ -88,11 +100,10 @@ TLBlocToolbar >> initialize [
 				layoutConstraints vertical fitContent ];
 		padding: (BlInsets all: 2);
 		geometry: (BlRoundedRectangleGeometry cornerRadius: 6);
-		background: (Color white alpha: 0.85);
-		border: (BlBorder paint: Color lightGray width: 1);
 		addEventHandlerOn: BlElementLayoutComputedEvent do: [ :event | self placeInWindow ];
 		addEventHandlerOn: BlElementAddedToSceneGraphEvent do: [ :event | self installInWindow ];
-		addEventHandlerOn: BlElementRemovedFromSceneGraphEvent do: [ :event | self uninstallFromWindow ]
+		addEventHandlerOn: BlElementRemovedFromSceneGraphEvent do: [ :event | self uninstallFromWindow ].
+	self applyTheme
 ]
 
 { #category : 'layout' }
@@ -111,6 +122,22 @@ TLBlocToolbar >> placeInWindow [
 	self parent ifNil: [ ^ self ].
 	position := self parent extent x - self extent x - self windowMargin @ self windowMargin.
 	self measuredBounds position = position ifFalse: [ self position: position ]
+]
+
+{ #category : 'theme' }
+TLBlocToolbar >> theme [
+	"The theme which gives my colors: the default one unless I was given another one"
+
+	^ theme ifNil: [ theme := TLBlocTheme default ]
+]
+
+{ #category : 'theme' }
+TLBlocToolbar >> theme: aTheme [
+	"Given before the buttons are added: they have the same theme"
+
+	theme := aTheme.
+	self applyTheme.
+	self buttons do: [ :button | button theme: aTheme ]
 ]
 
 { #category : 'layout' }

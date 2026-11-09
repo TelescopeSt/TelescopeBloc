@@ -9,7 +9,8 @@ Class {
 		'filterList',
 		'canvas',
 		'code',
-		'description'
+		'description',
+		'themeList'
 	],
 	#category : 'Telescope-Bloc-Demo-Browser',
 	#package : 'Telescope-Bloc-Demo',
@@ -49,16 +50,19 @@ TLBlocDemoPresenter >> code [
 TLBlocDemoPresenter >> connectPresenters [
 
 	demoList whenSelectedItemChangedDo: [ :selector | selector ifNotNil: [ self runDemo: selector ] ].
+	themeList whenSelectedItemChangedDo: [ :theme | demoList selectedItem ifNotNil: [ :selector | self runDemo: selector ] ].
 	filterList whenSelectedItemChangedDo: [ :filter | demoList items: (self demosMatching: filter) ]
 ]
 
 { #category : 'layout' }
 TLBlocDemoPresenter >> defaultLayout [
+
 	^ SpPanedLayout newTopToBottom
 		  add: (SpPanedLayout newLeftToRight
 				   positionOfSlider: 300;
 				   add: (SpBoxLayout newTopToBottom
 						    add: filterList expand: false;
+						    add: themeList expand: false;
 						    add: demoList;
 						    yourself);
 				   add: canvas;
@@ -113,10 +117,15 @@ TLBlocDemoPresenter >> filterList [
 
 { #category : 'initialization' }
 TLBlocDemoPresenter >> initializePresenters [
-	"The list shows the names of the demos for a human, in alphabetical order, and its items are the selectors which run them"
+	"The list shows the names of the demos for a human, in alphabetical order, and its items are the selectors which run them. The demos are shown in the theme chosen in the list of the themes, the default one at first"
 
 	demoList := self newList display: [ :selector | TLDemoCatalogue displayNameOf: selector ].
 	filterList := self newDropList items: { #all } , TLDemoCatalogue filterSymbols.
+	themeList := self newDropList
+		             items: TLBlocTheme available asArray;
+		             display: [ :theme | theme name ];
+		             yourself.
+	themeList selectItem: (themeList items detect: [ :theme | theme class = TLBlocTheme default class ]).
 	canvas := self instantiate: SpBlSpaceInMorphPresenter.
 	description := self newText beNotEditable.
 	code := self newCode beNotEditable.
@@ -133,7 +142,7 @@ TLBlocDemoPresenter >> initializeWindow: aWindowPresenter [
 
 { #category : 'running' }
 TLBlocDemoPresenter >> runDemo: aDemoSelector [
-	"Renders the demo in the canvas, or shows its error"
+	"Renders the demo in the canvas, in the chosen theme, or shows its error"
 
 	| connector visualization demoMethod |
 	description text: (TLDemoCatalogue descriptionOf: aDemoSelector).
@@ -141,15 +150,24 @@ TLBlocDemoPresenter >> runDemo: aDemoSelector [
 	code beForMethod: demoMethod.
 	code text: demoMethod sourceCode.
 	[
-	connector := TLBlocConnector new.
-	visualization := TLDemos perform: aDemoSelector.
-	visualization generator: connector.
-	visualization generateWith: connector.
-	canvas space root
-		removeChildren;
-		addChild: connector view ]
+		connector := TLBlocConnector new.
+		connector theme: self selectedTheme.
+		visualization := TLDemos perform: aDemoSelector.
+		visualization generator: connector.
+		visualization generateWith: connector.
+		canvas space root
+			background: self selectedTheme canvasColor;
+			removeChildren;
+			addChild: connector view ]
 		on: Error
 		do: [ :error | self showError: error ]
+]
+
+{ #category : 'running' }
+TLBlocDemoPresenter >> selectedTheme [
+	"The theme the demos are shown in"
+
+	^ themeList selectedItem ifNil: [ TLBlocTheme default ]
 ]
 
 { #category : 'running' }
@@ -180,4 +198,10 @@ TLBlocDemoPresenter >> stackTextOf: anError [
 			count := count + 1.
 			context := context sender ].
 	^ stream contents
+]
+
+{ #category : 'accessing' }
+TLBlocDemoPresenter >> themeList [
+
+	^ themeList
 ]

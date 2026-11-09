@@ -5,7 +5,8 @@ Class {
 	#name : 'TLBlocMenu',
 	#superclass : 'Object',
 	#instVars : [
-		'entries'
+		'entries',
+		'theme'
 	],
 	#category : 'Telescope-Bloc-Menu',
 	#package : 'Telescope-Bloc',
@@ -54,4 +55,17 @@ TLBlocMenu >> openIn: aSpace at: aPoint [
 	"Shows the menu in the window, with its top left corner at the point. The other menus of the window are closed"
 
 	TLBlocMenuPopup openIn: aSpace menu: self at: aPoint
+]
+
+{ #category : 'theme' }
+TLBlocMenu >> theme [
+	"The theme which gives my colors: the default one unless I was given another one"
+
+	^ theme ifNil: [ theme := TLBlocTheme default ]
+]
+
+{ #category : 'theme' }
+TLBlocMenu >> theme: aTheme [
+
+	theme := aTheme
 ]

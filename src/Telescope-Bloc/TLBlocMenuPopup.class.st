@@ -4,6 +4,9 @@ I am the transparent layer, as big as the window, which holds the menus shown ab
 Class {
 	#name : 'TLBlocMenuPopup',
 	#superclass : 'BlElement',
+	#instVars : [
+		'theme'
+	],
 	#category : 'Telescope-Bloc-Menu',
 	#package : 'Telescope-Bloc',
 	#tag : 'Menu'
@@ -17,6 +20,7 @@ TLBlocMenuPopup class >> openIn: aSpace menu: aMenu at: aPoint [
 	(aSpace root children select: [ :child | child class = self ]) do: #removeFromParent.
 	popup := self new
 		         extent: aSpace extent;
+		         theme: aMenu theme;
 		         yourself.
 	aSpace root addChild: popup.
 	popup show: aMenu at: aPoint.
@@ -66,8 +70,23 @@ TLBlocMenuPopup >> show: aMenu at: aPoint [
 
 	| element |
 	element := TLBlocMenuElement new
+		           theme: self theme;
 		           menu: aMenu popup: self;
 		           position: aPoint;
 		           yourself.
 	self addChild: element
+]
+
+{ #category : 'theme' }
+TLBlocMenuPopup >> theme [
+	"The theme which gives my colors: the default one unless I was given another one"
+
+	^ theme ifNil: [ theme := TLBlocTheme default ]
+]
+
+{ #category : 'theme' }
+TLBlocMenuPopup >> theme: aTheme [
+	"The theme of the menus I show, the one of the menu I was opened for"
+
+	theme := aTheme
 ]

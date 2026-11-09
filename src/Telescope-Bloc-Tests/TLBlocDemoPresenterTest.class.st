@@ -7,6 +7,36 @@ Class {
 }
 
 { #category : 'tests' }
+TLBlocDemoPresenterTest >> testChoosingAThemeShowsTheDemoInIt [
+
+	| presenter dark view |
+	presenter := TLBlocDemoPresenter new.
+	presenter demoList selectItem: #exampleSimpleConnections.
+	dark := presenter themeList items detect: [ :theme | theme class = TLBlocDarkTheme ].
+	presenter themeList selectItem: dark.
+	view := presenter canvas space root children detect: [ :child | child class = TLBlocVisualization ].
+	self assert: view theme class equals: TLBlocDarkTheme.
+	self assert: presenter canvas space root background paint color equals: dark canvasColor
+]
+
+{ #category : 'tests' }
+TLBlocDemoPresenterTest >> testDefaultThemeIsSelectedAtFirst [
+
+	self assert: TLBlocDemoPresenter new themeList selectedItem class equals: TLBlocTheme default class
+]
+
+{ #category : 'tests' }
+TLBlocDemoPresenterTest >> testDemoChosenAfterAThemeIsShownInIt [
+
+	| presenter view |
+	presenter := TLBlocDemoPresenter new.
+	presenter themeList selectItem: (presenter themeList items detect: [ :theme | theme class = TLBlocDarkTheme ]).
+	presenter demoList selectItem: #exampleSimpleConnections.
+	view := presenter canvas space root children detect: [ :child | child class = TLBlocVisualization ].
+	self assert: view theme class equals: TLBlocDarkTheme
+]
+
+{ #category : 'tests' }
 TLBlocDemoPresenterTest >> testDemoListHasEveryDemo [
 
 	self assert: TLBlocDemoPresenter new demoList items size equals: TLDemoCatalogue demoSelectors size
@@ -85,6 +115,14 @@ TLBlocDemoPresenterTest >> testSelectingADemoStillRunsItWithItsSelector [
 	| presenter |
 	presenter := TLBlocDemoPresenter new.
 	self assert: (presenter demoList items includes: #exampleSimpleConnections)
+]
+
+{ #category : 'tests' }
+TLBlocDemoPresenterTest >> testThemeListShowsTheAvailableThemes [
+
+	| presenter |
+	presenter := TLBlocDemoPresenter new.
+	self assert: (presenter themeList items collect: #name) asArray equals: (TLBlocTheme available collect: #name) asArray
 ]
 
 { #category : 'tests' }

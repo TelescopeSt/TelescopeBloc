@@ -8,7 +8,8 @@ Class {
 		'lines',
 		'anchor',
 		'placement',
-		'owner'
+		'owner',
+		'theme'
 	],
 	#category : 'Telescope-Bloc-Menu',
 	#package : 'Telescope-Bloc',
@@ -29,12 +30,24 @@ TLBlocPopUpElement class >> isShownIn: aRoot [
 
 { #category : 'showing' }
 TLBlocPopUpElement class >> showText: aString near: anElement position: aTLPosition [
-	"Shows the text above everything in the window of the element, near the element. The pop ups which were shown are closed: there is only one"
+	"Shows the text near the element, in the colors of the default theme (see #showText:near:position:theme:)"
+
+	^ self
+		  showText: aString
+		  near: anElement
+		  position: aTLPosition
+		  theme: TLBlocTheme default
+]
+
+{ #category : 'showing' }
+TLBlocPopUpElement class >> showText: aString near: anElement position: aTLPosition theme: aTheme [
+	"Shows the text above everything in the window of the element, near the element, in the colors of the theme. The pop ups which were shown are closed: there is only one"
 
 	| popUp root |
 	root := anElement space root.
 	self closeIn: root.
 	popUp := self new
+		         theme: aTheme;
 		         text: aString;
 		         owner: anElement;
 		         anchoredAt: anElement boundsInSpace asRectangle position: aTLPosition;
@@ -61,10 +74,19 @@ TLBlocPopUpElement >> anchoredAt: aRectangle position: aTLPosition [
 	placement := aTLPosition
 ]
 
+{ #category : 'theme' }
+TLBlocPopUpElement >> applyTheme [
+
+	self
+		background: self backgroundColor;
+		border: (BlBorder paint: self theme popUpBorderColor width: 1);
+		effect: (BlGaussianShadowEffect color: self theme popUpShadowColor width: 9 offset: 0 @ 3)
+]
+
 { #category : 'accessing' }
 TLBlocPopUpElement >> backgroundColor [
 
-	^ Color r: 0.14 g: 0.17 b: 0.24
+	^ self theme popUpColor
 ]
 
 { #category : 'layout' }
@@ -113,11 +135,9 @@ TLBlocPopUpElement >> initialize [
 				 bottom: 6
 				 right: 11);
 		geometry: (BlRoundedRectangleGeometry cornerRadius: 7);
-		background: self backgroundColor;
-		border: (BlBorder paint: (Color white alpha: 0.12) width: 1);
-		effect: (BlGaussianShadowEffect color: (Color black alpha: 0.35) width: 9 offset: 0 @ 3);
 		preventMeAndChildrenMouseEvents;
-		addEventHandlerOn: BlElementLayoutComputedEvent do: [ :event | self placeNearAnchor ]
+		addEventHandlerOn: BlElementLayoutComputedEvent do: [ :event | self placeNearAnchor ].
+	self applyTheme
 ]
 
 { #category : 'accessing' }
@@ -174,5 +194,20 @@ TLBlocPopUpElement >> text: aString [
 { #category : 'accessing' }
 TLBlocPopUpElement >> textColor [
 
-	^ Color r: 0.94 g: 0.96 b: 0.99
+	^ self theme popUpTextColor
+]
+
+{ #category : 'theme' }
+TLBlocPopUpElement >> theme [
+	"The theme which gives my colors: the default one unless I was given another one"
+
+	^ theme ifNil: [ theme := TLBlocTheme default ]
+]
+
+{ #category : 'theme' }
+TLBlocPopUpElement >> theme: aTheme [
+	"Given before the text: it has the color of the theme"
+
+	theme := aTheme.
+	self applyTheme
 ]
