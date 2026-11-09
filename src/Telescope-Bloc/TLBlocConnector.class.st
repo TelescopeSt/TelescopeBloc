@@ -21,6 +21,7 @@ Layout updates
 - The first layout is not animated and fits the visualization into the window.
 - When a layout is applied again, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default. A zero duration disables the animation.
 - The nodes which an interaction adds start from the node of the interaction and slide to their place.
+- The nodes and the connections which appear in a visualization already shown fade in (#fadeIn:), and the colors of a node or of a connection whose style an interaction changes, for example to highlight it, change progressively (TTLBlocEasedColors). A zero #animationDuration turns these transitions off too.
 - The visualization is fitted again into its window when a layout which is applied again moves or adds a node, unless its auto fit is turned off.
 
 Interactions
@@ -130,6 +131,7 @@ TLBlocConnector >> actedDrawableFor: aTLDrawable targeting: aTargetDrawable [
 TLBlocConnector >> addElementConnectionInView: element [
 
 	self view content addChild: element.
+	self fadeIn: element.
 	connections add: element.
 	element fromNode registerConnection: element.
 	element toNode registerConnection: element
@@ -158,7 +160,8 @@ TLBlocConnector >> addElementLegendItemInView: legendItem [
 { #category : 'view' }
 TLBlocConnector >> addElementNodeInView: element [
 
-	self view content addChild: element
+	self view content addChild: element.
+	self fadeIn: element
 ]
 
 { #category : 'generation - interaction' }
@@ -169,6 +172,13 @@ TLBlocConnector >> addHandlerOn: anEventClass to: anElement for: aTLDrawable do:
 	handler := anElement addEventHandlerOn: anEventClass do: aBlock.
 	(interactionHandlers at: aTLDrawable ifAbsentPut: [ OrderedCollection new ]) add: anElement -> handler.
 	^ handler
+]
+
+{ #category : 'animation' }
+TLBlocConnector >> animatesTransitions [
+	"The transitions are animated unless the animations of the layouts are off"
+
+	^ animationDuration isZero not
 ]
 
 { #category : 'accessing' }
@@ -221,6 +231,13 @@ TLBlocConnector >> closeVisualization [
 	"Closes the window of the visualization"
 
 	view space ifNotNil: [ :space | space close ]
+]
+
+{ #category : 'animation' }
+TLBlocConnector >> colorTransitionDuration [
+	"The time the colors of a node or of a connection take to change when an interaction changes its style, for example to highlight it"
+
+	^ 150 milliSeconds
 ]
 
 { #category : 'layout' }
@@ -356,6 +373,13 @@ TLBlocConnector >> dynamicLegendEntry: aDynamicEntry swatchFor: aBlock [
 	^ element
 ]
 
+{ #category : 'animation' }
+TLBlocConnector >> easeColorsOf: anElement [
+	"The colors of the element go progressively to the ones its style now gives"
+
+	self animatesTransitions ifTrue: [ anElement easeColorsDuring: self colorTransitionDuration ]
+]
+
 { #category : 'generation - interaction' }
 TLBlocConnector >> event: aMouseEvent isForElement: anElement [
 	"The mouse events go up from the element under the pointer to its parents, which are the nodes which contain it. An event is for the nearest node or connection from the element under the pointer: the label of a node is for the node, and the children of a composite node are not for the composite"
@@ -383,6 +407,25 @@ TLBlocConnector >> executeAnimatingFrom: anElement do: aBlock [
 
 	animationOrigin := self centerOf: anElement.
 	aBlock ensure: [ animationOrigin := nil ]
+]
+
+{ #category : 'animation' }
+TLBlocConnector >> fadeDuration [
+	"The time a node or a connection which appears in a visualization already shown takes to become opaque"
+
+	^ 200 milliSeconds
+]
+
+{ #category : 'animation' }
+TLBlocConnector >> fadeIn: anElement [
+	"An element which appears in a visualization already shown, for example the node an interaction adds, becomes opaque progressively. The ones of the first display appear at once, with the window"
+
+	(self animatesTransitions and: [ view isNotNil and: [ view isAttachedToSceneGraph ] ]) ifFalse: [ ^ self ].
+	anElement opacity: 0.
+	anElement addAnimation: (BlOpacityAnimation new
+			 opacity: 1;
+			 duration: self fadeDuration;
+			 yourself)
 ]
 
 { #category : 'updating' }
@@ -1020,7 +1063,8 @@ TLBlocConnector >> updateConnections [
 TLBlocConnector >> updateEdgeOf: aConnection [
 	"An interaction changed the style of the connection, for example to highlight it: the element is made again from the style sheet, and the connections are drawn again once the update is done"
 
-	(self elementFromTLDrawable: aConnection) customizeFromConnection: aConnection
+	(self elementFromTLDrawable: aConnection) customizeFromConnection: aConnection.
+	self easeColorsOf: (self elementFromTLDrawable: aConnection)
 ]
 
 { #category : 'updating - interaction' }
@@ -1030,6 +1074,7 @@ TLBlocConnector >> updateElementNodeOf: aNode [
 	| element |
 	element := self elementFromTLDrawable: aNode.
 	element customizeFromNode: aNode.
+	self easeColorsOf: element.
 	element replaceLabelWith: (self labelElementOf: aNode).
 	self updateTriggersOf: aNode
 ]

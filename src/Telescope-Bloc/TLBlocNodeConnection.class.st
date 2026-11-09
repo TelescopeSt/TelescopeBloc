@@ -4,6 +4,8 @@ I am the Bloc element of a connection between two nodes of a Telescope visualiza
 Class {
 	#name : 'TLBlocNodeConnection',
 	#superclass : 'BlElement',
+	#traits : 'TTLBlocEasedColors',
+	#classTraits : 'TTLBlocEasedColors classTrait',
 	#instVars : [
 		'fromNode',
 		'toNode',
@@ -33,6 +35,15 @@ TLBlocNodeConnection class >> from: aSourceElement to: aTargetElement [
 	^ self new
 		  fromNode: aSourceElement toNode: aTargetElement;
 		  yourself
+]
+
+{ #category : 'colors' }
+TLBlocNodeConnection >> applyColors: someColors [
+	"The line and the head"
+
+	self border: (self border copyWithPaint: someColors first).
+	headColor := someColors second.
+	head ifNotNil: [ :element | element background: headColor ]
 ]
 
 { #category : 'arrows' }
@@ -114,6 +125,9 @@ TLBlocNodeConnection >> customizeFromConnection: aTLConnection [
 		             ifTrue: [ headStyle color ]
 		             ifFalse: [ styleSheet color ].
 	arrows := TLBlocConnectionArrow arrowsFrom: styleSheet lineColor: styleSheet color.
+	self showColors: {
+			styleSheet color.
+			headColor }.
 	(styleSheet attributes includesKey: #connectionLabel) ifTrue: [ self createLabelFrom: styleSheet ]
 ]
 

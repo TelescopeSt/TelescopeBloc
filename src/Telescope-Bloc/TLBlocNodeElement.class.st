@@ -4,6 +4,8 @@ I am the Bloc element of a Telescope node. My dimension, my background and my bo
 Class {
 	#name : 'TLBlocNodeElement',
 	#superclass : 'BlElement',
+	#traits : 'TTLBlocEasedColors',
+	#classTraits : 'TTLBlocEasedColors classTrait',
 	#instVars : [
 		'dimension',
 		'outline',
@@ -54,6 +56,14 @@ TLBlocNodeElement >> adoptChildren: aTLBlocGroup [
 	self fitToChildren
 ]
 
+{ #category : 'colors' }
+TLBlocNodeElement >> applyColors: someColors [
+	"The background and the border"
+
+	self background: someColors first.
+	self border: (self border copyWithPaint: someColors second)
+]
+
 { #category : 'layout' }
 TLBlocNodeElement >> asBlocElement [
 	"The Bloc element that stands for a node or a group: the node itself"
@@ -86,15 +96,20 @@ TLBlocNodeElement >> customizeFromNode: aNode [
 TLBlocNodeElement >> customizeFromNode: aNode styleSheet: styleSheet [
 	"The style sheet is the effective one of the node, given because merging the style sheets of the parents of a node costs. The colors, the dimension and the shape of the style sheet can depend on the entity of the node: a block, or a gradient for the colors, gives the value of each node. It can be called again when an interaction changed the style: the previous inner border is removed, a composite node is still as big as its children, and a node which takes all the space of its line keeps the height the layout gave it. The border is drawn with the line style of the style sheet, solid by default, half inside and half outside of the edge of the node"
 
-	| previous |
+	| previous backgroundColor borderColor |
 	previous := dimension.
 	self beOutskirtsCentered.
-	self background: (self valueOf: #backgroundColor in: styleSheet forNode: aNode).
+	backgroundColor := self valueOf: #backgroundColor in: styleSheet forNode: aNode.
+	self background: backgroundColor.
 	shape := self valueOf: #shape in: styleSheet forNode: aNode.
 	borderStyle := (styleSheet attributes includesKey: #borderStyle)
 		               ifTrue: [ styleSheet borderStyle ]
 		               ifFalse: [ TLSolidLineStyle ].
-	self border: (borderStyle blocBorderPaint: (self valueOf: #borderColor in: styleSheet forNode: aNode) width: styleSheet borderWidth).
+	borderColor := self valueOf: #borderColor in: styleSheet forNode: aNode.
+	self border: (borderStyle blocBorderPaint: borderColor width: styleSheet borderWidth).
+	self showColors: {
+			backgroundColor.
+			borderColor }.
 	ownDimension := (self valueOf: #width in: styleSheet forNode: aNode) @ (self valueOf: #height in: styleSheet forNode: aNode).
 	occupiesMaxSpace := (self valueOf: #takeAllSpace in: styleSheet forNode: aNode) == true.
 	self dimension: ((occupiesMaxSpace and: [ previous isNotNil ])
