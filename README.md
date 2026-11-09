@@ -63,6 +63,12 @@ The demo browser lists them, filters them, shows the visualization and the sourc
 A theme gives the colors of what surrounds a visualization: the canvas behind it, the toolbar and its buttons, the legend, the menus and the pop ups.
 TelescopeBloc has a light theme, `TLBlocLightTheme`, the default one, a dark theme, `TLBlocDarkTheme`, and a dark blue theme, `TLBlocDarkBlueTheme`, which has the colors of the dark blue theme of Pharo.
 
+| Light | Dark | Dark blue |
+|---|---|---|
+| <img src="resources/theme-light.png" width="100%"> | <img src="resources/theme-dark.png" width="100%"> | <img src="resources/theme-dark-blue.png" width="100%"> |
+
+The same visualization in the three themes: the toolbar, the legend at the bottom left, and the pop up of the node under the mouse take the colors of the theme. The labels of the dark themes are white, given by the style sheet (see [What a theme does not change](#what-a-theme-does-not-change)).
+
 ### Choosing a theme
 
 Give the theme to the connector before the visualization is opened:
@@ -78,6 +84,8 @@ The theme is given to the elements when they are made: changing it once the visu
 
 `TLBlocTheme available` answers an instance of each theme, sorted by name, and `TLBlocTheme default` the theme of a connector which is not given one.
 In the demo browser, the list under the filter shows the available themes: the demos are shown in the chosen one, and choosing another theme shows the selected demo again in it.
+
+![The demo browser in the dark blue theme of Pharo, with the dark blue theme chosen in the list under the filter](resources/theme-demo-browser.png)
 
 ### Building a theme
 
