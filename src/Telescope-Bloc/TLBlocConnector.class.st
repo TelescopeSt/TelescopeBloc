@@ -59,8 +59,7 @@ Class {
 		'interactionHandlers',
 		'generatedInteractions',
 		'externalInteractions',
-		'connectionObstacles',
-		'stableLayoutCount'
+		'routeUpdatePending'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -200,11 +199,6 @@ TLBlocConnector >> connectionHeadShapesAvailableForConnector [
 	"Every shape can be the head of a connection, since the head is drawn from the outline of the shape"
 
 	^ TLSimpleShape allSubclasses
-]
-
-{ #category : 'accessing' }
-TLBlocConnector >> connectionObstacles [
-	^ connectionObstacles
 ]
 
 { #category : 'accessing' }
@@ -593,23 +587,6 @@ TLBlocConnector >> isTrigger: aTLDrawable [
 	^ aTLDrawable class = TLShapeTrigger
 ]
 
-{ #category : 'updating' }
-TLBlocConnector >> keepWatchingTheObstaclesAfterTheNextLayout [
-
-	view whenLayoutedDoOnce: [
-			| current |
-			current := self obstacleRectangles.
-			current = connectionObstacles
-				ifTrue: [ stableLayoutCount := stableLayoutCount + 1 ]
-				ifFalse: [
-						connectionObstacles := current.
-						stableLayoutCount := 0.
-						self updateConnectionRoutes ].
-			stableLayoutCount < self layoutsToBeStable
-				ifTrue: [ self keepWatchingTheObstaclesAfterTheNextLayout ]
-				ifFalse: [ connectionObstacles := nil ] ]
-]
-
 { #category : 'generation - node' }
 TLBlocConnector >> labelElementOf: aNode [
 	"The label of the node, or nil when its style gives none"
@@ -623,13 +600,6 @@ TLBlocConnector >> labelElementOf: aNode styleSheet: styleSheet [
 
 	^ ((styleSheet attributes includesKey: #nodeLabel) and: [ (styleSheet obtainValue: #nodeLabel forEntity: aNode entity inNode: aNode) ~~ TLNoNodeLabel ]) ifTrue: [
 		  TLBlocLabelElement forNode: aNode styleSheet: styleSheet ]
-]
-
-{ #category : 'updating' }
-TLBlocConnector >> layoutsToBeStable [
-	"The number of layouts in a row where the nodes and their labels did not move, after which the connections stop being watched"
-
-	^ 4
 ]
 
 { #category : 'generation - legend' }
@@ -655,13 +625,6 @@ TLBlocConnector >> nodesShapesAvailableForConnector [
 	"The shapes a node can have: all but the ones that are only for connections"
 
 	^ TLSimpleShape allSubclasses select: [ :each | each isAvailableForBlocNode ]
-]
-
-{ #category : 'updating' }
-TLBlocConnector >> obstacleRectangles [
-	"The rectangles of the nodes and of their labels, in the coordinates of the view, which the connections with segments go around"
-
-	^ (view allChildrenBreadthFirstSelect: [ :element | element class == TLBlocNodeElement and: [ element isTrigger not ] ]) collect: [ :element | element rectangleWithLabelRelativeTo: view ]
 ]
 
 { #category : 'opening' }
@@ -828,11 +791,6 @@ TLBlocConnector >> spreadParallelConnections [
 							 ifFalse: [ offset negated ]) ] ]
 ]
 
-{ #category : 'accessing' }
-TLBlocConnector >> stableLayoutCount [
-	^ stableLayoutCount
-]
-
 { #category : 'layout' }
 TLBlocConnector >> startPendingAnimation [
 	"The update is done and the items are at their final place. They go back to where they were, and an animation brings them to their place, slowly at first and at the end, with the connections following them. The new items start from the origin of the animation, if there is one. The places are the top left corners of the elements, so that the nodes of a group, which move with it, do not change where the group goes"
@@ -921,11 +879,27 @@ TLBlocConnector >> updateConnectionRoutes [
 ]
 
 { #category : 'updating' }
+TLBlocConnector >> updateConnectionRoutesWhenTheLayoutsAreSettled [
+	"The labels are measured and placed after the layouts: the connections which go around the nodes are made again once, when the layouts of the window are done. Only one update waits at a time, however many times the connections are updated in the meantime"
+
+	| update |
+	routeUpdatePending == true ifTrue: [ ^ self ].
+	(connections anySatisfy: [ :connection | connection avoidsOtherNodes ]) ifFalse: [ ^ self ].
+	routeUpdatePending := true.
+	update := [
+		          routeUpdatePending := false.
+		          self updateConnectionRoutes ].
+	view isAttachedToSceneGraph
+		ifTrue: [ view space whenLayoutSettledDo: update ]
+		ifFalse: [ view addEventHandlerOn: BlElementAddedToSceneGraphEvent doOnce: [ :event | view space whenLayoutSettledDo: update ] ]
+]
+
+{ #category : 'updating' }
 TLBlocConnector >> updateConnections [
-	"The connections join the borders of their nodes, which the layouts have just placed. The connections which go around the nodes are made again while the nodes and their labels move, because the labels are measured and placed after the layouts and are in their way too"
+	"The connections join the borders of their nodes, which the layouts have just placed. The connections which go around the nodes are made again when the layouts are settled, because the labels are measured and placed after the layouts and are in their way too"
 
 	self updateConnectionRoutes.
-	self watchTheObstaclesOfTheConnections
+	self updateConnectionRoutesWhenTheLayoutsAreSettled
 ]
 
 { #category : 'updating - shape' }
@@ -1015,16 +989,4 @@ TLBlocConnector >> updateViewForVisualization: aTLVisualization [
 	self startPendingAnimation.
 	reapplied ifTrue: [ self fitAgainWhenTheNodesAreMeasured ].
 	self updateConnections
-]
-
-{ #category : 'updating' }
-TLBlocConnector >> watchTheObstaclesOfTheConnections [
-	"The labels are measured and placed after the layouts: the connections which go around the nodes are made again after each layout which moves a node or a label, until nothing has moved for a few layouts"
-
-	| watching |
-	(connections anySatisfy: [ :connection | connection avoidsOtherNodes ]) ifFalse: [ ^ self ].
-	watching := connectionObstacles isNotNil.
-	connectionObstacles := self obstacleRectangles.
-	stableLayoutCount := 0.
-	watching ifFalse: [ self keepWatchingTheObstaclesAfterTheNextLayout ]
 ]
