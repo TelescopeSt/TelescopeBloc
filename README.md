@@ -57,10 +57,34 @@ The demo browser lists them, filters them, shows the visualization and the sourc
 - A visualization is fitted into its window when it opens, and again when a layout applied again moves or adds nodes, unless the auto fit is off.
 - The nodes move smoothly when a layout is applied again, and the ones an interaction adds slide from the node of the interaction.
 - The colors of the window, of the toolbar, of the legend, of the menus and of the pop ups come from a theme: light by default, dark, or dark blue (see [Themes](#themes)).
+- A discreet grid of dots behind the visualization follows its panning and its zoom (see [Grid](#grid)).
+
+## Grid
+
+A grid of dots is drawn behind the visualization, which gives a sense of the space and of the zoom.
+Its dots are a grid of the content: they follow the panning and the zoom of the visualization.
+When the content is zoomed out, every other dot is drawn, and when it is zoomed in, dots are added between them, so that they stay between 12 and 48 pixels apart.
+The grid does not take the mouse, a press on it pans, and it is not in the PNG and SVG exports.
+Its color is the `gridColor` of the [theme](#themes).
+
+The grid is shown by default. It can be turned off for all the visualizations in the settings browser, in the group `Telescope Bloc`, with the setting `Grid of dots`, or from code:
+
+```Smalltalk
+TLBlocConnector gridVisible: false
+```
+
+A connector can also show it or not whatever the setting, before the visualization is opened:
+
+```Smalltalk
+connector := TLBlocConnector new.
+connector gridVisible: false.
+visualization generator: connector.
+visualization open
+```
 
 ## Themes
 
-A theme gives the colors of what surrounds a visualization: the canvas behind it, the toolbar and its buttons, the legend, the menus and the pop ups.
+A theme gives the colors of what surrounds a visualization: the canvas behind it and its grid, the toolbar and its buttons, the legend, the menus and the pop ups.
 TelescopeBloc has a light theme, `TLBlocLightTheme`, the default one, a dark theme, `TLBlocDarkTheme`, and a dark blue theme, `TLBlocDarkBlueTheme`, which has the colors of the dark blue theme of Pharo.
 
 | Light | Dark | Dark blue |
@@ -124,6 +148,7 @@ The colors of a theme are:
 | `menuColor`, `menuHoverColor` | a menu, and the line under the mouse |
 | `popUpColor`, `popUpBorderColor`, `popUpTextColor`, `popUpShadowColor` | the pop ups and the tooltips |
 | `swatchOutlineColor` | the outline of the swatches of the legend which show a color |
+| `gridColor` | the dots of the grid behind the visualization |
 
 ### What a theme does not change
 
