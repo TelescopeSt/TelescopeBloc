@@ -83,7 +83,8 @@ TLBlocConnector >> actedDrawableFor: aTLDrawable targeting: aTargetDrawable [
 
 { #category : 'generation - connection' }
 TLBlocConnector >> addElementConnectionInView: element [
-	self view addChild: element.
+
+	self view content addChild: element.
 	connections add: element.
 	element fromNode registerConnection: element.
 	element toNode registerConnection: element
@@ -111,7 +112,8 @@ TLBlocConnector >> addElementLegendItemInView: legendItem [
 
 { #category : 'view' }
 TLBlocConnector >> addElementNodeInView: element [
-	self view addChild: element
+
+	self view content addChild: element
 ]
 
 { #category : 'generation - interaction' }
@@ -659,9 +661,9 @@ TLBlocConnector >> nodesShapesAvailableForConnector [
 
 { #category : 'updating' }
 TLBlocConnector >> obstacleRectangles [
-	"The rectangles of the nodes and of their labels, in the coordinates of the view, which the connections with segments go around"
+	"The rectangles of the nodes and of their labels, in the coordinates of the content of the view, the ones of the connections, which the connections with segments go around"
 
-	^ (view allChildrenBreadthFirstSelect: [ :element | element class == TLBlocNodeElement and: [ element isTrigger not ] ]) collect: [ :element | element rectangleWithLabelRelativeTo: view ]
+	^ (view allChildrenBreadthFirstSelect: [ :element | element class == TLBlocNodeElement and: [ element isTrigger not ] ]) collect: [ :element | element rectangleWithLabelRelativeTo: view content ]
 ]
 
 { #category : 'opening' }
@@ -785,6 +787,15 @@ TLBlocConnector >> removeTriggersOf: aDrawable [
 	"The elements of the triggers of a node, which are made again with its interactions"
 
 	self elementFromTLDrawable: aDrawable ifPresent: [ :element | element class = TLBlocNodeElement ifTrue: [ element triggerElements do: #removeFromParent ] ] ifNone: [ ]
+]
+
+{ #category : 'updating' }
+TLBlocConnector >> routeOutdatedConnections [
+	"The connections which do not join their nodes as they are anymore are made again, and the ones which go around the nodes, as a node may be in their way now. The others cannot change, and they are many: they are left alone"
+
+	| nodeElements |
+	nodeElements := self nodeElementsInTheWayOfConnections.
+	connections do: [ :connection | (connection avoidsOtherNodes or: [ connection isJoiningTheNodesWhereTheyAre not ]) ifTrue: [ self updateRouteOf: connection among: nodeElements ] ]
 ]
 
 { #category : 'layout' }
@@ -912,12 +923,10 @@ TLBlocConnector >> update: shape withRectangleShape: aTLRectangleShape [
 
 { #category : 'updating' }
 TLBlocConnector >> updateConnectionRoutes [
-	"Those which join the same two nodes are spread first, so that a Bezier curve is an arc for them. The connections with segments go around the nodes in their way, but not around the triggers, which are on the border of their nodes"
+	"Those which join the same two nodes are spread first, so that a Bezier curve is an arc for them. Then only the connections which do not join their nodes as they are anymore are made again, and the ones which go around the nodes (see #routeOutdatedConnections): an update, such as the highlight of a mouse over, does not move most of them, and routing 2000 connections takes more than 100 ms"
 
-	| nodeElements |
 	self spreadParallelConnections.
-	nodeElements := self nodeElementsInTheWayOfConnections.
-	connections do: [ :connection | self updateRouteOf: connection among: nodeElements ]
+	self routeOutdatedConnections
 ]
 
 { #category : 'updating' }
@@ -970,11 +979,9 @@ TLBlocConnector >> updateLegend: aTLLegend [
 
 { #category : 'updating' }
 TLBlocConnector >> updateOutdatedConnections [
-	"The connections which do not join their nodes where they are anymore are made again, and the ones which go around the nodes, as a node may be in their way now. The user moved a node, and its children with it, but a node can also move without the user touching it, for example a composite node which fits its children once a label is measured. The other connections cannot change, and a drag asks for an update at each move of the mouse, so they are left alone. No connection was added or removed: the parallel ones are not spread again"
+	"The user moved a node, and its children with it, but a node can also move without the user touching it, for example a composite node which fits its children once a label is measured: the connections which do not join their nodes as they are anymore are made again (see #routeOutdatedConnections). A drag asks for it at each move of the mouse. No connection was added or removed: the parallel ones are not spread again"
 
-	| nodeElements |
-	nodeElements := self nodeElementsInTheWayOfConnections.
-	connections do: [ :connection | (connection avoidsOtherNodes or: [ connection isJoiningTheNodesWhereTheyAre not ]) ifTrue: [ self updateRouteOf: connection among: nodeElements ] ].
+	self routeOutdatedConnections.
 	self watchTheObstaclesOfTheConnections
 ]
 

@@ -254,7 +254,7 @@ TLBlocConnectorConnectionTest >> testConnectionIsAnElementOfTheView [
 	visualization generateWith: connector.
 	element := connector elementFromTLDrawable: connection.
 	self assert: element class equals: TLBlocNodeConnection.
-	self assert: (connector view children includes: element)
+	self assert: (connector view content children includes: element)
 ]
 
 { #category : 'tests - line style' }
@@ -264,6 +264,21 @@ TLBlocConnectorConnectionTest >> testConnectionIsSolidByDefault [
 	element := self elementOfConnectionStyledWith: nil.
 	self deny: element border style isDashed.
 	self assertEmpty: element lines
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testConnectionJoinedByAnotherOneBetweenTheSameNodesBecomesAnArc [
+
+	| nodes first pointsBefore |
+	nodes := (1 to: 2) collect: [ :entity | visualization addNodeFromEntity: entity ].
+	first := nodes first connectTo: nodes second.
+	connector open: visualization inWindowSized: 400 @ 300 titled: 'Connections'.
+	connector view space settleForDuration: 1 seconds.
+	pointsBefore := (connector elementFromTLDrawable: first) route points.
+	nodes second connectTo: nodes first.
+	visualization update.
+	connector view space settleForDuration: 1 seconds.
+	self deny: (connector elementFromTLDrawable: first) route points equals: pointsBefore
 ]
 
 { #category : 'tests' }
@@ -323,7 +338,7 @@ TLBlocConnectorConnectionTest >> testConnectionStyleDemoGeneratesAConnectionForE
 	visualization := TLDemos exampleConnectionStyle.
 	visualization generator: connector.
 	visualization generateWith: connector.
-	count := (connector view children select: [ :each | each class == TLBlocNodeConnection ]) size.
+	count := (connector view content children select: [ :each | each class == TLBlocNodeConnection ]) size.
 	self assert: count equals: TLSimpleShape allSubclasses size + 1
 ]
 
@@ -394,6 +409,26 @@ TLBlocConnectorConnectionTest >> testConnectionsInTheSameDirectionAreCurvedOnDif
 	second := connector connections last.
 	self assert: first geometry class equals: BlBezierCurveGeometry.
 	self assert: (first route middlePoint - second route middlePoint) r > 10
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testConnectionsOfANodeWhichChangesItsShapeJoinItsNewBorder [
+	"The node keeps its place and its size: only its outline changes. The connection is diagonal, where the border of an ellipse is not the one of a rectangle"
+
+	| nodes connection pointsBefore |
+	nodes := (1 to: 4) collect: [ :entity | visualization addNodeFromEntity: entity ].
+	connection := nodes first connectTo: nodes fourth.
+	visualization styleSheet
+		width: 40;
+		height: 40.
+	visualization layout: (TLLinearLayout perLine: 2).
+	nodes fourth addInteraction: (TLStyleCustomizationAction custom: [ :style | style shape: TLEllipse ]) onMouseOver.
+	connector open: visualization inWindowSized: 400 @ 300 titled: 'Connections'.
+	connector view space settleForDuration: 1 seconds.
+	pointsBefore := (connector elementFromTLDrawable: connection) route points.
+	(connector elementFromTLDrawable: nodes fourth) dispatchEvent: BlMouseEnterEvent new.
+	connector view space settleForDuration: 1 seconds.
+	self deny: (connector elementFromTLDrawable: connection) route points equals: pointsBefore
 ]
 
 { #category : 'tests' }
@@ -538,6 +573,23 @@ TLBlocConnectorConnectionTest >> testHeadHasTheColorOfTheConnectionUnlessItHasIt
 	visualization generateWith: connector.
 	self assert: (connector elementFromTLDrawable: plain) head background paint color equals: Color red.
 	self assert: (connector elementFromTLDrawable: colored) head background paint color equals: Color blue
+]
+
+{ #category : 'tests' }
+TLBlocConnectorConnectionTest >> testHighlightingANodeDoesNotRouteTheOtherConnectionsAgain [
+	"A mouse over updates the visualization: routing all the connections again made it take more than 100 ms with 2000 connections"
+
+	| nodes unrelated routeBefore |
+	nodes := (1 to: 4) collect: [ :entity | visualization addNodeFromEntity: entity ].
+	nodes first connectTo: nodes second.
+	unrelated := nodes third connectTo: nodes fourth.
+	visualization addInteraction: (TLStyleCustomizationAction custom: [ :style | style backgroundColor: Color red ]) onMouseOver.
+	connector open: visualization inWindowSized: 400 @ 300 titled: 'Connections'.
+	connector view space settleForDuration: 1 seconds.
+	routeBefore := (connector elementFromTLDrawable: unrelated) route.
+	(connector elementFromTLDrawable: nodes first) dispatchEvent: BlMouseEnterEvent new.
+	connector view space settleForDuration: 1 seconds.
+	self assert: (connector elementFromTLDrawable: unrelated) route identicalTo: routeBefore
 ]
 
 { #category : 'tests - curves' }
@@ -811,7 +863,7 @@ TLBlocConnectorConnectionTest >> testSimpleConnectionsDemoGeneratesItsTenConnect
 	visualization := TLDemos exampleSimpleConnections.
 	visualization generator: connector.
 	visualization generateWith: connector.
-	connections := connector view children select: [ :each | each class == TLBlocNodeConnection ].
+	connections := connector view content children select: [ :each | each class == TLBlocNodeConnection ].
 	self assert: connections size equals: 10
 ]
 

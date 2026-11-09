@@ -179,9 +179,9 @@ TLBlocConnectorTriggerTest >> testTreeExplorerNodesHaveATrigger [
 	visualization generator: connector.
 	connector open: visualization inWindowSized: 800 @ 600 titled: 'Tree'.
 	connector view space settleForDuration: 2 seconds.
-	self assert: (connector view children select: [ :child | child class = TLBlocNodeElement ]) isNotEmpty.
+	self assert: (connector view content children select: [ :child | child class = TLBlocNodeElement ]) isNotEmpty.
 	self assert:
-		((connector view children select: [ :child | child class = TLBlocNodeElement ]) allSatisfy: [ :element | (element children select: [ :child | child class = TLBlocNodeElement ]) size = 1 ])
+		((connector view content children select: [ :child | child class = TLBlocNodeElement ]) allSatisfy: [ :element | (element children select: [ :child | child class = TLBlocNodeElement ]) size = 1 ])
 ]
 
 { #category : 'tests' }

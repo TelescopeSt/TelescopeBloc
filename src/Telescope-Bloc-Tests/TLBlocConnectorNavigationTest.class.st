@@ -24,6 +24,13 @@ TLBlocConnectorNavigationTest >> moveTo: aPoint on: anElement [
 			 yourself)
 ]
 
+{ #category : 'helpers' }
+TLBlocConnectorNavigationTest >> originOfTheView [
+	"Where the point 0 @ 0 of the visualization is in the window: the panning and the zoom move it"
+
+	^ connector view localPointToGlobal: 0 @ 0
+]
+
 { #category : 'events' }
 TLBlocConnectorNavigationTest >> pressAt: aPoint on: anElement [
 	"fireEvent: sends the event up to the root of the window like a real mouse, dispatchEvent: would stop at the element. The position is the one in the window, as Bloc gives it. The screen position is the one on the desktop, which is not the same, for example on a display with a scale"

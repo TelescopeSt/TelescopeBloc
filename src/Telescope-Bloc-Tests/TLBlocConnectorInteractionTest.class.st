@@ -36,7 +36,7 @@ TLBlocConnectorInteractionTest >> connectionElement [
 { #category : 'tests' }
 TLBlocConnectorInteractionTest >> connectionElements [
 
-	^ connector view children select: [ :element | element class = TLBlocNodeConnection ]
+	^ connector view content children select: [ :element | element class = TLBlocNodeConnection ]
 ]
 
 { #category : 'tests' }
@@ -82,7 +82,7 @@ TLBlocConnectorInteractionTest >> mouseLeave: aNode [
 { #category : 'tests' }
 TLBlocConnectorInteractionTest >> nodeElements [
 
-	^ connector view children select: [ :element | element class = TLBlocNodeElement ]
+	^ connector view content children select: [ :element | element class = TLBlocNodeElement ]
 ]
 
 { #category : 'tests' }

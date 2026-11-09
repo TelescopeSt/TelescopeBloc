@@ -87,25 +87,33 @@ TLBlocConnectorZoomTest >> testZoomKeepsThePointUnderTheCursorFixed [
 
 	| cursor localBefore localAfter |
 	cursor := 120 @ 90.
-	localBefore := cursor - connector view position / connector view zoom.
+	localBefore := cursor - self originOfTheView / connector view zoom.
 	self scrollUpAt: cursor.
 	self settle.
-	localAfter := cursor - connector view position / connector view zoom.
+	localAfter := cursor - self originOfTheView / connector view zoom.
 	self assert: (localAfter - localBefore) abs < (0.5 @ 0.5)
 ]
 
 { #category : 'tests' }
 TLBlocConnectorZoomTest >> testZoomedVisualizationStillPansByTheDragDistance [
-	"The position of the view is the one of its bounds, which Bloc computes with the transformation of the zoom: it is right to a fraction of a pixel"
+	"The origin of the view is computed with the transformation of the zoom: it is right to a fraction of a pixel"
 
 	| root before |
 	root := connector view space root.
 	self scrollUpAt: 100 @ 100.
 	self settle.
-	before := connector view position.
+	before := self originOfTheView.
 	self pressAt: 50 @ 50 on: root.
 	self moveTo: 80 @ 70 on: root.
 	self releaseAt: 80 @ 70 on: root.
 	self settle.
-	self assert: (connector view position - (before + (30 @ 20))) abs < (0.05 @ 0.05)
+	self assert: (self originOfTheView - (before + (30 @ 20))) abs < (0.05 @ 0.05)
+]
+
+{ #category : 'tests' }
+TLBlocConnectorZoomTest >> testZoomingDoesNotLayOutTheVisualizationAgain [
+	"The zoom only changes the transformation of the visualization: laying out its nodes and labels again at each step of the zoom would make it slow with many nodes"
+
+	connector view zoomBy: 1.5 around: 100 @ 100.
+	self deny: connector view space isLayoutRequested
 ]

@@ -30,7 +30,7 @@ TLBlocConnectorNodeTest >> testOpeningTenNodesShowsThemInAWindow [
 
 	visualization addNodesFromEntities: (1 to: 10).
 	connector open: visualization inWindowSized: 400 @ 300 titled: 'Ten nodes'.
-	self assert: connector view children size equals: 10
+	self assert: connector view content children size equals: 10
 ]
 
 { #category : 'tests' }
@@ -47,7 +47,7 @@ TLBlocConnectorNodeTest >> testTenNodesAreGeneratedInTheView [
 
 	visualization addNodesFromEntities: (1 to: 10).
 	visualization generateWith: connector.
-	self assert: connector view children size equals: 10
+	self assert: connector view content children size equals: 10
 ]
 
 { #category : 'tests' }
@@ -56,7 +56,7 @@ TLBlocConnectorNodeTest >> testTenNodesAreLaidOutAtDistinctPositions [
 	| positions |
 	visualization addNodesFromEntities: (1 to: 10).
 	visualization generateWith: connector.
-	positions := connector view children collect: [ :each | each measuredBounds position ].
+	positions := connector view content children collect: [ :each | each measuredBounds position ].
 	self assert: positions asSet size equals: 10
 ]
 
