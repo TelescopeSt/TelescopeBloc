@@ -56,6 +56,75 @@ The demo browser lists them, filters them, shows the visualization and the sourc
 - The legend of the visualization is at the bottom left.
 - A visualization is fitted into its window when it opens, and again when a layout applied again moves or adds nodes, unless the auto fit is off.
 - The nodes move smoothly when a layout is applied again, and the ones an interaction adds slide from the node of the interaction.
+- The colors of the window, of the toolbar, of the legend, of the menus and of the pop ups come from a theme: light by default, dark, or dark blue (see [Themes](#themes)).
+
+## Themes
+
+A theme gives the colors of what surrounds a visualization: the canvas behind it, the toolbar and its buttons, the legend, the menus and the pop ups.
+TelescopeBloc has a light theme, `TLBlocLightTheme`, the default one, a dark theme, `TLBlocDarkTheme`, and a dark blue theme, `TLBlocDarkBlueTheme`, which has the colors of the dark blue theme of Pharo.
+
+### Choosing a theme
+
+Give the theme to the connector before the visualization is opened:
+
+```Smalltalk
+connector := TLBlocConnector new.
+connector theme: TLBlocDarkTheme new.
+visualization generator: connector.
+visualization open
+```
+
+The theme is given to the elements when they are made: changing it once the visualization is open does not change the colors of what is shown.
+
+`TLBlocTheme available` answers an instance of each theme, sorted by name, and `TLBlocTheme default` the theme of a connector which is not given one.
+In the demo browser, the list under the filter shows the available themes: the demos are shown in the chosen one, and choosing another theme shows the selected demo again in it.
+
+### Building a theme
+
+A theme is a subclass of `TLBlocTheme` which answers its `name` and the colors listed by `TLBlocTheme colorSelectors`.
+The simplest way is to subclass an existing theme and to change some of its colors:
+
+```Smalltalk
+TLBlocLightTheme << #MySepiaTheme
+	slots: {};
+	package: 'MyProject'.
+
+MySepiaTheme >> name
+	^ 'Sepia'
+
+MySepiaTheme >> canvasColor
+	^ Color r: 0.98 g: 0.95 b: 0.88
+
+MySepiaTheme >> panelColor
+	^ (Color r: 0.95 g: 0.9 b: 0.8) alpha: 0.9
+```
+
+Every subclass which is not abstract is in `TLBlocTheme available`, so the new theme is also in the list of the demo browser.
+
+The colors of a theme are:
+
+| Color | Used for |
+|---|---|
+| `canvasColor` | the background of the window, behind the visualization |
+| `panelColor` | the background of the toolbar |
+| `panelBorderColor` | the border of the toolbar, of its buttons, of the legend and of the menus |
+| `legendColor` | the background of the legend |
+| `textColor` | the text of the buttons, of the legend and of the menus |
+| `iconColor` | the arrows of the buttons, of the menus and of the legend |
+| `buttonColor`, `buttonHoverColor` | a button, and a button under the mouse |
+| `toggledButtonColor`, `toggledButtonHoverColor` | a button which is on (the auto fit), and the same under the mouse |
+| `menuColor`, `menuHoverColor` | a menu, and the line under the mouse |
+| `popUpColor`, `popUpBorderColor`, `popUpTextColor`, `popUpShadowColor` | the pop ups and the tooltips |
+| `swatchOutlineColor` | the outline of the swatches of the legend which show a color |
+
+### What a theme does not change
+
+The colors of the nodes, of their labels and of the connections are the ones of the style sheet of the visualization, which a theme does not change.
+The default style sheet of Telescope has black texts and borders, made for a light canvas: with the dark theme, give the labels which are outside of the nodes a light color, for example:
+
+```Smalltalk
+visualization styleSheet textColor: Color white
+```
 
 ## What is rendered
 
