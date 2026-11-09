@@ -15,6 +15,15 @@ Class {
 	#tag : 'Navigation'
 }
 
+{ #category : 'accessing' }
+TLBlocNodeDragHandler >> draggedNode [
+	"The element of the node which the user is dragging, or nil: a press on a node is not a drag until the mouse went far enough"
+
+	^ (node isNotNil and: [ dragging ])
+		  ifTrue: [ node ]
+		  ifFalse: [ nil ]
+]
+
 { #category : 'events' }
 TLBlocNodeDragHandler >> eventsToHandle [
 
@@ -22,6 +31,13 @@ TLBlocNodeDragHandler >> eventsToHandle [
 		  BlMouseDownEvent.
 		  BlMouseMoveEvent.
 		  BlMouseUpEvent }
+]
+
+{ #category : 'initialization' }
+TLBlocNodeDragHandler >> initialize [
+
+	super initialize.
+	dragging := false
 ]
 
 { #category : 'events' }
@@ -47,7 +63,7 @@ TLBlocNodeDragHandler >> mouseMoveEvent: anEvent [
 	dragging ifFalse: [ dragging := pendingMove r >= self threshold ].
 	dragging ifFalse: [ ^ self ].
 	node wasDragged: true.
-	visualization keepPositionWhile: [
+	visualization keepPositionWhileMoving: node with: [
 			node placeAt: node placement + (pendingMove / visualization zoom).
 			node fitParentCompositesToTheirChildren ].
 	pendingMove := 0 @ 0.
@@ -59,7 +75,7 @@ TLBlocNodeDragHandler >> mouseUpEvent: anEvent [
 	"The node was dropped when it was dragged: it is told where, for the moved interactions of Telescope, and the node under the pointer is told which node was dropped on it, for its drop interactions"
 
 	| target |
-	(node isNotNil and: [ dragging == true ]) ifTrue: [
+	(node isNotNil and: [ dragging ]) ifTrue: [
 			node dispatchEvent: (TLBlocNodeMovedEvent new
 					 position: node placement + (node dimension / 2);
 					 yourself).

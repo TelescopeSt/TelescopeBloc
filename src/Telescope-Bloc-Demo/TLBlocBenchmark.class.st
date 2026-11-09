@@ -61,7 +61,7 @@ TLBlocBenchmark >> dragStepOf: aNodeElement in: aConnector [
 	view := aConnector view.
 	^ [
 		  steps timesRepeat: [
-				  view keepPositionWhile: [
+				  view keepPositionWhileMoving: aNodeElement with: [
 						  aNodeElement placeAt: aNodeElement placement + (4 @ 3).
 						  aNodeElement fitParentCompositesToTheirChildren ].
 				  view nodesMoved: aNodeElement.

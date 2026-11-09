@@ -445,6 +445,22 @@ TLBlocConnectorDragTest >> testNodeKnowsItWasDragged [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorDragTest >> testNodesAreUnderTheMouseAgainOnceTheDragIsOver [
+
+	| root dragged other |
+	connector view panBy: 0 @ 100.
+	self settle.
+	root := connector view space root.
+	dragged := self nodeElement.
+	other := connector elementFromTLDrawable: visualization allNodes last.
+	self pressAt: 5 @ 5 on: dragged.
+	self moveTo: 40 @ 40 on: root.
+	self releaseAt: 40 @ 40 on: root.
+	self settle.
+	self assert: (root findMouseEventTargetAt: other boundsInSpace center) identicalTo: other
+]
+
+{ #category : 'tests' }
 TLBlocConnectorDragTest >> testOnlyTheNodeUnderThePointerReceivesTheDrop [
 
 	| drops |
@@ -462,6 +478,28 @@ TLBlocConnectorDragTest >> testOtherNodesDoNotMove [
 	before := other measuredBounds position.
 	self drag: self nodeElement by: 60 @ 40.
 	self assert: other measuredBounds position equals: before
+]
+
+{ #category : 'tests' }
+TLBlocConnectorDragTest >> testOtherNodesStayInTheWindowWhenANodeIsDraggedBeyondTheTopLeftOfTheContent [
+	"The node becomes the top left corner of the content, which the visualization is anchored to: the panning compensates"
+
+	| other before |
+	other := connector elementFromTLDrawable: visualization allNodes first.
+	before := other boundsInSpace origin.
+	self drag: (connector elementFromTLDrawable: visualization allNodes last) by: -300 @ -200.
+	self assert: (other boundsInSpace origin - before) abs < (0.01 @ 0.01)
+]
+
+{ #category : 'tests' }
+TLBlocConnectorDragTest >> testOtherNodesStayInTheWindowWhenTheTopLeftNodeIsDraggedAway [
+	"The corner of the content is then another node: the panning compensates"
+
+	| other before |
+	other := connector elementFromTLDrawable: visualization allNodes last.
+	before := other boundsInSpace origin.
+	self drag: self nodeElement by: 200 @ 150.
+	self assert: (other boundsInSpace origin - before) abs < (0.01 @ 0.01)
 ]
 
 { #category : 'tests' }
@@ -513,4 +551,19 @@ TLBlocConnectorDragTest >> testSecondaryButtonDoesNotDragTheNode [
 	self moveTo: 65 @ 45 on: root.
 	self settle.
 	self assert: node measuredBounds position equals: before
+]
+
+{ #category : 'tests' }
+TLBlocConnectorDragTest >> testTheDraggedNodeIsUnderTheMouseWhileItIsDragged [
+	"The nodes it passes over are not entered and left, which would run their mouse over interactions at each move, and the element under the mouse is not looked for among all the nodes"
+
+	| root dragged other |
+	connector view panBy: 0 @ 100.
+	self settle.
+	root := connector view space root.
+	dragged := self nodeElement.
+	other := connector elementFromTLDrawable: visualization allNodes last.
+	self pressAt: 5 @ 5 on: dragged.
+	self moveTo: 40 @ 40 on: root.
+	self assert: (root findMouseEventTargetAt: other boundsInSpace center) identicalTo: dragged
 ]

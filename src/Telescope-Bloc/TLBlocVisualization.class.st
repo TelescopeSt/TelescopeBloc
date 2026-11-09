@@ -163,9 +163,10 @@ TLBlocVisualization >> exportAsSvgTo: aFileReference [
 { #category : 'event handling' }
 TLBlocVisualization >> findMouseEventTargetAt: aPoint [
 	"The element under the point of the window which the mouse events are for, as Bloc finds it, but in my coordinates. Bloc compares the point with the bounds of each element in the window, which a pan or a zoom changes: it computes them again for all the nodes at the next move of the mouse, which takes milliseconds with thousands of nodes. The point is converted once into my coordinates, then into the ones of each child, whose bounds a pan or a zoom does not change.
-	While the user pans, the mouse events are for the background, and the nodes are not looked for under the mouse at all"
+	While the user pans, the mouse events are for the background, and the nodes are not looked for under the mouse at all. While the user drags a node, they are for that node, which follows the mouse: the nodes it passes over are not entered and left, which would run their mouse over interactions at each move"
 
 	panning ifTrue: [ ^ nil ].
+	dragHandler draggedNode ifNotNil: [ :draggedNode | ^ draggedNode ].
 	^ self mouseEventTargetIn: self at: (self globalPointToLocal: aPoint)
 ]
 
@@ -279,6 +280,16 @@ TLBlocVisualization >> isZooming [
 ]
 
 { #category : 'dragging' }
+TLBlocVisualization >> itemOfContentHolding: anElement [
+	"The child of my content which is or holds the element: a node, or the element of a group or of a composite node"
+
+	| item |
+	item := anElement.
+	[ item parent == content ] whileFalse: [ item := item parent ].
+	^ item
+]
+
+{ #category : 'dragging' }
 TLBlocVisualization >> keepPositionWhile: aBlock [
 	"The visualization stays where it is while the block moves nodes. It is anchored to the top left corner of its content, which a node dragged to the left or to the top moves: the panning compensates, so the other nodes do not move under the mouse. The user took over: the visualization is not fitted again by itself. The corner before the move is the one of the last placement, and the one after it is computed once"
 
@@ -287,6 +298,25 @@ TLBlocVisualization >> keepPositionWhile: aBlock [
 	keptPosition := (self basePositionFor: self placedContentTopLeft) + panOffset.
 	aBlock value.
 	topLeft := self contentTopLeft.
+	panOffset := keptPosition - (self basePositionFor: topLeft).
+	self placeContentWithTopLeft: topLeft
+]
+
+{ #category : 'dragging' }
+TLBlocVisualization >> keepPositionWhileMoving: aNodeElement with: aBlock [
+	"As #keepPositionWhile:, for a block which only moves the node and the composite nodes around it, as a drag does at each move of the mouse. The top left corner of the content after the move is found from the one of the last placement and from the item of my content which holds the node: it only changes when that item goes beyond it. All the nodes are gone through, which takes milliseconds with thousands of them, only when that item was on the corner"
+
+	| cornerBefore keptPosition item itemCornerBefore itemCornerAfter topLeft |
+	autoFit := false.
+	cornerBefore := self placedContentTopLeft.
+	keptPosition := (self basePositionFor: cornerBefore) + panOffset.
+	item := self itemOfContentHolding: aNodeElement.
+	itemCornerBefore := self topLeftOfItem: item.
+	aBlock value.
+	itemCornerAfter := self topLeftOfItem: item.
+	topLeft := (itemCornerBefore x > cornerBefore x and: [ itemCornerBefore y > cornerBefore y ])
+		           ifTrue: [ cornerBefore min: itemCornerAfter ]
+		           ifFalse: [ self contentTopLeft ].
 	panOffset := keptPosition - (self basePositionFor: topLeft).
 	self placeContentWithTopLeft: topLeft
 ]
@@ -434,6 +464,13 @@ TLBlocVisualization >> toolbarReservedHeight [
 
 	(toolbar isNil or: [ toolbar hasParent not ]) ifTrue: [ ^ 0 ].
 	^ toolbar extent y + (toolbar windowMargin * 2)
+]
+
+{ #category : 'dragging' }
+TLBlocVisualization >> topLeftOfItem: anItemOfContent [
+	"The top left corner of the item of my content, with its labels and its children, in the coordinates of my content"
+
+	^ (Rectangle merging: (anItemOfContent rectanglesRelativeTo: 0 @ 0)) origin
 ]
 
 { #category : 'initialization' }
