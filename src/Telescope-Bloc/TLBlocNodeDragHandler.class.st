@@ -47,7 +47,9 @@ TLBlocNodeDragHandler >> mouseMoveEvent: anEvent [
 	dragging ifFalse: [ dragging := pendingMove r >= self threshold ].
 	dragging ifFalse: [ ^ self ].
 	node wasDragged: true.
-	visualization keepPositionWhile: [ node placeAt: node placement + (pendingMove / visualization zoom) ].
+	visualization keepPositionWhile: [
+			node placeAt: node placement + (pendingMove / visualization zoom).
+			node fitParentCompositesToTheirChildren ].
 	pendingMove := 0 @ 0.
 	visualization nodesMoved: node
 ]
