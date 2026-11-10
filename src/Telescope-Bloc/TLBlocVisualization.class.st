@@ -245,14 +245,17 @@ TLBlocVisualization >> gridVisible: aBoolean [
 
 { #category : 'initialization' }
 TLBlocVisualization >> initialize [
-	"The window already clips the visualization, so nodes and labels placed outside the default extent must still be drawn. The nodes and the connections are in my content, which is never transformed: my transformation pans and zooms it. The visualization is fitted into the window the first time it is laid out, and again when a layout is applied again unless the auto fit is turned off."
+	"The window already clips the visualization, so nodes and labels placed outside the default extent must still be drawn. The nodes and the connections are in my content, which is never transformed: my transformation pans and zooms it. Neither I nor my content take the mouse: a press on the background must reach the root of the space, which pans. My children still take it. The visualization is fitted into the window the first time it is laid out, and again when a layout is applied again unless the auto fit is turned off."
 
 	super initialize.
 	content := BlElement new
+		           preventMouseEvents;
 		           clipChildren: false;
 		           yourself.
 	self addChild: content.
-	self clipChildren: false.
+	self
+		clipChildren: false;
+		preventMouseEvents.
 	panOffset := 0 @ 0.
 	zoomFactor := 1.
 	fitPending := true.
