@@ -34,6 +34,16 @@ TLBlocDarkBlueTheme >> gridColor [
 ]
 
 { #category : 'accessing' }
+TLBlocDarkBlueTheme >> hoverOutlineColor [
+
+	^ Color
+		  r: 0.55
+		  g: 0.65
+		  b: 0.95
+		  alpha: 0.9
+]
+
+{ #category : 'accessing' }
 TLBlocDarkBlueTheme >> iconColor [
 
 	^ Color r: 0.839 g: 0.846 b: 0.878

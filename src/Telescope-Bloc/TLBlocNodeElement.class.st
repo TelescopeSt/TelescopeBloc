@@ -308,6 +308,13 @@ TLBlocNodeElement >> labelElement [
 ]
 
 { #category : 'accessing' }
+TLBlocNodeElement >> mouseCursor [
+	"A node shows the normal cursor unless it was given one, for example the hand of a node which can be clicked. Without it, its children would show the cursor of their composite, although their clicks are not for the composite"
+
+	^ super mouseCursor ifNil: [ Cursor normal ]
+]
+
+{ #category : 'accessing' }
 TLBlocNodeElement >> occupyMaxSpace [
 	"Whether the node takes all the space of its line in a layout, as high as the tallest node of the line: the takeAllSpace of its style"
 

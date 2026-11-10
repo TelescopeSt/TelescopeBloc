@@ -1,5 +1,5 @@
 "
-I am a theme of Telescope Bloc: the colors of what surrounds a visualization, which are not given by its style sheet. The canvas behind it, the toolbar and its buttons, the legend, the menus and the pop ups take their colors from me.
+I am a theme of Telescope Bloc: the colors of what surrounds a visualization, which are not given by its style sheet. The canvas behind it, the toolbar and its buttons, the legend, the menus, the pop ups and the outline of the node under the mouse take their colors from me.
 The colors of the nodes, of their labels and of the connections are the ones of the style sheet of the visualization: a theme does not change them.
 #available answers an instance of each theme, and #default the one a visualization has unless it is given another one (see TLBlocConnector>>#theme:). A theme is a subclass which answers its #name and the colors of #colorSelectors.
 "
@@ -23,7 +23,7 @@ TLBlocTheme class >> colorSelectors [
 	"The colors which a theme gives"
 
 	^ #( #canvasColor #panelColor #panelBorderColor #legendColor #textColor #iconColor #buttonColor #buttonHoverColor #toggledButtonColor #toggledButtonHoverColor #menuColor #menuHoverColor
-	     #popUpColor #popUpBorderColor #popUpTextColor #popUpShadowColor #swatchOutlineColor #gridColor )
+	     #popUpColor #popUpBorderColor #popUpTextColor #popUpShadowColor #swatchOutlineColor #gridColor #hoverOutlineColor )
 ]
 
 { #category : 'instance creation' }
@@ -63,6 +63,13 @@ TLBlocTheme >> canvasColor [
 { #category : 'accessing' }
 TLBlocTheme >> gridColor [
 	"The dots of the grid of the canvas"
+
+	^ self subclassResponsibility
+]
+
+{ #category : 'accessing' }
+TLBlocTheme >> hoverOutlineColor [
+	"The outline of the node under the mouse"
 
 	^ self subclassResponsibility
 ]

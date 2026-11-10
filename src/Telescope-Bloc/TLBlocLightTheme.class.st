@@ -34,6 +34,16 @@ TLBlocLightTheme >> gridColor [
 ]
 
 { #category : 'accessing' }
+TLBlocLightTheme >> hoverOutlineColor [
+
+	^ Color
+		  r: 0.2
+		  g: 0.45
+		  b: 0.9
+		  alpha: 0.8
+]
+
+{ #category : 'accessing' }
 TLBlocLightTheme >> iconColor [
 
 	^ Color darkGray

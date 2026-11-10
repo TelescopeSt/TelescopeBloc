@@ -25,7 +25,7 @@ Layout updates
 - The visualization is fitted again into its window when a layout which is applied again moves or adds a node, unless its auto fit is turned off.
 
 Interactions
-- The mouse over, click, double click, right click, drop, moved, multi choice and simple menu, pop up, shape trigger and external trigger interactions are implemented.
+- The mouse over, click, double click, right click, drop, moved, multi choice and simple menu, pop up, shape trigger and external trigger interactions are implemented. An element which can be clicked or double clicked shows a hand under the mouse; the other nodes show the normal cursor, also when they are in a composite which can be clicked.
 - The handlers of the interactions of a drawable are remembered, and made again when its interactions change, for example because the node moved to another group: always add them with #addHandlerOn:to:for:do:.
 - A click, a right click or a menu is for the innermost node under the pointer, and a click which ends the drag of a node is not a click.
 - The menus of Telescope open at the mouse as Bloc elements (TLBlocMenu), and the pop up action shows its text in a TLBlocPopUpElement near the node.
@@ -451,11 +451,12 @@ TLBlocConnector >> generateBasicInteraction: aTLInteraction onNode: aTLNode [
 
 { #category : 'generation - interaction' }
 TLBlocConnector >> generateClickInteraction: aTLClickInteraction onDrawable: aTLDrawable targetingDrawable: aTargetDrawable [
-	"The action of the interaction is executed when the element of the target is clicked, unless the click ends the drag of the node. The click is for the innermost node under the pointer: a composite node does not get the clicks of its children. The action of a pop up is not executed: a click shows the text near the element, and the next click hides it. The interaction of a trigger is for the element of the trigger, and its action for the node of the trigger"
+	"The action of the interaction is executed when the element of the target is clicked, unless the click ends the drag of the node. The click is for the innermost node under the pointer, and the element shows a hand under it: a composite node does not get the clicks of its children. The action of a pop up is not executed: a click shows the text near the element, and the next click hides it. The interaction of a trigger is for the element of the trigger, and its action for the node of the trigger"
 
 	| element acted |
 	element := self eventElementFor: aTLDrawable targeting: aTargetDrawable.
 	acted := self actedDrawableFor: aTLDrawable targeting: aTargetDrawable.
+	element mouseCursor: Cursor webLink.
 	aTLClickInteraction action isPopUp ifTrue: [
 			^ self
 				  addHandlerOn: BlClickEvent
@@ -473,11 +474,12 @@ TLBlocConnector >> generateClickInteraction: aTLClickInteraction onDrawable: aTL
 
 { #category : 'generation - interaction' }
 TLBlocConnector >> generateDoubleClickInteraction: aTLDoubleClickInteraction onDrawable: aTLDrawable targetingDrawable: aTargetDrawable [
-	"The action of the interaction is executed when the element of the target is double clicked. The double click is for the innermost node under the pointer, like the click"
+	"The action of the interaction is executed when the element of the target is double clicked. The double click is for the innermost node under the pointer, and the element shows a hand under it, like the click"
 
 	| element acted |
 	element := self eventElementFor: aTLDrawable targeting: aTargetDrawable.
 	acted := self actedDrawableFor: aTLDrawable targeting: aTargetDrawable.
+	element mouseCursor: Cursor webLink.
 	self
 		addHandlerOn: BlDoubleClickEvent
 		to: element
@@ -877,7 +879,10 @@ TLBlocConnector >> removeGroup: aTLGroup [
 { #category : 'generation - interaction' }
 TLBlocConnector >> removeInteractionHandlersOf: aTLDrawable [
 
-	(interactionHandlers removeKey: aTLDrawable ifAbsent: [ #(  ) ]) do: [ :association | association key removeEventHandler: association value ].
+	(interactionHandlers removeKey: aTLDrawable ifAbsent: [ #(  ) ]) do: [ :association |
+			association key
+				removeEventHandler: association value;
+				mouseCursor: nil ].
 	externalInteractions removeKey: aTLDrawable ifAbsent: [ ].
 	self menuInteractionByDrawable removeKey: aTLDrawable ifAbsent: [ ]
 ]

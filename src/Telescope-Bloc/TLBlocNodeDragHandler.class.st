@@ -1,5 +1,5 @@
 "
-I let the user drag the nodes of a Telescope visualization of Bloc with the mouse: I am installed on the root of the window, and when the primary mouse button is pressed on a node or on its label and the mouse goes further than a few pixels, I move the node by the same distance, divided by the zoom of the visualization. A press on the background is for the pan handler. The node knows it was dragged, so that the click which ends the drag does not execute its click interactions. The place of a dragged node is not kept: a layout which is applied again puts it back. When a dragged node is dropped it receives a TLBlocNodeMovedEvent. The node under the pointer is told that a node was dropped on it with a TLBlocNodeDropEvent.
+I let the user drag the nodes of a Telescope visualization of Bloc with the mouse: I am installed on the root of the window, and when the primary mouse button is pressed on a node or on its label and the mouse goes further than a few pixels, I move the node by the same distance, divided by the zoom of the visualization. The node shows a move cursor until it is dropped. A press on the background is for the pan handler. The node knows it was dragged, so that the click which ends the drag does not execute its click interactions. The place of a dragged node is not kept: a layout which is applied again puts it back. When a dragged node is dropped it receives a TLBlocNodeMovedEvent. The node under the pointer is told that a node was dropped on it with a TLBlocNodeDropEvent.
 "
 Class {
 	#name : 'TLBlocNodeDragHandler',
@@ -8,7 +8,8 @@ Class {
 		'node',
 		'lastPosition',
 		'pendingMove',
-		'dragging'
+		'dragging',
+		'cursorBeforeDrag'
 	],
 	#category : 'Telescope-Bloc-Navigation',
 	#package : 'Telescope-Bloc',
@@ -60,8 +61,10 @@ TLBlocNodeDragHandler >> mouseMoveEvent: anEvent [
 	node ifNil: [ ^ self ].
 	pendingMove := pendingMove + (anEvent position - lastPosition).
 	lastPosition := anEvent position.
-	dragging ifFalse: [ dragging := pendingMove r >= self threshold ].
-	dragging ifFalse: [ ^ self ].
+	dragging ifFalse: [
+			pendingMove r < self threshold ifTrue: [ ^ self ].
+			self startDragging ].
+
 	node wasDragged: true.
 	visualization keepPositionWhileMoving: node with: [
 			node placeAt: node placement + (pendingMove / visualization zoom).
@@ -76,6 +79,7 @@ TLBlocNodeDragHandler >> mouseUpEvent: anEvent [
 
 	| target |
 	(node isNotNil and: [ dragging ]) ifTrue: [
+			node mouseCursor: cursorBeforeDrag.
 			node dispatchEvent: (TLBlocNodeMovedEvent new
 					 position: node placement + (node dimension / 2);
 					 yourself).
@@ -95,6 +99,15 @@ TLBlocNodeDragHandler >> nodeElementOf: anElement [
 	current := anElement.
 	[ current isNil or: [ current class = TLBlocNodeElement ] ] whileFalse: [ current := current parent ].
 	^ (current isNotNil and: [ current isTrigger ]) ifFalse: [ current ]
+]
+
+{ #category : 'private' }
+TLBlocNodeDragHandler >> startDragging [
+	"The node shows a move cursor until it is dropped"
+
+	dragging := true.
+	cursorBeforeDrag := node mouseCursor.
+	node mouseCursor: Cursor move
 ]
 
 { #category : 'private' }
