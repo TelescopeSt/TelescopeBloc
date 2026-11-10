@@ -1,5 +1,5 @@
 "
-I display the label of a Telescope node in a Bloc visualization, as a vertical stack of lines, because Bloc neither breaks a text at line feeds nor wraps it. Each line is a text element, centered in me. My placement is a TLPosition: I place myself so that my reversed position meets the anchor of the position on my node, with a gap. I wrap my lines to a maximum width by moving one word at a time to the next line, or I cut my text with three dots, measuring the lines after each layout. The size of my font is the label size of the style sheet of my node, because Telescope computes the width of a node from its label and its label size: I give it again to the text of a line each time the text changes. The position can be given by a block which answers a symbol such as #top. The color of the text is the text color of the style sheet, which can depend on the entity: I give it again, with the size, to the text of a line each time it changes. #looksLike: tells whether another label would look the same. A label at the center of a composite node with children displayed is in the strip at the top of the node, not over its children.
+I display the label of a Telescope node in a Bloc visualization, as a vertical stack of lines, because Bloc neither breaks a text at line feeds nor wraps it. Each line is a text element, centered in me. My placement is a TLPosition: I place myself so that my reversed position meets the anchor of the position on my node, with a gap. I wrap my lines to a maximum width by moving one word at a time to the next line, or I cut my text with three dots, measuring the lines after each layout. The size of my font is the label size of the style sheet of my node, because Telescope computes the width of a node from its label and its label size: I give it again to the text of a line each time the text changes. The position can be given by a block which answers a symbol such as #top. The color of the text is the text color of the style sheet, which can depend on the entity: I give it again, with the size, to the text of a line each time it changes. #looksLike: tells whether another label would look the same. A label at the center of a composite node with children displayed is in the strip at the top of the node, not over its children. With a halo (#halo:, given by the connector), the letters of my lines are outlined in the opposite of the color of the text, white around a dark text and black around a light one.
 "
 Class {
 	#name : 'TLBlocLabelElement',
@@ -9,7 +9,8 @@ Class {
 		'wrapping',
 		'maximumWidth',
 		'fontSize',
-		'textColor'
+		'textColor',
+		'halo'
 	],
 	#category : 'Telescope-Bloc-Elements',
 	#package : 'Telescope-Bloc',
@@ -27,6 +28,16 @@ TLBlocLabelElement class >> forNode: aNode styleSheet: aStyleSheet [
 	"The label of a node, made from the effective style sheet of the node"
 
 	^ self new
+		  configureForNode: aNode styleSheet: aStyleSheet;
+		  yourself
+]
+
+{ #category : 'instance creation' }
+TLBlocLabelElement class >> forNode: aNode styleSheet: aStyleSheet halo: aBoolean [
+	"The label of a node, made from the effective style sheet of the node, with a halo around its letters or not"
+
+	^ self new
+		  halo: aBoolean;
 		  configureForNode: aNode styleSheet: aStyleSheet;
 		  yourself
 ]
@@ -116,6 +127,29 @@ TLBlocLabelElement >> gapVector [
 	placement horizontal = #left ifTrue: [ ^ self gapFromNode negated @ 0 ].
 	placement horizontal = #right ifTrue: [ ^ self gapFromNode @ 0 ].
 	^ 0 @ 0
+]
+
+{ #category : 'initialization' }
+TLBlocLabelElement >> halo: aBoolean [
+	"Whether the lines have an outline of their letters in the opposite of the color of their text. It is given before the label is configured"
+
+	halo := aBoolean
+]
+
+{ #category : 'accessing' }
+TLBlocLabelElement >> haloColor [
+	"White around a dark text, black around a light one. The text is black unless the style sheet gives another color"
+
+	^ (textColor ifNil: [ Color black ]) luminance > 0.5
+		  ifTrue: [ Color black alpha: 0.8 ]
+		  ifFalse: [ Color white alpha: 0.8 ]
+]
+
+{ #category : 'initialization' }
+TLBlocLabelElement >> initialize [
+
+	super initialize.
+	halo := false
 ]
 
 { #category : 'testing' }
@@ -221,12 +255,20 @@ TLBlocLabelElement >> rectanglesRelativeTo: anOrigin [
 
 { #category : 'private' }
 TLBlocLabelElement >> ropedTextOf: aString [
-	"The text of a line, in the font size and the color of the label: every time the text of a line changes, they have to be given again"
+	"The text of a line, in the font size and the color of the label: every time the text of a line changes, they have to be given again, with the halo"
 
 	| text |
 	text := aString asRopedText.
 	fontSize ifNotNil: [ text fontSize: fontSize ].
 	textColor ifNotNil: [ text foreground: textColor ].
+	halo ifTrue: [
+			text
+				border: (BlBorder builder
+						 paint: self haloColor;
+						 width: 3;
+						 joinRound;
+						 build)
+				above: false ].
 	^ text
 ]
 

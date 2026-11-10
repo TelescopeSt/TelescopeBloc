@@ -41,6 +41,7 @@ Theme
 - The colors of the window, of the toolbar, of the legend, of the menus and of the pop ups come from a TLBlocTheme, the light one by default. #theme: gives another one, such as TLBlocDarkTheme, before the visualization is opened.
 - The colors of the nodes, of their labels and of the connections are the ones of the style sheet of the visualization: a theme does not change them.
 - A grid of dots behind the visualization follows its panning and its zoom, in the grid color of the theme. It is shown unless the setting Grid of dots of Telescope Bloc is off (TLBlocConnector class>>#gridVisible:), and #gridVisible:, before the visualization is opened, shows it or not whatever the setting.
+- The labels can have a halo, an outline of their letters in the opposite of the color of their text, to stay readable on a background close to their color. It is off unless the setting Halo around the labels of Telescope Bloc is on (TLBlocConnector class>>#labelHalo:), because it makes the drawing about twice as slow with thousands of labels, and #labelHalo:, before the visualization is opened, turns it on or off whatever the setting.
 
 Legend
 - The legend of a visualization is made of the entries of Telescope, static or dynamic, as a TLBlocLegendElement in the window, which keeps its element when the legend is made again.
@@ -68,10 +69,12 @@ Class {
 		'connectionObstacles',
 		'stableLayoutCount',
 		'theme',
-		'gridVisible'
+		'gridVisible',
+		'labelHalo'
 	],
 	#classVars : [
-		'GridVisible'
+		'GridVisible',
+		'LabelHalo'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
@@ -86,6 +89,13 @@ TLBlocConnector class >> defaultGridVisible [
 ]
 
 { #category : 'settings' }
+TLBlocConnector class >> defaultLabelHalo [
+	"Whether the labels have a halo, unless the setting or their connector says otherwise. It is off: see #labelHalo"
+
+	^ false
+]
+
+{ #category : 'settings' }
 TLBlocConnector class >> gridVisible [
 	"Whether the visualizations show a grid of dots behind them, unless their connector says otherwise (see #gridVisible:). It is the setting Grid of dots of Telescope Bloc"
 
@@ -96,6 +106,20 @@ TLBlocConnector class >> gridVisible [
 TLBlocConnector class >> gridVisible: aBoolean [
 
 	GridVisible := aBoolean
+]
+
+{ #category : 'settings' }
+TLBlocConnector class >> labelHalo [
+	"Whether the labels of the visualizations have a halo, unless their connector says otherwise (see #labelHalo:). It is the setting Halo around the labels of Telescope Bloc.
+	A halo is an outline of the letters in the opposite of the color of the text, white around a dark text and black around a light one, which keeps a label readable on a background close to its color, such as a black label on a dark theme. It is off by default because it is slow to draw: the outline of the letters is made again at each drawing, while the letters themselves come from a cache. With a halo on each of 3000 labels, drawing the window takes about twice as long"
+
+	^ LabelHalo ifNil: [ self defaultLabelHalo ]
+]
+
+{ #category : 'settings' }
+TLBlocConnector class >> labelHalo: aBoolean [
+
+	LabelHalo := aBoolean
 ]
 
 { #category : 'accessing' }
@@ -115,7 +139,12 @@ TLBlocConnector class >> settingsOn: aBuilder [
 				(aBuilder setting: #gridVisible)
 					target: self;
 					label: 'Grid of dots';
-					description: 'Show a grid of dots behind the visualizations, which follows their panning and their zoom. A connector can still show it or not with #gridVisible:' ]
+					description: 'Show a grid of dots behind the visualizations, which follows their panning and their zoom. A connector can still show it or not with #gridVisible:'.
+				(aBuilder setting: #labelHalo)
+					target: self;
+					label: 'Halo around the labels';
+					description:
+						'Draw an outline around the letters of the labels, white around a dark text and black around a light one, to keep them readable on a background close to their color. It is off by default because it is slow: with a halo on each of 3000 labels, drawing a visualization takes about twice as long. A connector can still show it or not with #labelHalo:' ]
 ]
 
 { #category : 'triggers' }
@@ -733,7 +762,20 @@ TLBlocConnector >> labelElementOf: aNode styleSheet: styleSheet [
 	"The label of the node, made from its effective style sheet, or nil when its style gives none: Telescope says so with the class TLNoNodeLabel, which is not a text to draw"
 
 	^ ((styleSheet attributes includesKey: #nodeLabel) and: [ (styleSheet obtainValue: #nodeLabel forEntity: aNode entity inNode: aNode) ~~ TLNoNodeLabel ]) ifTrue: [
-		  TLBlocLabelElement forNode: aNode styleSheet: styleSheet ]
+		  TLBlocLabelElement forNode: aNode styleSheet: styleSheet halo: self labelHalo ]
+]
+
+{ #category : 'accessing' }
+TLBlocConnector >> labelHalo [
+
+	^ labelHalo ifNil: [ self class labelHalo ]
+]
+
+{ #category : 'accessing' }
+TLBlocConnector >> labelHalo: aBoolean [
+	"Whether the labels have a halo, an outline of their letters in the opposite of the color of their text (see TLBlocConnector class>>#labelHalo, which also explains why it is slow). Without it, the setting Halo around the labels of Telescope Bloc decides. It is set before the visualization is opened"
+
+	labelHalo := aBoolean
 ]
 
 { #category : 'updating' }
