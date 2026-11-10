@@ -326,6 +326,20 @@ TLBlocConnectorFitTest >> testNodesAddedByAnUpdateDoNotFitWhenAutoFitIsOff [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorFitTest >> testPanningDuringTheSmoothFitStopsIt [
+
+	| zoom |
+	self openNodes: 200.
+	connector view zoomBy: 3 around: 150 @ 150.
+	zoom := connector view zoom.
+	connector view fitIntoWindowSmoothly.
+	connector view panBy: 10 @ 0.
+	connector view space settleForDuration: 1 seconds.
+	self assert: connector view zoom equals: zoom.
+	self deny: connector view autoFit
+]
+
+{ #category : 'tests' }
 TLBlocConnectorFitTest >> testPathBuilderIsFittedAfterItsOriginIsClicked [
 	"The nodes it adds are in groups, and their labels are above them: the content is only known once the labels are placed"
 
@@ -359,6 +373,53 @@ TLBlocConnectorFitTest >> testSmallVisualizationIsEnlargedToFillTheWindow [
 	rectangle := self contentRectangleInWindow.
 	self assert: connector view zoom > 1.
 	self assert: ((rectangle width - (window x - (margin * 2))) abs < 1 or: [ (rectangle height - (window y - (margin * 2))) abs < 1 ])
+]
+
+{ #category : 'tests' }
+TLBlocConnectorFitTest >> testSmoothFitDoesNotJump [
+	"The Fit button of the toolbar moves the visualization to the fit in a short animation"
+
+	| zoom |
+	self openNodes: 200.
+	connector view zoomBy: 3 around: 150 @ 150.
+	zoom := connector view zoom.
+	connector view fitIntoWindowSmoothly.
+	self assert: connector view zoom equals: zoom
+]
+
+{ #category : 'tests' }
+TLBlocConnectorFitTest >> testSmoothFitEndsAsTheFit [
+
+	| smoothZoom smoothCenter |
+	self openNodes: 200.
+	connector view zoomBy: 3 around: 150 @ 150.
+	connector view panBy: 40 @ 40.
+	connector view fitIntoWindowSmoothly.
+	connector view space settleForDuration: 1 seconds.
+	smoothZoom := connector view zoom.
+	smoothCenter := self contentCenterInWindow.
+	connector view fitIntoWindow.
+	connector view space settleForDuration: 500 milliSeconds.
+	self assert: (smoothZoom - connector view zoom) abs < 0.0001.
+	self assert: (smoothCenter - self contentCenterInWindow) abs < (0.5 @ 0.5).
+	self assert: connector view autoFit
+]
+
+{ #category : 'tests' }
+TLBlocConnectorFitTest >> testSmoothFitPassesThroughTheZoomsBetween [
+	"The zoom changes progressively from the one before the fit to the one of the fit"
+
+	| zooms before |
+	self openNodes: 200.
+	connector view zoomBy: 3 around: 150 @ 150.
+	before := connector view zoom.
+	zooms := OrderedCollection new.
+	connector view fitIntoWindowSmoothly.
+	15 timesRepeat: [
+			connector view space settleForDuration: 20 milliSeconds.
+			zooms add: connector view zoom ].
+	connector view space settleForDuration: 1 seconds.
+	self assert: (zooms anySatisfy: [ :zoom | zoom < before and: [ zoom > connector view zoom ] ])
 ]
 
 { #category : 'tests' }
