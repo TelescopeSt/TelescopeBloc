@@ -6,6 +6,17 @@ Class {
 	#tag : 'Connector'
 }
 
+{ #category : 'helpers' }
+TLBlocConnectorCompositeTest >> cornerRadiusOfEntity: anEntity [
+	"The radius of the corners of the node, 0 when they are square"
+
+	| geometry |
+	geometry := (self elementOfEntity: anEntity) geometry.
+	^ geometry class = BlRoundedRectangleGeometry
+		  ifTrue: [ geometry cornerRadii topLeft ]
+		  ifFalse: [ 0 ]
+]
+
 { #category : 'tests' }
 TLBlocConnectorCompositeTest >> countClicksOfEntities: someEntities [
 	"Opens the composites 30 > 6 > 2 and 3, 5, where a click on the nodes of the given entities increments their own counter. Answers a dictionary of the counters"
@@ -172,6 +183,13 @@ TLBlocConnectorCompositeTest >> testChildrenOfACompositeAreInsideItsElement [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorCompositeTest >> testChildrenWithoutChildrenHaveSquareCorners [
+
+	self openWithComposite: 6 expanded: true.
+	self assert: (self cornerRadiusOfEntity: 2) equals: 0
+]
+
+{ #category : 'tests' }
 TLBlocConnectorCompositeTest >> testClickAfterADragIsAClickAgainAfterThePress [
 
 	| counters child |
@@ -269,6 +287,28 @@ TLBlocConnectorCompositeTest >> testCollapsedCompositeHasNoChildrenElement [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorCompositeTest >> testCollapsedCompositeHasSquareCorners [
+
+	self openWithComposite: 6 expanded: false.
+	self assert: (self cornerRadiusOfEntity: 6) equals: 0
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testCollapsingACompositeMakesItsCornersSquareAgain [
+
+	self prepareComposites.
+	visualization styleSheet compositeExpandedByDefault: true.
+	visualization addNodeFromEntity: 6.
+	visualization addInteraction: TLExpandCollapseCompositeNodeAction onClick.
+	connector open: visualization inWindowSized: 600 @ 500 titled: 'Composite'.
+	connector view space settleForDuration: 1 seconds.
+	(self elementOfEntity: 6) dispatchEvent: BlClickEvent new.
+	connector view space settleForDuration: 500 milliSeconds.
+	self assert: (self elementOfEntity: 6) childrenGroup isNil.
+	self assert: (self cornerRadiusOfEntity: 6) equals: 0
+]
+
+{ #category : 'tests' }
 TLBlocConnectorCompositeTest >> testCompositeIsAsWideAsItsInsideLabel [
 	"The label is longer than the children"
 
@@ -323,6 +363,16 @@ TLBlocConnectorCompositeTest >> testConnectionBetweenChildrenJoinsThemInsideTheC
 	connection := connector connections first.
 	self deny: connection start equals: connection end.
 	self assert: connection measuredBounds position x >= (self elementOfEntity: 6) measuredBounds position x
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testDoubleBorderOfAnExpandedCompositeIsRoundedToo [
+
+	| innerBorder |
+	visualization styleSheet borderStyle: TLDoubleLineStyle.
+	self openWithComposite: 6 expanded: true.
+	innerBorder := (self elementOfEntity: 6) children first.
+	self assert: innerBorder geometry class equals: BlRoundedRectangleGeometry
 ]
 
 { #category : 'tests' }
@@ -403,13 +453,33 @@ TLBlocConnectorCompositeTest >> testDraggingACompositeMovesItsChildren [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorCompositeTest >> testExpandedCompositeHasRoundedCorners [
+
+	self openWithComposite: 6 expanded: true.
+	self assert: (self cornerRadiusOfEntity: 6) equals: TLBlocNodeElement compositeCornerRadius
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testExpandedCompositeOfAnotherShapeKeepsItsShape [
+
+	| element |
+	visualization styleSheet shape: TLEllipse.
+	self openWithComposite: 6 expanded: true.
+	element := self elementOfEntity: 6.
+	self assert: (self cornerRadiusOfEntity: 6) equals: 0.
+	self assert: element geometry class equals: (TLEllipse outlineOfExtent: element dimension) asBlocGeometry class
+]
+
+{ #category : 'tests' }
 TLBlocConnectorCompositeTest >> testExpandingACompositeInAColumnDoesNotOverlapItsSiblings [
 	"The layouts of Telescope work in a frame turned by their angle, so the size of a composite node, as the one of the other nodes, has to be turned with it: a column asks the height of the nodes, which is not their width"
 
 	| composite |
 	self prepareComposites.
 	visualization styleSheet compositeExpandedByDefault: false.
-	visualization layout: (TLLinearLayout topToBottom gap: 10; yourself).
+	visualization layout: (TLLinearLayout topToBottom
+			 gap: 10;
+			 yourself).
 	visualization addNodesFromEntities: #( 1 30 7 ).
 	visualization addInteraction: TLExpandCollapseCompositeNodeAction onCompositeNodeWithChildren onClick.
 	connector open: visualization inWindowSized: 600 @ 500 titled: 'Composite'.
@@ -428,7 +498,9 @@ TLBlocConnectorCompositeTest >> testExpandingACompositeInATreeDoesNotOverlapItsS
 	| composite |
 	self prepareComposites.
 	visualization styleSheet compositeExpandedByDefault: false.
-	visualization layout: (TLTreeLayout topToBottom useOutgoingLinks; yourself).
+	visualization layout: (TLTreeLayout topToBottom
+			 useOutgoingLinks;
+			 yourself).
 	visualization addNodesFromEntities: #( 1 30 7 ).
 	(self nodeOfEntity: 1) connectTo: (self nodeOfEntity: 30).
 	(self nodeOfEntity: 1) connectTo: (self nodeOfEntity: 7).
@@ -640,6 +712,16 @@ TLBlocConnectorCompositeTest >> testRightClickOnAnInnerCompositeDoesNotRightClic
 			 yourself).
 	self assert: (counters at: 6) equals: 1.
 	self assert: (counters at: 30) equals: 0
+]
+
+{ #category : 'tests' }
+TLBlocConnectorCompositeTest >> testRoundedCornersDoNotChangeTheOutline [
+	"The connections meet the composite node on the rectangle of its outline"
+
+	| element |
+	self openWithComposite: 6 expanded: true.
+	element := self elementOfEntity: 6.
+	self assert: element outline equals: (TLRectangle outlineOfExtent: element dimension)
 ]
 
 { #category : 'tests' }
