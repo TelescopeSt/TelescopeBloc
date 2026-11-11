@@ -182,11 +182,12 @@ TLBlocPopUpElement >> placeNearAnchor [
 
 { #category : 'initialization' }
 TLBlocPopUpElement >> text: aString [
-	"A line of light text for each line of the text"
+	"A line of light text for each line of the text. A line is as high as a line of its font, not only as its letters, which would run over the next line"
 
 	lines := aString lines asArray.
 	lines do: [ :line |
 			self addChild: (BlTextElement new
+					 labelMeasurement;
 					 text: ((line asRopedText fontSize: 12) foreground: self textColor);
 					 yourself) ]
 ]
