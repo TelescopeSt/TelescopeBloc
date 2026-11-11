@@ -19,6 +19,35 @@ TLBlocConnectorTransitionTest >> connectionElement [
 ]
 
 { #category : 'helpers' }
+TLBlocConnectorTransitionTest >> dimensionsOf: anElement during: aNumber [
+	"The dimensions of the element at each of a number of frames"
+
+	^ (1 to: aNumber) collect: [ :index |
+			  connector view space settleForDuration: 20 milliSeconds.
+			  anElement dimension ]
+]
+
+{ #category : 'helpers' }
+TLBlocConnectorTransitionTest >> openCollapsedComposite [
+	"Opens the composite node 6, collapsed, whose children are 2 and 3, and which a click expands or collapses. Answers its element"
+
+	| node |
+	visualization styleSheet
+		nodeLabel: #asString;
+		compositeExpandedByDefault: false.
+	visualization childrenProperty: [ :number |
+			number = 6
+				ifTrue: [ #( 2 3 ) ]
+				ifFalse: [ #(  ) ] ].
+	visualization nodeCreationStrategy beRecursive.
+	node := visualization addNodeFromEntity: 6.
+	visualization addInteraction: TLExpandCollapseCompositeNodeAction onClick.
+	connector open: visualization inWindowSized: 400 @ 300 titled: 'Transitions'.
+	self settle.
+	^ connector elementFromTLDrawable: node
+]
+
+{ #category : 'helpers' }
 TLBlocConnectorTransitionTest >> openWithChildrenOnClick [
 	"Opens the nodes 1 and 2: a click on a node adds a child, the entity multiplied by ten. Answers the first node"
 
@@ -58,6 +87,23 @@ TLBlocConnectorTransitionTest >> settle [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorTransitionTest >> testCollapsedCompositeShrinksProgressively [
+
+	| composite collapsed expanded dimensions |
+	composite := self openCollapsedComposite.
+	collapsed := composite dimension.
+	composite dispatchEvent: BlClickEvent new.
+	self settle.
+	expanded := composite dimension.
+	composite dispatchEvent: BlClickEvent new.
+	self assert: composite dimension equals: expanded.
+	dimensions := self dimensionsOf: composite during: 20.
+	self settle.
+	self assert: composite dimension equals: collapsed.
+	self assert: (dimensions anySatisfy: [ :dimension | (dimension x between: collapsed x + 1 and: expanded x - 1) and: [ dimension y between: collapsed y + 1 and: expanded y - 1 ] ])
+]
+
+{ #category : 'tests' }
 TLBlocConnectorTransitionTest >> testColorOfANodeComesBackProgressivelyWhenTheMouseLeaves [
 
 	| node before |
@@ -79,6 +125,45 @@ TLBlocConnectorTransitionTest >> testColorsChangeAtOnceWithoutAnimation [
 	node := self openWithHighlight: [ :style | style backgroundColor: Color red ].
 	(connector elementFromTLDrawable: node) dispatchEvent: BlMouseEnterEvent new.
 	self assert: (self backgroundOf: node) equals: Color red
+]
+
+{ #category : 'tests' }
+TLBlocConnectorTransitionTest >> testCompositeResizesAtOnceWithoutAnimation [
+
+	| composite collapsed |
+	connector animationDuration: 0 seconds.
+	composite := self openCollapsedComposite.
+	collapsed := composite dimension.
+	composite dispatchEvent: BlClickEvent new.
+	self assert: composite dimension x > collapsed x
+]
+
+{ #category : 'tests' }
+TLBlocConnectorTransitionTest >> testExpandedCompositeEndsAsBigAsItsChildren [
+	"Fitting it to its children again does not change it"
+
+	| composite expanded |
+	composite := self openCollapsedComposite.
+	composite dispatchEvent: BlClickEvent new.
+	self settle.
+	expanded := composite dimension.
+	composite fitToChildren.
+	self assert: composite dimension equals: expanded
+]
+
+{ #category : 'tests' }
+TLBlocConnectorTransitionTest >> testExpandedCompositeGrowsProgressively [
+
+	| composite collapsed dimensions |
+	composite := self openCollapsedComposite.
+	collapsed := composite dimension.
+	composite dispatchEvent: BlClickEvent new.
+	self assert: composite dimension equals: collapsed.
+	dimensions := self dimensionsOf: composite during: 20.
+	self settle.
+	self assert: (composite dimension x > collapsed x and: [ composite dimension y > collapsed y ]).
+	self assert:
+		(dimensions anySatisfy: [ :dimension | (dimension x between: collapsed x + 1 and: composite dimension x - 1) and: [ dimension y between: collapsed y + 1 and: composite dimension y - 1 ] ])
 ]
 
 { #category : 'tests' }

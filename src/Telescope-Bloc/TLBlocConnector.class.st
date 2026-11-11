@@ -19,7 +19,7 @@ Connections
 
 Layout updates
 - The first layout is not animated and fits the visualization into the window.
-- When a layout is applied again, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default. A zero duration disables the animation.
+- When a layout is applied again, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, and the composite nodes which were expanded or collapsed grow or shrink to their new size during the same animation (#rememberSizeOf:). A zero duration disables the animation.
 - The nodes which an interaction adds start from the node of the interaction and slide to their place.
 - The nodes and the connections which appear in a visualization already shown fade in (#fadeIn:), and the colors of a node or of a connection whose style an interaction changes, for example to highlight it, change progressively (TTLBlocEasedColors). A zero #animationDuration turns these transitions off too.
 - The visualization is fitted again into its window when a layout which is applied again moves or adds a node, unless its auto fit is turned off.
@@ -70,7 +70,9 @@ Class {
 		'stableLayoutCount',
 		'theme',
 		'gridVisible',
-		'labelHalo'
+		'labelHalo',
+		'pendingSizes',
+		'runningResizes'
 	],
 	#classVars : [
 		'GridVisible',
@@ -470,7 +472,22 @@ TLBlocConnector >> fitAgainWhenTheNodesAreMeasured [
 TLBlocConnector >> fitCompositeNodeOf: aTLGroup [
 	"A composite node has the size of the group of its children, which a layout has just placed"
 
-	(self compositeNodeOfGroup: aTLGroup) ifNotNil: [ :composite | self elementFromTLDrawable: composite ifPresent: [ :compositeElement | compositeElement fitToChildren ] ifNone: [ ] ]
+	(self compositeNodeOfGroup: aTLGroup) ifNotNil: [ :composite |
+			self
+				elementFromTLDrawable: composite
+				ifPresent: [ :compositeElement |
+						self rememberSizeOf: compositeElement.
+						compositeElement fitToChildren ]
+				ifNone: [ ] ]
+]
+
+{ #category : 'animation' }
+TLBlocConnector >> forgetAnimation [
+	"The animation is done: the items are at their place and their size, and a layout which starts now has nothing to settle"
+
+	animation := nil.
+	runningMoves := nil.
+	runningResizes := nil
 ]
 
 { #category : 'generation - interaction' }
@@ -727,6 +744,14 @@ TLBlocConnector >> initialize [
 	animationDuration := 500 milliSeconds
 ]
 
+{ #category : 'animation' }
+TLBlocConnector >> interpolate: aStartAndEnd at: aProgress [
+	"The point between the start and the end at the progress of an animation, from 0 to 1. The end itself at the end of the animation, without rounding"
+
+	aProgress >= 1 ifTrue: [ ^ aStartAndEnd value ].
+	^ aStartAndEnd key + (aStartAndEnd value - aStartAndEnd key * aProgress)
+]
+
 { #category : 'triggers' }
 TLBlocConnector >> isTrigger: aTLDrawable [
 
@@ -854,6 +879,13 @@ TLBlocConnector >> parallelConnectionsSpacing [
 	^ 40
 ]
 
+{ #category : 'animation' }
+TLBlocConnector >> pendingSizes [
+	"The dimension of the composite nodes which an update expands or collapses, before the update: #startPendingAnimation resizes them progressively"
+
+	^ pendingSizes ifNil: [ pendingSizes := IdentityDictionary new ]
+]
+
 { #category : 'triggers' }
 TLBlocConnector >> placeElement: anElement correspondingToTrigger: aTLShapeTrigger relativeToDrawable: aTLDrawable [
 	"The trigger is a child of the element of the drawable, and its center is on the side of the position of the trigger of the style sheet of the drawable: on the right by default"
@@ -870,6 +902,13 @@ TLBlocConnector >> placementsOfPlacedItemsIn: group [
 	placements := IdentityDictionary new.
 	group do: [ :item | (placedElements includes: item) ifTrue: [ placements at: item put: item placement ] ].
 	^ placements
+]
+
+{ #category : 'animation' }
+TLBlocConnector >> rememberSizeOf: aCompositeElement [
+	"The dimension of the composite node before an update fits it to its children or releases them, when it is already shown: a new composite node appears at its size. A composite which an update resizes several times keeps the first one"
+
+	(placedElements includes: aCompositeElement) ifTrue: [ self pendingSizes at: aCompositeElement ifAbsentPut: [ aCompositeElement dimension ] ]
 ]
 
 { #category : 'layout' }
@@ -915,7 +954,13 @@ TLBlocConnector >> removeGroup: aTLGroup [
 	composite := self compositeNodeOfGroup: aTLGroup.
 	(self elementFromTLDrawable: aTLGroup) element removeFromParent.
 	super removeGroup: aTLGroup.
-	composite ifNotNil: [ self elementFromTLDrawable: composite ifPresent: #releaseChildren ifNone: [ ] ]
+	composite ifNotNil: [
+			self
+				elementFromTLDrawable: composite
+				ifPresent: [ :compositeElement |
+						self rememberSizeOf: compositeElement.
+						compositeElement releaseChildren ]
+				ifNone: [ ] ]
 ]
 
 { #category : 'generation - interaction' }
@@ -954,7 +999,7 @@ TLBlocConnector >> routeOutdatedConnections [
 
 { #category : 'layout' }
 TLBlocConnector >> settleAnimation [
-	"A layout starts while an animation is in progress: the items go to the place the animation was bringing them to, and where they were is remembered"
+	"A layout starts while an animation is in progress: the items go to the place and the size the animation was bringing them to, and where they were and their size are remembered"
 
 	animation ifNil: [ ^ self ].
 	animation stop.
@@ -962,7 +1007,12 @@ TLBlocConnector >> settleAnimation [
 	runningMoves keysAndValuesDo: [ :item :move |
 			pendingStarts at: item ifAbsentPut: [ item placement ].
 			item placeAt: move value ].
-	runningMoves := nil
+	runningMoves := nil.
+	runningResizes ifNotNil: [ :resizes |
+			resizes keysAndValuesDo: [ :element :resize |
+					self pendingSizes at: element ifAbsentPut: [ element dimension ].
+					element resizeTo: resize value ] ].
+	runningResizes := nil
 ]
 
 { #category : 'generation - interaction' }
@@ -1001,28 +1051,36 @@ TLBlocConnector >> stableLayoutCount [
 
 { #category : 'layout' }
 TLBlocConnector >> startPendingAnimation [
-	"The update is done and the items are at their final place. They go back to where they were, and an animation brings them to their place, slowly at first and at the end, with the connections following them. The new items start from the origin of the animation, if there is one. The places are the top left corners of the elements, so that the nodes of a group, which move with it, do not change where the group goes"
+	"The update is done and the items are at their final place and size. They go back to where they were, and an animation brings them to their place, slowly at first and at the end, with the connections following them. The new items start from the origin of the animation, if there is one. The places are the top left corners of the elements, so that the nodes of a group, which move with it, do not change where the group goes. The composite nodes which were expanded or collapsed go back to their previous dimension too, and grow or shrink to the new one during the same animation"
 
-	| moves |
+	| moves resizes transition |
 	moves := IdentityDictionary new.
 	pendingStarts keysAndValuesDo: [ :item :start |
 			| target |
 			target := item placement.
 			target = start ifFalse: [ moves at: item put: start -> target ] ].
 	pendingStarts := IdentityDictionary new.
-	(moves isEmpty or: [ animationDuration isZero ]) ifTrue: [ ^ self ].
+	resizes := IdentityDictionary new.
+	self pendingSizes keysAndValuesDo: [ :element :start | element dimension = start ifFalse: [ resizes at: element put: start -> element dimension ] ].
+	pendingSizes := IdentityDictionary new.
+	((moves isEmpty and: [ resizes isEmpty ]) or: [ animationDuration isZero ]) ifTrue: [ ^ self ].
 	moves keysAndValuesDo: [ :item :move | item placeAt: move key ].
+	resizes keysAndValuesDo: [ :element :resize | element resizeTo: resize key ].
 	runningMoves := moves.
-	animation := BlNumberTransition new
-		             from: 0;
-		             to: 1;
-		             duration: animationDuration;
-		             easing: TLBlocSmoothEasing new;
-		             onStepDo: [ :progress |
-				             moves keysAndValuesDo: [ :item :move | item placeAt: move key + (move value - move key * progress) ].
-				             self updateConnections ];
-		             yourself.
-	view addAnimation: animation
+	runningResizes := resizes.
+	transition := BlNumberTransition new
+		              from: 0;
+		              to: 1;
+		              duration: animationDuration;
+		              easing: TLBlocSmoothEasing new;
+		              onStepDo: [ :progress |
+				              moves keysAndValuesDo: [ :item :move | item placeAt: (self interpolate: move at: progress) ].
+				              resizes keysAndValuesDo: [ :element :resize | element resizeTo: (self interpolate: resize at: progress) ].
+				              self updateConnections ];
+		              yourself.
+	transition onFinishedDo: [ animation == transition ifTrue: [ self forgetAnimation ] ].
+	animation := transition.
+	view addAnimation: transition
 ]
 
 { #category : 'theme' }

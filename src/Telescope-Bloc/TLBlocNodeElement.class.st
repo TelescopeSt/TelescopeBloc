@@ -78,6 +78,11 @@ TLBlocNodeElement >> childrenElement [
 	^ childrenGroup ifNotNil: [ :group | group element ]
 ]
 
+{ #category : 'accessing' }
+TLBlocNodeElement >> childrenGroup [
+	^ childrenGroup
+]
+
 { #category : 'composite' }
 TLBlocNodeElement >> childrenPadding [
 	"The space in pixels between the children of a composite node and its border"
