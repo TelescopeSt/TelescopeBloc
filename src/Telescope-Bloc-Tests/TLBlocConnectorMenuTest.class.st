@@ -26,6 +26,18 @@ TLBlocConnectorMenuTest >> hover: aLabel in: aMenuElement [
 	connector view space settleForDuration: 300 milliSeconds
 ]
 
+{ #category : 'helpers' }
+TLBlocConnectorMenuTest >> isHighlighted: anItem [
+
+	^ anItem background paint color = anItem theme menuHoverColor
+]
+
+{ #category : 'helpers' }
+TLBlocConnectorMenuTest >> item: aLabel in: aMenuElement [
+
+	^ aMenuElement items detect: [ :item | item label = aLabel ]
+]
+
 { #category : 'tests' }
 TLBlocConnectorMenuTest >> labelsOf: aMenuElement [
 
@@ -44,6 +56,22 @@ TLBlocConnectorMenuTest >> menuElements [
 TLBlocConnectorMenuTest >> nodeElement: anEntity [
 
 	^ connector elementFromTLDrawable: (visualization allNodes detect: [ :node | node entity = anEntity ])
+]
+
+{ #category : 'helpers' }
+TLBlocConnectorMenuTest >> openMenuWithASubmenu [
+	"Opens the menu of a node, with an entry Count and an entry with a submenu of dishes. Answers the menu element. It opens at the left of the window, so that the submenu has room at its right"
+
+	visualization addNodesFromEntities: #( #Henry ).
+	visualization addInteraction: (TLMenuInteraction new
+			 title: 'Count';
+			 action: (TLCustomAction block: [ :node |  ]);
+			 yourself).
+	visualization addInteraction: ((TLCustomWithParameterAction block: [ :node :dish |  ]) withMultipleChoices: [ :node | self dishes ] menu: 'Choose your dish').
+	connector open: visualization inWindowSized: 400 @ 300 titled: 'Menu'.
+	connector view space settleForDuration: 1 seconds.
+	self rightClickOn: (self nodeElement: #Henry) at: 40 @ 100.
+	^ self menuElements first
 ]
 
 { #category : 'tests' }
@@ -80,6 +108,16 @@ TLBlocConnectorMenuTest >> pressOn: anElement button: aButton at: aPoint [
 TLBlocConnectorMenuTest >> rightClickOn: anElement at: aPoint [
 
 	self pressOn: anElement button: BlMouseButton secondary at: aPoint
+]
+
+{ #category : 'tests' }
+TLBlocConnectorMenuTest >> testArrowOfASubmenuIsOnTheRightOfItsLine [
+
+	| menu item arrow |
+	menu := self openMenuWithASubmenu.
+	item := self item: 'Choose your dish' in: menu.
+	arrow := item children last.
+	self assert: (item width - item padding right - arrow bounds inParent right) abs < 1
 ]
 
 { #category : 'tests' }
@@ -140,13 +178,13 @@ TLBlocConnectorMenuTest >> testHoveringTheEntryShowsTheChoicesNextToIt [
 
 	| menu submenu |
 	self openWithChoices: [ :node :dish |  ].
-	self rightClickOn: (self nodeElement: #Henry) at: 100 @ 100.
+	self rightClickOn: (self nodeElement: #Henry) at: 40 @ 100.
 	menu := self menuElements first.
 	self hover: 'Choose your dish' in: menu.
 	self assert: self menuElements size equals: 2.
 	submenu := self menuElements last.
 	self assert: (self labelsOf: submenu) equals: self dishes.
-	self assert: submenu measuredBounds position x >= (menu measuredBounds position x + menu extent x - 1)
+	self deny: (submenu bounds inSpace asRectangle intersects: menu bounds inSpace asRectangle)
 ]
 
 { #category : 'tests' }
@@ -160,6 +198,47 @@ TLBlocConnectorMenuTest >> testHoveringTheSameEntryAgainKeepsTheSubmenu [
 	self hover: 'Choose your dish' in: self menuElements first.
 	self assert: self menuElements size equals: 2.
 	self assert: self menuElements last identicalTo: submenu
+]
+
+{ #category : 'tests' }
+TLBlocConnectorMenuTest >> testLineOfAClosedSubmenuIsNotHighlightedAnyMore [
+
+	| menu item |
+	menu := self openMenuWithASubmenu.
+	item := self item: 'Choose your dish' in: menu.
+	self hover: 'Choose your dish' in: menu.
+	item dispatchEvent: BlMouseLeaveEvent new.
+	self hover: 'Count' in: menu.
+	self deny: (self isHighlighted: item)
+]
+
+{ #category : 'tests' }
+TLBlocConnectorMenuTest >> testLineOfTheOpenSubmenuStaysHighlighted [
+	"The mouse leaves the line to go into the submenu: the line still shows which submenu is open"
+
+	| menu item |
+	menu := self openMenuWithASubmenu.
+	item := self item: 'Choose your dish' in: menu.
+	self hover: 'Choose your dish' in: menu.
+	item dispatchEvent: BlMouseLeaveEvent new.
+	self assert: (self isHighlighted: item)
+]
+
+{ #category : 'tests' }
+TLBlocConnectorMenuTest >> testMenuHasAShadow [
+	"Like the pop ups, a menu stands above the visualization"
+
+	| menu |
+	menu := self openMenuWithASubmenu.
+	self assert: menu effect class equals: BlGaussianShadowEffect
+]
+
+{ #category : 'tests' }
+TLBlocConnectorMenuTest >> testMenuIsNotNarrowerThanItsMinimumWidth [
+
+	| menu |
+	menu := self openMenuWithASubmenu.
+	self assert: menu width >= TLBlocMenuElement minimumWidth
 ]
 
 { #category : 'tests' }
@@ -242,6 +321,18 @@ TLBlocConnectorMenuTest >> testSimpleMenuInteractionIsAnEntryOfTheSameMenu [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorMenuTest >> testSubmenuIsAlignedWithItsLineAndContinuesItsMenu [
+
+	| menu item submenu |
+	menu := self openMenuWithASubmenu.
+	item := self item: 'Choose your dish' in: menu.
+	self hover: 'Choose your dish' in: menu.
+	submenu := self menuElements last.
+	self assert: (submenu items first bounds inSpace asRectangle top - item bounds inSpace asRectangle top) abs < 1.
+	self assert: (submenu bounds inSpace asRectangle left - menu bounds inSpace asRectangle right) abs < 1
+]
+
+{ #category : 'tests' }
 TLBlocConnectorMenuTest >> testSubmenuStaysInTheWindow [
 
 	| submenu |
@@ -251,6 +342,26 @@ TLBlocConnectorMenuTest >> testSubmenuStaysInTheWindow [
 	submenu := self menuElements last.
 	self assert: submenu measuredBounds position x + submenu extent x <= 400.
 	self assert: submenu measuredBounds position y + submenu extent y <= 300
+]
+
+{ #category : 'tests' }
+TLBlocConnectorMenuTest >> testSubmenuWithoutRoomAtTheRightOpensAtTheLeft [
+
+	| menu submenu |
+	self openWithChoices: [ :node :dish |  ].
+	self rightClickOn: (self nodeElement: #Henry) at: 200 @ 100.
+	menu := self menuElements first.
+	self hover: 'Choose your dish' in: menu.
+	submenu := self menuElements last.
+	self assert: (menu bounds inSpace asRectangle left - submenu bounds inSpace asRectangle right) abs < 1
+]
+
+{ #category : 'tests' }
+TLBlocConnectorMenuTest >> testTextOfALineIsAsHighAsALineOfItsFont [
+
+	| menu |
+	menu := self openMenuWithASubmenu.
+	menu items do: [ :item | self assert: item children first height >= 13 ]
 ]
 
 { #category : 'tests' }

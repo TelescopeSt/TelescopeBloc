@@ -1,5 +1,5 @@
 "
-I am the transparent layer, as big as the window, which holds the menus shown above a visualization. I open the first menu where I am asked to, and a submenu at the right of a line when the mouse enters it, replacing the submenus after the menu of the line. I close when a line which executes an action is chosen, or when the mouse is pressed outside of the menus. Only one of me is in a window.
+I am the transparent layer, as big as the window, which holds the menus shown above a visualization. I open the first menu where I am asked to, and a submenu at the right of a line when the mouse enters it, its first line in front of the line, replacing the submenus after the menu of the line. I close when a line which executes an action is chosen, or when the mouse is pressed outside of the menus. Only one of me is in a window.
 "
 Class {
 	#name : 'TLBlocMenuPopup',
@@ -44,7 +44,7 @@ TLBlocMenuPopup >> close [
 
 { #category : 'opening' }
 TLBlocMenuPopup >> hover: anEntry over: anItem [
-	"The mouse is over a line: the submenu of the line opens at its right, unless it is open already, and the submenus of the other lines of the menu close. The submenus open after the menu of the line are replaced"
+	"The mouse is over a line: the submenu of the line opens at its right, its first line in front of the line, unless it is open already (see TLBlocMenuElement>>#keepInWindow when there is no room at the right). The submenus of the other lines of the menu close, and the submenus open after the menu of the line are replaced"
 
 	| menuElement |
 	menuElement := anItem parent.
@@ -53,7 +53,8 @@ TLBlocMenuPopup >> hover: anEntry over: anItem [
 	menuElement openedItem: nil.
 	anEntry hasSubmenu ifFalse: [ ^ self ].
 	menuElement openedItem: anItem.
-	self show: anEntry submenu at: menuElement measuredBounds position x + menuElement extent x @ (menuElement measuredBounds position y + anItem measuredBounds position y)
+	(self show: anEntry submenu at: menuElement measuredBounds position x + menuElement extent x + self submenuGap
+		 @ (menuElement measuredBounds position y + anItem position y - TLBlocMenuElement padding - TLBlocMenuItemElement verticalMargin)) openerMenu: menuElement
 ]
 
 { #category : 'initialization' }
@@ -66,7 +67,7 @@ TLBlocMenuPopup >> initialize [
 
 { #category : 'opening' }
 TLBlocMenuPopup >> show: aMenu at: aPoint [
-	"Adds the menu, above the menus which are already open"
+	"Adds the menu, above the menus which are already open, and answers its element"
 
 	| element |
 	element := TLBlocMenuElement new
@@ -74,7 +75,15 @@ TLBlocMenuPopup >> show: aMenu at: aPoint [
 		           menu: aMenu popup: self;
 		           position: aPoint;
 		           yourself.
-	self addChild: element
+	self addChild: element.
+	^ element
+]
+
+{ #category : 'accessing' }
+TLBlocMenuPopup >> submenuGap [
+	"The space between a menu and the submenu which opens at its right: none, the submenu continues the menu"
+
+	^ 0
 ]
 
 { #category : 'theme' }

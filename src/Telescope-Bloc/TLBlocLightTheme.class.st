@@ -63,8 +63,13 @@ TLBlocLightTheme >> menuColor [
 
 { #category : 'accessing' }
 TLBlocLightTheme >> menuHoverColor [
+	"A light tint of the outline of the node under the mouse"
 
-	^ Color veryLightGray
+	^ Color
+		  r: 0.2
+		  g: 0.45
+		  b: 0.9
+		  alpha: 0.14
 ]
 
 { #category : 'accessing' }
