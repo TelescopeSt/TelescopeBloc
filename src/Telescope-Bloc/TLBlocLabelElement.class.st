@@ -1,5 +1,5 @@
 "
-I display the label of a Telescope node in a Bloc visualization, as a vertical stack of lines, because Bloc neither breaks a text at line feeds nor wraps it. Each line is a text element, centered in me. My placement is a TLPosition: I place myself so that my reversed position meets the anchor of the position on my node, with a gap. I wrap my lines to a maximum width by moving one word at a time to the next line, or I cut my text with three dots, measuring the lines after each layout. The size of my font is the label size of the style sheet of my node, because Telescope computes the width of a node from its label and its label size: I give it again to the text of a line each time the text changes. The position can be given by a block which answers a symbol such as #top. The color of the text is the text color of the style sheet, which can depend on the entity: I give it again, with the size, to the text of a line each time it changes. #looksLike: tells whether another label would look the same. A label at the center of a composite node with children displayed is in the strip at the top of the node, not over its children. With a halo (#halo:, given by the connector), the letters of my lines are outlined in the opposite of the color of the text, white around a dark text and black around a light one.
+I display the label of a Telescope node in a Bloc visualization, as a vertical stack of lines, because Bloc neither breaks a text at line feeds nor wraps it. Each line is as high as a line of its font, not only as its letters, so that the lines are evenly spaced and do not run over each other. Each line is a text element, centered in me. My placement is a TLPosition: I place myself so that my reversed position meets the anchor of the position on my node, with a gap. I wrap my lines to a maximum width by moving one word at a time to the next line, or I cut my text with three dots, measuring the lines after each layout. The size of my font is the label size of the style sheet of my node, because Telescope computes the width of a node from its label and its label size: I give it again to the text of a line each time the text changes. The position can be given by a block which answers a symbol such as #top. The color of the text is the text color of the style sheet, which can depend on the entity: I give it again, with the size, to the text of a line each time it changes. #looksLike: tells whether another label would look the same. A label at the center of a composite node with children displayed is in the strip at the top of the node, not over its children. With a halo (#halo:, given by the connector), the letters of my lines are outlined in the opposite of the color of the text, white around a dark text and black around a light one.
 "
 Class {
 	#name : 'TLBlocLabelElement',
@@ -180,10 +180,12 @@ TLBlocLabelElement >> labelText [
 
 { #category : 'private' }
 TLBlocLabelElement >> lineElementWith: aString [
-	"A line of the label, centered in the label"
+	"A line of the label, centered in the label. It is as high as a line of its font, not only as its letters, which would run over the next line and make the lines unevenly spaced"
 
 	| line |
-	line := BlTextElement new text: (self ropedTextOf: aString).
+	line := BlTextElement new
+		        labelMeasurement;
+		        text: (self ropedTextOf: aString).
 	line constraintsDo: [ :lineConstraints | lineConstraints linear horizontal alignCenter ].
 	^ line
 ]
