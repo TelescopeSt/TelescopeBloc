@@ -96,6 +96,20 @@ TLBlocConnectorPopUpTest >> testEachLineOfTheTextIsALine [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorPopUpTest >> testLinesOfTheTextDoNotOverlap [
+	"Each line is as high as a line of its font, not only as its letters: the letters of a line which go below or above the others, like the g of a word, do not run over the next line"
+
+	| node lineElements |
+	node := self openNodeWith: (TLPopUpAction text: [ :entity | 'Fit' , (String with: Character cr) , 'going' ]) onMouseOver.
+	self mouseEnter: node.
+	lineElements := self popUps first children.
+	self assert: lineElements size equals: 2.
+	lineElements do: [ :line | self assert: line height >= 12 ].
+	self assert: lineElements first height equals: lineElements second height.
+	self assert: lineElements second bounds inParent top >= lineElements first bounds inParent bottom
+]
+
+{ #category : 'tests' }
 TLBlocConnectorPopUpTest >> testMouseLeavingRemovesThePopUp [
 
 	| node |

@@ -28,6 +28,22 @@ TLBlocDarkBlueTheme >> canvasColor [
 ]
 
 { #category : 'accessing' }
+TLBlocDarkBlueTheme >> gridColor [
+
+	^ (Color r: 0.294 g: 0.341 b: 0.491) alpha: 0.55
+]
+
+{ #category : 'accessing' }
+TLBlocDarkBlueTheme >> hoverOutlineColor [
+
+	^ Color
+		  r: 0.55
+		  g: 0.65
+		  b: 0.95
+		  alpha: 0.9
+]
+
+{ #category : 'accessing' }
 TLBlocDarkBlueTheme >> iconColor [
 
 	^ Color r: 0.839 g: 0.846 b: 0.878

@@ -19,12 +19,13 @@ Connections
 
 Layout updates
 - The first layout is not animated and fits the visualization into the window.
-- When a layout is applied again, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default. A zero duration disables the animation.
+- When a layout is applied again, the nodes and the groups which were already placed move smoothly to their new place during #animationDuration, 500 milliseconds by default, and the composite nodes which were expanded or collapsed grow or shrink to their new size during the same animation (#rememberSizeOf:). A zero duration disables the animation.
 - The nodes which an interaction adds start from the node of the interaction and slide to their place.
+- The nodes and the connections which appear in a visualization already shown fade in (#fadeIn:), and the colors of a node or of a connection whose style an interaction changes, for example to highlight it, change progressively (TTLBlocEasedColors). A zero #animationDuration turns these transitions off too.
 - The visualization is fitted again into its window when a layout which is applied again moves or adds a node, unless its auto fit is turned off.
 
 Interactions
-- The mouse over, click, double click, right click, drop, moved, multi choice and simple menu, pop up, shape trigger and external trigger interactions are implemented.
+- The mouse over, click, double click, right click, drop, moved, multi choice and simple menu, pop up, shape trigger and external trigger interactions are implemented. An element which can be clicked or double clicked shows a hand under the mouse; the other nodes show the normal cursor, also when they are in a composite which can be clicked.
 - The handlers of the interactions of a drawable are remembered, and made again when its interactions change, for example because the node moved to another group: always add them with #addHandlerOn:to:for:do:.
 - A click, a right click or a menu is for the innermost node under the pointer, and a click which ends the drag of a node is not a click.
 - The menus of Telescope open at the mouse as Bloc elements (TLBlocMenu), and the pop up action shows its text in a TLBlocPopUpElement near the node.
@@ -39,6 +40,8 @@ Dragging
 Theme
 - The colors of the window, of the toolbar, of the legend, of the menus and of the pop ups come from a TLBlocTheme, the light one by default. #theme: gives another one, such as TLBlocDarkTheme, before the visualization is opened.
 - The colors of the nodes, of their labels and of the connections are the ones of the style sheet of the visualization: a theme does not change them.
+- A grid of dots behind the visualization follows its panning and its zoom, in the grid color of the theme. It is shown unless the setting Grid of dots of Telescope Bloc is off (TLBlocConnector class>>#gridVisible:), and #gridVisible:, before the visualization is opened, shows it or not whatever the setting.
+- The labels can have a halo, an outline of their letters in the opposite of the color of their text, to stay readable on a background close to their color. It is off unless the setting Halo around the labels of Telescope Bloc is on (TLBlocConnector class>>#labelHalo:), because it makes the drawing about twice as slow with thousands of labels, and #labelHalo:, before the visualization is opened, turns it on or off whatever the setting.
 
 Legend
 - The legend of a visualization is made of the entries of Telescope, static or dynamic, as a TLBlocLegendElement in the window, which keeps its element when the legend is made again.
@@ -65,16 +68,85 @@ Class {
 		'externalInteractions',
 		'connectionObstacles',
 		'stableLayoutCount',
-		'theme'
+		'theme',
+		'gridVisible',
+		'labelHalo',
+		'pendingSizes',
+		'runningResizes'
+	],
+	#classVars : [
+		'GridVisible',
+		'LabelHalo'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
 	#tag : 'Core'
 }
 
+{ #category : 'settings' }
+TLBlocConnector class >> defaultGridVisible [
+	"Whether the visualizations show a grid of dots behind them, unless the setting or their connector says otherwise"
+
+	^ true
+]
+
+{ #category : 'settings' }
+TLBlocConnector class >> defaultLabelHalo [
+	"Whether the labels have a halo, unless the setting or their connector says otherwise. It is off: see #labelHalo"
+
+	^ false
+]
+
+{ #category : 'settings' }
+TLBlocConnector class >> gridVisible [
+	"Whether the visualizations show a grid of dots behind them, unless their connector says otherwise (see #gridVisible:). It is the setting Grid of dots of Telescope Bloc"
+
+	^ GridVisible ifNil: [ self defaultGridVisible ]
+]
+
+{ #category : 'settings' }
+TLBlocConnector class >> gridVisible: aBoolean [
+
+	GridVisible := aBoolean
+]
+
+{ #category : 'settings' }
+TLBlocConnector class >> labelHalo [
+	"Whether the labels of the visualizations have a halo, unless their connector says otherwise (see #labelHalo:). It is the setting Halo around the labels of Telescope Bloc.
+	A halo is an outline of the letters in the opposite of the color of the text, white around a dark text and black around a light one, which keeps a label readable on a background close to its color, such as a black label on a dark theme. It is off by default because it is slow to draw: the outline of the letters is made again at each drawing, while the letters themselves come from a cache. With a halo on each of 3000 labels, drawing the window takes about twice as long"
+
+	^ LabelHalo ifNil: [ self defaultLabelHalo ]
+]
+
+{ #category : 'settings' }
+TLBlocConnector class >> labelHalo: aBoolean [
+
+	LabelHalo := aBoolean
+]
+
 { #category : 'accessing' }
 TLBlocConnector class >> priority [
 	^ 50
+]
+
+{ #category : 'settings' }
+TLBlocConnector class >> settingsOn: aBuilder [
+	"The settings of Telescope Bloc, in their own group of the settings browser. The default value of a setting is the one its getter answers when it was never set"
+
+	<systemsettings>
+	(aBuilder group: #telescopeBloc)
+		label: 'Telescope Bloc';
+		description: 'Settings of the Bloc connector of Telescope';
+		with: [
+				(aBuilder setting: #gridVisible)
+					target: self;
+					label: 'Grid of dots';
+					description: 'Show a grid of dots behind the visualizations, which follows their panning and their zoom. A connector can still show it or not with #gridVisible:'.
+				(aBuilder setting: #labelHalo)
+					target: self;
+					label: 'Halo around the labels';
+					description:
+						'Draw an outline around the letters of the labels, white around a dark text and black around a light one, to keep them readable on a background close to their color. It is off by default because it is slow: with a halo on each of 3000 labels, drawing a visualization takes about twice as long. A connector can still show it or not with #labelHalo:' ]
 ]
 
 { #category : 'triggers' }
@@ -90,6 +162,7 @@ TLBlocConnector >> actedDrawableFor: aTLDrawable targeting: aTargetDrawable [
 TLBlocConnector >> addElementConnectionInView: element [
 
 	self view content addChild: element.
+	self fadeIn: element.
 	connections add: element.
 	element fromNode registerConnection: element.
 	element toNode registerConnection: element
@@ -118,7 +191,8 @@ TLBlocConnector >> addElementLegendItemInView: legendItem [
 { #category : 'view' }
 TLBlocConnector >> addElementNodeInView: element [
 
-	self view content addChild: element
+	self view content addChild: element.
+	self fadeIn: element
 ]
 
 { #category : 'generation - interaction' }
@@ -129,6 +203,13 @@ TLBlocConnector >> addHandlerOn: anEventClass to: anElement for: aTLDrawable do:
 	handler := anElement addEventHandlerOn: anEventClass do: aBlock.
 	(interactionHandlers at: aTLDrawable ifAbsentPut: [ OrderedCollection new ]) add: anElement -> handler.
 	^ handler
+]
+
+{ #category : 'animation' }
+TLBlocConnector >> animatesTransitions [
+	"The transitions are animated unless the animations of the layouts are off"
+
+	^ animationDuration isZero not
 ]
 
 { #category : 'accessing' }
@@ -183,6 +264,13 @@ TLBlocConnector >> closeVisualization [
 	view space ifNotNil: [ :space | space close ]
 ]
 
+{ #category : 'animation' }
+TLBlocConnector >> colorTransitionDuration [
+	"The time the colors of a node or of a connection take to change when an interaction changes its style, for example to highlight it"
+
+	^ 150 milliSeconds
+]
+
 { #category : 'layout' }
 TLBlocConnector >> compositeNodeOfGroup: aTLGroup [
 	"The composite node whose children are in the group, or nil: the group of a visualization has no parent"
@@ -199,6 +287,7 @@ TLBlocConnector >> configView [
 
 	^ TLBlocVisualization new
 		  theme: self theme;
+		  gridVisible: self gridVisible;
 		  onNodesMovedDo: [ self updateOutdatedConnections ];
 		  yourself
 ]
@@ -315,6 +404,13 @@ TLBlocConnector >> dynamicLegendEntry: aDynamicEntry swatchFor: aBlock [
 	^ element
 ]
 
+{ #category : 'animation' }
+TLBlocConnector >> easeColorsOf: anElement [
+	"The colors of the element go progressively to the ones its style now gives"
+
+	self animatesTransitions ifTrue: [ anElement easeColorsDuring: self colorTransitionDuration ]
+]
+
 { #category : 'generation - interaction' }
 TLBlocConnector >> event: aMouseEvent isForElement: anElement [
 	"The mouse events go up from the element under the pointer to its parents, which are the nodes which contain it. An event is for the nearest node or connection from the element under the pointer: the label of a node is for the node, and the children of a composite node are not for the composite"
@@ -344,6 +440,25 @@ TLBlocConnector >> executeAnimatingFrom: anElement do: aBlock [
 	aBlock ensure: [ animationOrigin := nil ]
 ]
 
+{ #category : 'animation' }
+TLBlocConnector >> fadeDuration [
+	"The time a node or a connection which appears in a visualization already shown takes to become opaque"
+
+	^ 200 milliSeconds
+]
+
+{ #category : 'animation' }
+TLBlocConnector >> fadeIn: anElement [
+	"An element which appears in a visualization already shown, for example the node an interaction adds, becomes opaque progressively. The ones of the first display appear at once, with the window"
+
+	(self animatesTransitions and: [ view isNotNil and: [ view isAttachedToSceneGraph ] ]) ifFalse: [ ^ self ].
+	anElement opacity: 0.
+	anElement addAnimation: (BlOpacityAnimation new
+			 opacity: 1;
+			 duration: self fadeDuration;
+			 yourself)
+]
+
 { #category : 'updating' }
 TLBlocConnector >> fitAgainWhenTheNodesAreMeasured [
 	"The new nodes have no labels measured yet when the visualization is first fitted. It is fitted again when they are: at the next layout of the view, or when the animation is done, because the nodes are not at their final place before. Nothing happens when the auto fit was turned off in the meantime"
@@ -357,7 +472,22 @@ TLBlocConnector >> fitAgainWhenTheNodesAreMeasured [
 TLBlocConnector >> fitCompositeNodeOf: aTLGroup [
 	"A composite node has the size of the group of its children, which a layout has just placed"
 
-	(self compositeNodeOfGroup: aTLGroup) ifNotNil: [ :composite | self elementFromTLDrawable: composite ifPresent: [ :compositeElement | compositeElement fitToChildren ] ifNone: [ ] ]
+	(self compositeNodeOfGroup: aTLGroup) ifNotNil: [ :composite |
+			self
+				elementFromTLDrawable: composite
+				ifPresent: [ :compositeElement |
+						self rememberSizeOf: compositeElement.
+						compositeElement fitToChildren ]
+				ifNone: [ ] ]
+]
+
+{ #category : 'animation' }
+TLBlocConnector >> forgetAnimation [
+	"The animation is done: the items are at their place and their size, and a layout which starts now has nothing to settle"
+
+	animation := nil.
+	runningMoves := nil.
+	runningResizes := nil
 ]
 
 { #category : 'generation - interaction' }
@@ -367,11 +497,12 @@ TLBlocConnector >> generateBasicInteraction: aTLInteraction onNode: aTLNode [
 
 { #category : 'generation - interaction' }
 TLBlocConnector >> generateClickInteraction: aTLClickInteraction onDrawable: aTLDrawable targetingDrawable: aTargetDrawable [
-	"The action of the interaction is executed when the element of the target is clicked, unless the click ends the drag of the node. The click is for the innermost node under the pointer: a composite node does not get the clicks of its children. The action of a pop up is not executed: a click shows the text near the element, and the next click hides it. The interaction of a trigger is for the element of the trigger, and its action for the node of the trigger"
+	"The action of the interaction is executed when the element of the target is clicked, unless the click ends the drag of the node. The click is for the innermost node under the pointer, and the element shows a hand under it: a composite node does not get the clicks of its children. The action of a pop up is not executed: a click shows the text near the element, and the next click hides it. The interaction of a trigger is for the element of the trigger, and its action for the node of the trigger"
 
 	| element acted |
 	element := self eventElementFor: aTLDrawable targeting: aTargetDrawable.
 	acted := self actedDrawableFor: aTLDrawable targeting: aTargetDrawable.
+	element mouseCursor: Cursor webLink.
 	aTLClickInteraction action isPopUp ifTrue: [
 			^ self
 				  addHandlerOn: BlClickEvent
@@ -389,11 +520,12 @@ TLBlocConnector >> generateClickInteraction: aTLClickInteraction onDrawable: aTL
 
 { #category : 'generation - interaction' }
 TLBlocConnector >> generateDoubleClickInteraction: aTLDoubleClickInteraction onDrawable: aTLDrawable targetingDrawable: aTargetDrawable [
-	"The action of the interaction is executed when the element of the target is double clicked. The double click is for the innermost node under the pointer, like the click"
+	"The action of the interaction is executed when the element of the target is double clicked. The double click is for the innermost node under the pointer, and the element shows a hand under it, like the click"
 
 	| element acted |
 	element := self eventElementFor: aTLDrawable targeting: aTargetDrawable.
 	acted := self actedDrawableFor: aTLDrawable targeting: aTargetDrawable.
+	element mouseCursor: Cursor webLink.
 	self
 		addHandlerOn: BlDoubleClickEvent
 		to: element
@@ -578,6 +710,19 @@ TLBlocConnector >> generateTLWidthLegendEntry: aTLWidthLegendEntry [
 	^ self legendEntryWith: (TLBlocLegendSwatch widthArrowColored: self theme iconColor) label: aTLWidthLegendEntry label
 ]
 
+{ #category : 'theme' }
+TLBlocConnector >> gridVisible [
+
+	^ gridVisible ifNil: [ self class gridVisible ]
+]
+
+{ #category : 'theme' }
+TLBlocConnector >> gridVisible: aBoolean [
+	"Whether the window shows a grid of dots behind the visualization, which follows its panning and its zoom. Without it, the setting Grid of dots of Telescope Bloc decides (see TLBlocConnector class>>#gridVisible). It is set before the visualization is opened"
+
+	gridVisible := aBoolean
+]
+
 { #category : 'accessing' }
 TLBlocConnector >> host: aBlHost [
 	"The host of the windows I open, for example BlHeadlessHost default to open them without a display. When nil, the windows use the default host of Bloc"
@@ -597,6 +742,14 @@ TLBlocConnector >> initialize [
 	externalInteractions := IdentityDictionary new.
 	layoutReapplied := false.
 	animationDuration := 500 milliSeconds
+]
+
+{ #category : 'animation' }
+TLBlocConnector >> interpolate: aStartAndEnd at: aProgress [
+	"The point between the start and the end at the progress of an animation, from 0 to 1. The end itself at the end of the animation, without rounding"
+
+	aProgress >= 1 ifTrue: [ ^ aStartAndEnd value ].
+	^ aStartAndEnd key + (aStartAndEnd value - aStartAndEnd key * aProgress)
 ]
 
 { #category : 'triggers' }
@@ -634,7 +787,20 @@ TLBlocConnector >> labelElementOf: aNode styleSheet: styleSheet [
 	"The label of the node, made from its effective style sheet, or nil when its style gives none: Telescope says so with the class TLNoNodeLabel, which is not a text to draw"
 
 	^ ((styleSheet attributes includesKey: #nodeLabel) and: [ (styleSheet obtainValue: #nodeLabel forEntity: aNode entity inNode: aNode) ~~ TLNoNodeLabel ]) ifTrue: [
-		  TLBlocLabelElement forNode: aNode styleSheet: styleSheet ]
+		  TLBlocLabelElement forNode: aNode styleSheet: styleSheet halo: self labelHalo ]
+]
+
+{ #category : 'accessing' }
+TLBlocConnector >> labelHalo [
+
+	^ labelHalo ifNil: [ self class labelHalo ]
+]
+
+{ #category : 'accessing' }
+TLBlocConnector >> labelHalo: aBoolean [
+	"Whether the labels have a halo, an outline of their letters in the opposite of the color of their text (see TLBlocConnector class>>#labelHalo, which also explains why it is slow). Without it, the setting Halo around the labels of Telescope Bloc decides. It is set before the visualization is opened"
+
+	labelHalo := aBoolean
 ]
 
 { #category : 'updating' }
@@ -713,6 +879,13 @@ TLBlocConnector >> parallelConnectionsSpacing [
 	^ 40
 ]
 
+{ #category : 'animation' }
+TLBlocConnector >> pendingSizes [
+	"The dimension of the composite nodes which an update expands or collapses, before the update: #startPendingAnimation resizes them progressively"
+
+	^ pendingSizes ifNil: [ pendingSizes := IdentityDictionary new ]
+]
+
 { #category : 'triggers' }
 TLBlocConnector >> placeElement: anElement correspondingToTrigger: aTLShapeTrigger relativeToDrawable: aTLDrawable [
 	"The trigger is a child of the element of the drawable, and its center is on the side of the position of the trigger of the style sheet of the drawable: on the right by default"
@@ -729,6 +902,13 @@ TLBlocConnector >> placementsOfPlacedItemsIn: group [
 	placements := IdentityDictionary new.
 	group do: [ :item | (placedElements includes: item) ifTrue: [ placements at: item put: item placement ] ].
 	^ placements
+]
+
+{ #category : 'animation' }
+TLBlocConnector >> rememberSizeOf: aCompositeElement [
+	"The dimension of the composite node before an update fits it to its children or releases them, when it is already shown: a new composite node appears at its size. A composite which an update resizes several times keeps the first one"
+
+	(placedElements includes: aCompositeElement) ifTrue: [ self pendingSizes at: aCompositeElement ifAbsentPut: [ aCompositeElement dimension ] ]
 ]
 
 { #category : 'layout' }
@@ -774,13 +954,22 @@ TLBlocConnector >> removeGroup: aTLGroup [
 	composite := self compositeNodeOfGroup: aTLGroup.
 	(self elementFromTLDrawable: aTLGroup) element removeFromParent.
 	super removeGroup: aTLGroup.
-	composite ifNotNil: [ self elementFromTLDrawable: composite ifPresent: #releaseChildren ifNone: [ ] ]
+	composite ifNotNil: [
+			self
+				elementFromTLDrawable: composite
+				ifPresent: [ :compositeElement |
+						self rememberSizeOf: compositeElement.
+						compositeElement releaseChildren ]
+				ifNone: [ ] ]
 ]
 
 { #category : 'generation - interaction' }
 TLBlocConnector >> removeInteractionHandlersOf: aTLDrawable [
 
-	(interactionHandlers removeKey: aTLDrawable ifAbsent: [ #(  ) ]) do: [ :association | association key removeEventHandler: association value ].
+	(interactionHandlers removeKey: aTLDrawable ifAbsent: [ #(  ) ]) do: [ :association |
+			association key
+				removeEventHandler: association value;
+				mouseCursor: nil ].
 	externalInteractions removeKey: aTLDrawable ifAbsent: [ ].
 	self menuInteractionByDrawable removeKey: aTLDrawable ifAbsent: [ ]
 ]
@@ -810,7 +999,7 @@ TLBlocConnector >> routeOutdatedConnections [
 
 { #category : 'layout' }
 TLBlocConnector >> settleAnimation [
-	"A layout starts while an animation is in progress: the items go to the place the animation was bringing them to, and where they were is remembered"
+	"A layout starts while an animation is in progress: the items go to the place and the size the animation was bringing them to, and where they were and their size are remembered"
 
 	animation ifNil: [ ^ self ].
 	animation stop.
@@ -818,7 +1007,12 @@ TLBlocConnector >> settleAnimation [
 	runningMoves keysAndValuesDo: [ :item :move |
 			pendingStarts at: item ifAbsentPut: [ item placement ].
 			item placeAt: move value ].
-	runningMoves := nil
+	runningMoves := nil.
+	runningResizes ifNotNil: [ :resizes |
+			resizes keysAndValuesDo: [ :element :resize |
+					self pendingSizes at: element ifAbsentPut: [ element dimension ].
+					element resizeTo: resize value ] ].
+	runningResizes := nil
 ]
 
 { #category : 'generation - interaction' }
@@ -857,28 +1051,36 @@ TLBlocConnector >> stableLayoutCount [
 
 { #category : 'layout' }
 TLBlocConnector >> startPendingAnimation [
-	"The update is done and the items are at their final place. They go back to where they were, and an animation brings them to their place, slowly at first and at the end, with the connections following them. The new items start from the origin of the animation, if there is one. The places are the top left corners of the elements, so that the nodes of a group, which move with it, do not change where the group goes"
+	"The update is done and the items are at their final place and size. They go back to where they were, and an animation brings them to their place, slowly at first and at the end, with the connections following them. The new items start from the origin of the animation, if there is one. The places are the top left corners of the elements, so that the nodes of a group, which move with it, do not change where the group goes. The composite nodes which were expanded or collapsed go back to their previous dimension too, and grow or shrink to the new one during the same animation"
 
-	| moves |
+	| moves resizes transition |
 	moves := IdentityDictionary new.
 	pendingStarts keysAndValuesDo: [ :item :start |
 			| target |
 			target := item placement.
 			target = start ifFalse: [ moves at: item put: start -> target ] ].
 	pendingStarts := IdentityDictionary new.
-	(moves isEmpty or: [ animationDuration isZero ]) ifTrue: [ ^ self ].
+	resizes := IdentityDictionary new.
+	self pendingSizes keysAndValuesDo: [ :element :start | element dimension = start ifFalse: [ resizes at: element put: start -> element dimension ] ].
+	pendingSizes := IdentityDictionary new.
+	((moves isEmpty and: [ resizes isEmpty ]) or: [ animationDuration isZero ]) ifTrue: [ ^ self ].
 	moves keysAndValuesDo: [ :item :move | item placeAt: move key ].
+	resizes keysAndValuesDo: [ :element :resize | element resizeTo: resize key ].
 	runningMoves := moves.
-	animation := BlNumberTransition new
-		             from: 0;
-		             to: 1;
-		             duration: animationDuration;
-		             easing: TLBlocSmoothEasing new;
-		             onStepDo: [ :progress |
-				             moves keysAndValuesDo: [ :item :move | item placeAt: move key + (move value - move key * progress) ].
-				             self updateConnections ];
-		             yourself.
-	view addAnimation: animation
+	runningResizes := resizes.
+	transition := BlNumberTransition new
+		              from: 0;
+		              to: 1;
+		              duration: animationDuration;
+		              easing: TLBlocSmoothEasing new;
+		              onStepDo: [ :progress |
+				              moves keysAndValuesDo: [ :item :move | item placeAt: (self interpolate: move at: progress) ].
+				              resizes keysAndValuesDo: [ :element :resize | element resizeTo: (self interpolate: resize at: progress) ].
+				              self updateConnections ];
+		              yourself.
+	transition onFinishedDo: [ animation == transition ifTrue: [ self forgetAnimation ] ].
+	animation := transition.
+	view addAnimation: transition
 ]
 
 { #category : 'theme' }
@@ -966,7 +1168,8 @@ TLBlocConnector >> updateConnections [
 TLBlocConnector >> updateEdgeOf: aConnection [
 	"An interaction changed the style of the connection, for example to highlight it: the element is made again from the style sheet, and the connections are drawn again once the update is done"
 
-	(self elementFromTLDrawable: aConnection) customizeFromConnection: aConnection
+	(self elementFromTLDrawable: aConnection) customizeFromConnection: aConnection.
+	self easeColorsOf: (self elementFromTLDrawable: aConnection)
 ]
 
 { #category : 'updating - interaction' }
@@ -976,6 +1179,7 @@ TLBlocConnector >> updateElementNodeOf: aNode [
 	| element |
 	element := self elementFromTLDrawable: aNode.
 	element customizeFromNode: aNode.
+	self easeColorsOf: element.
 	element replaceLabelWith: (self labelElementOf: aNode).
 	self updateTriggersOf: aNode
 ]

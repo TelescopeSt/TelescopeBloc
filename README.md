@@ -52,15 +52,68 @@ The demo browser lists them, filters them, shows the visualization and the sourc
 
 - The mouse wheel zooms around the mouse, and a press on the background pans.
 - A press on a node and a move drag the node, and the connections follow. A layout which is applied again puts it back.
+- The node under the mouse is outlined in the `hoverOutlineColor` of the theme. A node or a connection which can be clicked shows a hand, and a dragged node shows a move cursor.
 - The toolbar at the top fits the visualization into the window, zooms, exports it as a PNG or as a SVG (a file chooser opens), and turns the auto fit on or off. Each button has a tooltip after one second.
 - The legend of the visualization is at the bottom left.
 - A visualization is fitted into its window when it opens, and again when a layout applied again moves or adds nodes, unless the auto fit is off.
 - The nodes move smoothly when a layout is applied again, and the ones an interaction adds slide from the node of the interaction.
 - The colors of the window, of the toolbar, of the legend, of the menus and of the pop ups come from a theme: light by default, dark, or dark blue (see [Themes](#themes)).
+- A discreet grid of dots behind the visualization follows its panning and its zoom (see [Grid](#grid)).
+- The labels can have a halo which keeps them readable on any background. It is off by default because it is slow to draw (see [Halo around the labels](#halo-around-the-labels)).
+
+## Grid
+
+A grid of dots is drawn behind the visualization, which gives a sense of the space and of the zoom.
+Its dots are a grid of the content: they follow the panning and the zoom of the visualization.
+When the content is zoomed out, every other dot is drawn, and when it is zoomed in, dots are added between them, so that they stay between 12 and 48 pixels apart.
+The grid does not take the mouse, a press on it pans, and it is not in the PNG and SVG exports.
+Its color is the `gridColor` of the [theme](#themes).
+
+The grid is shown by default. It can be turned off for all the visualizations in the settings browser, in the group `Telescope Bloc`, with the setting `Grid of dots`, or from code:
+
+```Smalltalk
+TLBlocConnector gridVisible: false
+```
+
+A connector can also show it or not whatever the setting, before the visualization is opened:
+
+```Smalltalk
+connector := TLBlocConnector new.
+connector gridVisible: false.
+visualization generator: connector.
+visualization open
+```
+
+## Halo around the labels
+
+A label is hard to read on a background close to its color: a black label outside of its node on a dark theme, or a dark label inside a dark node.
+The halo outlines the letters of the labels in the opposite of the color of their text, white around a dark text and black around a light one, without changing the colors of the style sheet.
+
+The halo is off by default because it is slow to draw. The letters of a text come from a cache, but their outline is made again each time the window is drawn, and the Morphic window is drawn again at each step of a hover, of a drag or of an animation. With a halo on each of the 3000 labels of the demo *Benchmark many nodes*:
+
+| Phase | Without halo | With halo |
+|---|---|---|
+| Drawing the window | 45–50 ms | 111–112 ms |
+| A step of a pan | 15–17 ms | 23–24 ms |
+
+It is fine for visualizations with a few hundred labels. It can be turned on for all the visualizations in the settings browser, in the group `Telescope Bloc`, with the setting `Halo around the labels`, or from code:
+
+```Smalltalk
+TLBlocConnector labelHalo: true
+```
+
+A connector can also turn it on or off whatever the setting, before the visualization is opened:
+
+```Smalltalk
+connector := TLBlocConnector new.
+connector labelHalo: true.
+visualization generator: connector.
+visualization open
+```
 
 ## Themes
 
-A theme gives the colors of what surrounds a visualization: the canvas behind it, the toolbar and its buttons, the legend, the menus and the pop ups.
+A theme gives the colors of what surrounds a visualization: the canvas behind it and its grid, the toolbar and its buttons, the legend, the menus and the pop ups.
 TelescopeBloc has a light theme, `TLBlocLightTheme`, the default one, a dark theme, `TLBlocDarkTheme`, and a dark blue theme, `TLBlocDarkBlueTheme`, which has the colors of the dark blue theme of Pharo.
 
 | Light | Dark | Dark blue |
@@ -124,6 +177,8 @@ The colors of a theme are:
 | `menuColor`, `menuHoverColor` | a menu, and the line under the mouse |
 | `popUpColor`, `popUpBorderColor`, `popUpTextColor`, `popUpShadowColor` | the pop ups and the tooltips |
 | `swatchOutlineColor` | the outline of the swatches of the legend which show a color |
+| `gridColor` | the dots of the grid behind the visualization |
+| `hoverOutlineColor` | the outline of the node under the mouse |
 
 ### What a theme does not change
 
@@ -133,6 +188,8 @@ The default style sheet of Telescope has black texts and borders, made for a lig
 ```Smalltalk
 visualization styleSheet textColor: Color white
 ```
+
+Or turn on the [halo around the labels](#halo-around-the-labels), which keeps the colors of the style sheet, at a cost on the speed of the drawing.
 
 ## What is rendered
 

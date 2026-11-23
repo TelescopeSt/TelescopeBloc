@@ -74,12 +74,13 @@ TLBlocConnectorZoomTest >> testZoomGoesThroughIntermediateValues [
 
 { #category : 'tests' }
 TLBlocConnectorZoomTest >> testZoomIsLimited [
+
 	200 timesRepeat: [ self scrollUpAt: 100 @ 100 ].
 	self settle.
-	self assert: connector view zoom equals: TLBlocVisualization maximumZoom.
+	self assert: (connector view zoom closeTo: TLBlocVisualization maximumZoom).
 	400 timesRepeat: [ self scrollDownAt: 100 @ 100 ].
 	self settle.
-	self assert: connector view zoom equals: TLBlocVisualization minimumZoom
+	self assert: (connector view zoom closeTo: TLBlocVisualization minimumZoom)
 ]
 
 { #category : 'tests' }

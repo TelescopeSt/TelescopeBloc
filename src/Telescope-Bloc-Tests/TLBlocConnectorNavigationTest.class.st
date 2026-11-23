@@ -92,3 +92,25 @@ TLBlocConnectorNavigationTest >> setUp [
 TLBlocConnectorNavigationTest >> settle [
 	connector view space settleForDuration: 1 seconds
 ]
+
+{ #category : 'tests' }
+TLBlocConnectorNavigationTest >> testZoomInIsSmooth [
+
+	| zoom |
+	zoom := connector view zoom.
+	connector view zoomIn.
+	self assert: connector view zoom equals: zoom.
+	self settle.
+	self assert: (connector view zoom - (zoom * 1.25)) abs < 0.0001
+]
+
+{ #category : 'tests' }
+TLBlocConnectorNavigationTest >> testZoomOutIsSmooth [
+
+	| zoom |
+	zoom := connector view zoom.
+	connector view zoomOut.
+	self assert: connector view zoom equals: zoom.
+	self settle.
+	self assert: (connector view zoom - (zoom / 1.25)) abs < 0.0001
+]

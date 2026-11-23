@@ -140,6 +140,22 @@ TLBlocConnectorLabelTest >> testLabelTextColorIsTheTextColorOfTheStyle [
 ]
 
 { #category : 'tests' }
+TLBlocConnectorLabelTest >> testLinesOfALabelDoNotOverlap [
+	"Each line is as high as a line of its font, not only as its letters: the letters of a line which go below or above the others, like the g of a word, do not run over the next line, and the lines are evenly spaced"
+
+	| node lines |
+	visualization styleSheet nodeLabel: [ :entity | 'Fit' , (String with: Character cr) , 'going' ] position: #bottom.
+	node := visualization addNodeFromEntity: 1.
+	connector open: visualization inWindowSized: 300 @ 300 titled: 'Label'.
+	connector view space settleForDuration: 500 milliSeconds.
+	lines := (connector elementFromTLDrawable: node) labelElement children.
+	self assert: lines size equals: 2.
+	lines do: [ :line | self assert: line height >= TLStyleSheet defaultLabelSize ].
+	self assert: lines first height equals: lines second height.
+	self assert: lines second bounds inParent top >= lines first bounds inParent bottom
+]
+
+{ #category : 'tests' }
 TLBlocConnectorLabelTest >> testNameCloudDemoGeneratesLabelsSizedByTheirLabelSizeWithoutOverlap [
 	"The widths of the nodes come from their labels and their label size: the biggest word is much bigger than the smallest one, and a word is not drawn over its neighbour"
 

@@ -75,3 +75,17 @@ TLBlocConnectorPickingTest >> testTheElementUnderTheMouseIsTheOneBlocFinds [
 				 TLBlocNodeElement.
 				 BlTextElement })
 ]
+
+{ #category : 'tests' }
+TLBlocConnectorPickingTest >> testTheVisualizationAndItsContentAreNeverUnderTheMouse [
+	"The view and its content are plain elements: they must let a press on the background reach the root of the space, which pans"
+
+	| view |
+	view := connector view.
+	0 to: 400 by: 5 do: [ :x |
+			0 to: 300 by: 5 do: [ :y |
+					| target |
+					target := view findMouseEventTargetAt: x @ y.
+					self deny: target identicalTo: view.
+					self deny: target identicalTo: view content ] ]
+]

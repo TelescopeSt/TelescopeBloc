@@ -1,5 +1,5 @@
 "
-I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels and the connections are in my #content, an element which is never transformed. I translate myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. Both are my transformation, not my position: zooming and panning do not lay out my nodes and their labels again. While the user pans (#startPanning and #stopPanning), my content is in a composition layer: Bloc paints what it drew once at the new place instead of drawing all the nodes at each step, unless the content is too big in the window for the memory of the layer (#contentFitsInACompositionLayer), and the nodes are not looked for under the mouse, so that the mouse events go to the background. The pan and zoom handlers are installed on the root of the window while I am in it. The first time I am laid out with some content I am fitted into the window: scaled so that the content fills the window, down or up as far as the zoom allows, and centered, which #fitIntoWindow does again on request. #zoomIn and #zoomOut zoom around the center of the window, and #exportAsPngTo: and #exportAsSvgTo: write me as I am shown. I put my toolbar in the root of the window while I am in it. I do not clip my children, because the window already clips me. I let the user drag the nodes, and the panning compensates the nodes which move my content, so that the other nodes stay under the mouse. The connector is told when a node moved, to join the nodes again. I keep the legend, and I fit my content in what is at its right. After a fit, I fit myself again when my content changes, until the user pans, zooms or drags, because the content is only known after a few layouts. It finds the node under the point where a node was dropped (#dropTargetOf:at:). The area where I am fitted (#fitArea) is the window without the strip of the legend, at its left, and the strip of the toolbar, at its top, so that the content is clear of both.
+I am the Bloc element that holds the elements of a Telescope visualization: the nodes with their labels and the connections are in my #content, an element which is never transformed. I translate myself so that the content starts at the margin of the window, shifted by the panning, and I scale myself with the zoom. Both are my transformation, not my position: zooming and panning do not lay out my nodes and their labels again. While the user pans (#startPanning and #stopPanning), my content is in a composition layer: Bloc paints what it drew once at the new place instead of drawing all the nodes at each step, unless the content is too big in the window for the memory of the layer (#contentFitsInACompositionLayer), and the nodes are not looked for under the mouse, so that the mouse events go to the background. The pan, zoom, drag and hover handlers are installed on the root of the window while I am in it. The node under the mouse is outlined in the color of my theme (#hover:, with a TLBlocHoverOutlineEffect, which neither resizes it nor lays it out again). The first time I am laid out with some content I am fitted into the window: scaled so that the content fills the window, down or up as far as the zoom allows, and centered, which #fitIntoWindow does again on request. #fitIntoWindowSmoothly does it in a short animation, as the Fit button of the toolbar, and a zoom, a pan or a drag of the user stops it. #zoomIn and #zoomOut zoom around the center of the window in a short animation, like the mouse wheel, and #exportAsPngTo: and #exportAsSvgTo: write me as I am shown. I put my toolbar in the root of the window while I am in it. I do not clip my children, because the window already clips me. I let the user drag the nodes, and the panning compensates the nodes which move my content, so that the other nodes stay under the mouse. The connector is told when a node moved, to join the nodes again. I keep the legend, and I fit my content in what is at its right. After a fit, I fit myself again when my content changes, until the user pans, zooms or drags, because the content is only known after a few layouts. It finds the node under the point where a node was dropped (#dropTargetOf:at:). The area where I am fitted (#fitArea) is the window without the strip of the legend, at its left, and the strip of the toolbar, at its top, so that the content is clear of both. While I am in a window, a grid of dots (TLBlocGridElement) is behind me in it, unless #gridVisible: turned it off: it follows my panning and my zoom.
 "
 Class {
 	#name : 'TLBlocVisualization',
@@ -24,12 +24,24 @@ Class {
 		'content',
 		'panning',
 		'placedTransformation',
-		'theme'
+		'theme',
+		'grid',
+		'gridVisible',
+		'hoveredNode',
+		'hoverHandler',
+		'fitAnimation'
 	],
 	#category : 'Telescope-Bloc-Core',
 	#package : 'Telescope-Bloc',
 	#tag : 'Core'
 }
+
+{ #category : 'zoom' }
+TLBlocVisualization class >> fitDuration [
+	"How long the Fit button takes to bring the visualization to the fit"
+
+	^ 250 milliSeconds
+]
 
 { #category : 'zoom' }
 TLBlocVisualization class >> maximumZoom [
@@ -48,6 +60,13 @@ TLBlocVisualization class >> zoomDuration [
 	"How long the zoom takes to reach its target"
 
 	^ 150 milliSeconds
+]
+
+{ #category : 'accessing' }
+TLBlocVisualization >> autoFit [
+	"Whether I am fitted into the window again by myself when my content changes: true after a fit, until the user pans, zooms or drags"
+
+	^ autoFit
 ]
 
 { #category : 'fitting' }
@@ -200,18 +219,38 @@ TLBlocVisualization >> fitIfPendingOtherwiseKeepContentInWindow [
 TLBlocVisualization >> fitIntoWindow [
 	"Scales the visualization so that all its nodes and labels fill the area of the window which is free, as much as the zoom allows, and centers it there. The legend is at the left of the window and the toolbar at the top: the visualization fills what is left. The panning is forgotten, and the visualization is fitted again when its content changes, until the user pans, zooms or drags"
 
-	| rectangle area ratios |
+	self fitIntoWindowSmoothly: false
+]
+
+{ #category : 'layout' }
+TLBlocVisualization >> fitIntoWindowSmoothly [
+	"Like #fitIntoWindow, but the visualization moves to the fit in a short animation instead of jumping, as the Fit button of the toolbar does. A zoom, a pan or a drag of the user stops the animation"
+
+	self fitIntoWindowSmoothly: true
+]
+
+{ #category : 'layout' }
+TLBlocVisualization >> fitIntoWindowSmoothly: aBoolean [
+	"See #fitIntoWindow and #fitIntoWindowSmoothly. The zoom or the fit in progress stops: the new fit is the one to show"
+
+	| rectangle area ratios targetZoom targetPanOffset |
 	self space ifNil: [ ^ self ].
 	rectangle := self contentRectangle.
 	rectangle extent isZero ifTrue: [ ^ self ].
+	zoomAnimation := nil.
+	zoomTarget := nil.
+	fitAnimation := nil.
 	area := self fitArea.
 	ratios := area extent - (self windowMargin * 2) / (rectangle extent max: 1 @ 1).
-	zoomFactor := ((ratios x min: ratios y) min: self class maximumZoom) max: self class minimumZoom.
-	panOffset := area origin + (area extent - (rectangle extent * zoomFactor) / 2) - self windowMargin.
+	targetZoom := ((ratios x min: ratios y) min: self class maximumZoom) max: self class minimumZoom.
+	targetPanOffset := area origin + (area extent - (rectangle extent * targetZoom) / 2) - self windowMargin.
 	autoFit := true.
 	fittedRectangle := rectangle.
 	fittedArea := area.
-	self fitContentToWindow
+	aBoolean ifTrue: [ ^ self moveSmoothlyToZoom: targetZoom panOffset: targetPanOffset contentTopLeft: rectangle origin ].
+	zoomFactor := targetZoom.
+	panOffset := targetPanOffset.
+	self placeContentWithTopLeft: rectangle origin
 ]
 
 { #category : 'fitting' }
@@ -228,16 +267,55 @@ TLBlocVisualization >> fitOnNextLayoutIfAutoFit [
 	autoFitOnLayout ifTrue: [ self fitOnNextLayout ]
 ]
 
+{ #category : 'accessing' }
+TLBlocVisualization >> gridVisible [
+
+	^ gridVisible ifNil: [ true ]
+]
+
+{ #category : 'accessing' }
+TLBlocVisualization >> gridVisible: aBoolean [
+	"Whether the window shows a grid of dots behind me, which follows my panning and my zoom (see TLBlocGridElement). It does by default"
+
+	gridVisible := aBoolean
+]
+
+{ #category : 'hovering' }
+TLBlocVisualization >> hover: aNodeElement [
+	"The node under the mouse is outlined in the color of my theme, and nil removes the outline. Only the nodes whose outline changes are drawn again: an effect changes neither their size nor the layout"
+
+	hoveredNode == aNodeElement ifTrue: [ ^ self ].
+	hoveredNode ifNotNil: [ :previous | previous effect: BlNullEffect new ].
+	hoveredNode := aNodeElement.
+	aNodeElement ifNotNil: [ aNodeElement effect: (TLBlocHoverOutlineEffect color: self theme hoverOutlineColor width: self hoverOutlineWidth) ]
+]
+
+{ #category : 'hovering' }
+TLBlocVisualization >> hoverOutlineWidth [
+
+	^ 2
+]
+
+{ #category : 'accessing' }
+TLBlocVisualization >> hoveredNode [
+	"The node under the mouse, which is outlined, if any"
+
+	^ hoveredNode
+]
+
 { #category : 'initialization' }
 TLBlocVisualization >> initialize [
-	"The window already clips the visualization, so nodes and labels placed outside the default extent must still be drawn. The nodes and the connections are in my content, which is never transformed: my transformation pans and zooms it. The visualization is fitted into the window the first time it is laid out, and again when a layout is applied again unless the auto fit is turned off."
+	"The window already clips the visualization, so nodes and labels placed outside the default extent must still be drawn. The nodes and the connections are in my content, which is never transformed: my transformation pans and zooms it. Neither I nor my content take the mouse: a press on the background must reach the root of the space, which pans. My children still take it. The visualization is fitted into the window the first time it is laid out, and again when a layout is applied again unless the auto fit is turned off."
 
 	super initialize.
 	content := BlElement new
+		           preventMouseEvents;
 		           clipChildren: false;
 		           yourself.
 	self addChild: content.
-	self clipChildren: false.
+	self
+		clipChildren: false;
+		preventMouseEvents.
 	panOffset := 0 @ 0.
 	zoomFactor := 1.
 	fitPending := true.
@@ -248,9 +326,19 @@ TLBlocVisualization >> initialize [
 	panHandler := TLBlocPanHandler on: self.
 	zoomHandler := TLBlocZoomHandler on: self.
 	dragHandler := TLBlocNodeDragHandler on: self.
+	hoverHandler := TLBlocHoverHandler on: self.
 	self addEventHandlerOn: BlElementLayoutComputedEvent do: [ :event | self fitIfPendingOtherwiseKeepContentInWindow ].
 	self addEventHandlerOn: BlElementAddedToSceneGraphEvent do: [ :event | self installNavigationHandlers ].
 	self addEventHandlerOn: BlElementRemovedFromSceneGraphEvent do: [ :event | self uninstallNavigationHandlers ]
+]
+
+{ #category : 'navigation' }
+TLBlocVisualization >> installGrid [
+	"The grid is behind everything in the window"
+
+	(self gridVisible and: [ grid isNil or: [ grid hasParent not ] ]) ifFalse: [ ^ self ].
+	grid := TLBlocGridElement for: self.
+	self space root addChild: grid at: 1
 ]
 
 { #category : 'legend' }
@@ -263,14 +351,16 @@ TLBlocVisualization >> installLegend [
 
 { #category : 'initialization' }
 TLBlocVisualization >> installNavigationHandlers [
-	"The mouse events of the background and of the nodes arrive on the root of the window, which also holds the toolbar and the legend"
+	"The mouse events of the background and of the nodes arrive on the root of the window, which also holds the toolbar, the legend and the grid"
 
 	{
 		panHandler.
 		zoomHandler.
-		dragHandler } do: [ :handler | self space root addEventHandlerIfNotPresent: handler ].
+		dragHandler.
+		hoverHandler } do: [ :handler | self space root addEventHandlerIfNotPresent: handler ].
 	self toolbar hasParent ifFalse: [ self space root addChild: self toolbar ].
-	self installLegend
+	self installLegend.
+	self installGrid
 ]
 
 { #category : 'zoom' }
@@ -295,7 +385,7 @@ TLBlocVisualization >> keepPositionWhile: aBlock [
 	"The visualization stays where it is while the block moves nodes. It is anchored to the top left corner of its content, which a node dragged to the left or to the top moves: the panning compensates, so the other nodes do not move under the mouse. The user took over: the visualization is not fitted again by itself. The corner before the move is the one of the last placement, and the one after it is computed once"
 
 	| keptPosition topLeft |
-	autoFit := false.
+	self userTookOver.
 	keptPosition := (self basePositionFor: self placedContentTopLeft) + panOffset.
 	aBlock value.
 	topLeft := self contentTopLeft.
@@ -364,6 +454,45 @@ TLBlocVisualization >> mouseEventTargetIn: anElement at: aLocalPoint [
 		  ifFalse: [ nil ]
 ]
 
+{ #category : 'private' }
+TLBlocVisualization >> moveSmoothlyToZoom: aZoom panOffset: aPanOffset contentTopLeft: aContentTopLeft [
+	"Brings the zoom and the panning to the given ones in a short animation. The zoom changes by the same ratio at each step, like the zoom of the mouse wheel, and the translation of the content in proportion, both eased so that the move starts and ends slowly. The content does not change meanwhile: its top left corner is the given one. An animation which was replaced ignores its steps from then on and ends by itself"
+
+	| startZoom startTranslation endTranslation animation |
+	startZoom := zoomFactor.
+	startTranslation := (self basePositionFor: self placedContentTopLeft) + panOffset.
+	endTranslation := self windowMargin @ self windowMargin - (aContentTopLeft * aZoom) + aPanOffset.
+	animation := BlNumberTransition new
+		             from: 0;
+		             to: 1;
+		             duration: self class fitDuration;
+		             easing: TLBlocSmoothEasing new;
+		             onStepDo: [ :progress |
+				             fitAnimation == animation ifTrue: [
+							             progress >= 1
+								             ifTrue: [
+										             zoomFactor := aZoom.
+										             panOffset := aPanOffset.
+										             fitAnimation := nil ]
+								             ifFalse: [
+										             zoomFactor := startZoom * (aZoom / startZoom raisedTo: progress).
+										             panOffset := startTranslation + (endTranslation - startTranslation * progress) - (self basePositionFor: aContentTopLeft) ].
+							             self placeContentWithTopLeft: aContentTopLeft ] ];
+		             yourself.
+	fitAnimation := animation.
+	self addAnimation: animation
+]
+
+{ #category : 'hovering' }
+TLBlocVisualization >> nodeElementHolding: anElement [
+	"The innermost node which is or contains the element, if any: the element under the mouse may be the label of a node"
+
+	| current |
+	current := anElement.
+	[ current isNil or: [ current == self or: [ current class = TLBlocNodeElement ] ] ] whileFalse: [ current := current parent ].
+	^ current == self ifFalse: [ current ]
+]
+
 { #category : 'dragging' }
 TLBlocVisualization >> nodeElementsOf: anElement do: aBlock [
 	"The node elements inside of the element, at any depth, each one before the nodes it contains: the last one under a point is the one drawn above the others"
@@ -391,7 +520,7 @@ TLBlocVisualization >> onNodesMovedDo: aBlock [
 TLBlocVisualization >> panBy: aPoint [
 	"Moves the visualization by the given distance, and keeps the distance for the next layouts. The user took over: the visualization is not fitted again by itself. The content does not change: the top left corner of the last placement is reused"
 
-	autoFit := false.
+	self userTookOver.
 	panOffset := panOffset + aPoint.
 	self placeContentWithTopLeft: self placedContentTopLeft
 ]
@@ -404,21 +533,22 @@ TLBlocVisualization >> panOffset [
 { #category : 'layout' }
 TLBlocVisualization >> placeContentWithTopLeft: aContentTopLeft [
 	"Translates and scales me so that the top left corner of my content, the one given, sits at the margin of the window, shifted by the panning. Only my transformation changes, not my position: my nodes and their labels are not laid out again, which makes the zoom and the panning fluid with many nodes. The content is scaled first, then translated. The corner is remembered: the zoom and the panning do not change the content, they reuse it.
-	A drag places the content at each move of the mouse, mostly at the same place: the transformation is only changed when it differs, because changing it, even to the same one, makes Bloc draw all the nodes again"
+	A drag places the content at each move of the mouse, mostly at the same place: the transformation is only changed when it differs, because changing it, even to the same one, makes Bloc draw all the nodes again. The grid follows the content: it is drawn again"
 
 	| translation aTransformation |
 	placedContentTopLeft := aContentTopLeft.
 	translation := (self basePositionFor: aContentTopLeft) + panOffset.
 	aTransformation := {
-		                  zoomFactor.
-		                  translation }.
+		                   zoomFactor.
+		                   translation }.
 	aTransformation = placedTransformation ifTrue: [ ^ self ].
 	placedTransformation := aTransformation.
 	self transformDo: [ :builder |
 			builder
 				topLeftOrigin;
 				scaleBy: zoomFactor @ zoomFactor;
-				translateBy: translation ]
+				translateBy: translation ].
+	grid ifNotNil: [ :element | element invalidate ]
 ]
 
 { #category : 'layout' }
@@ -494,9 +624,19 @@ TLBlocVisualization >> uninstallNavigationHandlers [
 	{
 		panHandler.
 		zoomHandler.
-		dragHandler } do: [ :handler | handler uninstall ].
+		dragHandler.
+		hoverHandler } do: [ :handler | handler uninstall ].
 	toolbar ifNotNil: [ :element | element removeFromParent ].
-	legend ifNotNil: [ :element | element removeFromParent ]
+	legend ifNotNil: [ :element | element removeFromParent ].
+	grid ifNotNil: [ :element | element removeFromParent ]
+]
+
+{ #category : 'private' }
+TLBlocVisualization >> userTookOver [
+	"The user panned, zoomed or dragged: I am not fitted again by myself, and a fit in progress stops where it is"
+
+	autoFit := false.
+	fitAnimation := nil
 ]
 
 { #category : 'layout' }
@@ -517,7 +657,7 @@ TLBlocVisualization >> zoomBy: aFactor around: aPoint [
 	"Scales the visualization, within the limits of the zoom, and keeps the point under the given position of the window where it is. The user took over: the visualization is not fitted again by itself. The content is the same whatever the zoom: the top left corner of the last placement is reused"
 
 	| newZoom ratio topLeft currentPosition |
-	autoFit := false.
+	self userTookOver.
 	newZoom := (zoomFactor * aFactor min: self class maximumZoom) max: self class minimumZoom.
 	ratio := newZoom / zoomFactor.
 	topLeft := self placedContentTopLeft.
@@ -534,16 +674,16 @@ TLBlocVisualization >> zoomFactor [
 
 { #category : 'fitting' }
 TLBlocVisualization >> zoomIn [
-	"Zooms around the center of the window"
+	"Zooms around the center of the window, in a short animation"
 
-	self zoomBy: 1.25 around: self space extent / 2
+	self zoomSmoothlyBy: 1.25 around: self space extent / 2
 ]
 
 { #category : 'fitting' }
 TLBlocVisualization >> zoomOut [
-	"Zooms around the center of the window"
+	"Zooms around the center of the window, in a short animation"
 
-	self zoomBy: 1 / 1.25 around: self space extent / 2
+	self zoomSmoothlyBy: 1 / 1.25 around: self space extent / 2
 ]
 
 { #category : 'zoom' }

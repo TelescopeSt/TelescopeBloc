@@ -28,6 +28,22 @@ TLBlocDarkTheme >> canvasColor [
 ]
 
 { #category : 'accessing' }
+TLBlocDarkTheme >> gridColor [
+
+	^ Color white alpha: 0.08
+]
+
+{ #category : 'accessing' }
+TLBlocDarkTheme >> hoverOutlineColor [
+
+	^ Color
+		  r: 0.45
+		  g: 0.65
+		  b: 1
+		  alpha: 0.85
+]
+
+{ #category : 'accessing' }
 TLBlocDarkTheme >> iconColor [
 
 	^ Color r: 0.7 g: 0.72 b: 0.76
@@ -47,8 +63,13 @@ TLBlocDarkTheme >> menuColor [
 
 { #category : 'accessing' }
 TLBlocDarkTheme >> menuHoverColor [
+	"A tint of the outline of the node under the mouse"
 
-	^ Color r: 0.3 g: 0.32 b: 0.37
+	^ Color
+		  r: 0.45
+		  g: 0.65
+		  b: 1
+		  alpha: 0.22
 ]
 
 { #category : 'accessing' }

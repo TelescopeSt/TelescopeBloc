@@ -1,5 +1,5 @@
 "
-I am the toolbar of a visualization in a window, with a button to fit the visualization into the window, to zoom in, to zoom out, and to export it as a PNG or as a SVG. The visualization puts me in the root of its window, not in itself, so that the zoom and the panning do not move me, and I stay at the top right corner of the window, even when it is resized. The export buttons ask for the file in a dialog, in another process so that the window does not freeze.
+I am the toolbar of a visualization in a window, with a button to fit the visualization into the window, to zoom in, to zoom out, and to export it as a PNG or as a SVG. The fit and the zoom of my buttons are short animations (TLBlocVisualization>>#fitIntoWindowSmoothly, #zoomIn, #zoomOut). The visualization puts me in the root of its window, not in itself, so that the zoom and the panning do not move me, and I stay at the top right corner of the window, even when it is resized. The export buttons ask for the file in a dialog, in another process so that the window does not freeze.
 "
 Class {
 	#name : 'TLBlocToolbar',
@@ -21,7 +21,7 @@ TLBlocToolbar class >> for: aVisualization [
 	| toolbar |
 	toolbar := self new.
 	toolbar theme: aVisualization theme.
-	(toolbar addButton: 'Fit' action: [ aVisualization fitIntoWindow ]) tooltip: 'Fit' , String cr , 'Scales and centers the visualization to fill the window'.
+	(toolbar addButton: 'Fit' action: [ aVisualization fitIntoWindowSmoothly ]) tooltip: 'Fit' , String cr , 'Scales and centers the visualization to fill the window'.
 	(toolbar addToggleButton: 'Auto' action: [ :isOn | aVisualization autoFitOnLayout: isOn ])
 		isOn: aVisualization autoFitOnLayout;
 		tooltip: 'Auto fit' , String cr , 'On: the visualization fits the window each time its layout is updated' , String cr , 'Off: it stays where it is, even when its layout is updated'.

@@ -1,9 +1,11 @@
 "
-I am the Bloc element of a Telescope node. My dimension, my background and my border come from the style sheet of the node, the border being half inside and half outside of the edge, solid, dashed, dotted or double, the outline drawn a second time inside of the first one with a small gap: the colors can depend on the entity of the node, with a block or a gradient. My shape is my outline: a Geometry project shape (a polygon, a rectangle or an ellipse) built from the Telescope shape and my dimension, in my own coordinates. My Bloc geometry is derived from my outline, and the connections use my outline to find where they meet the border of the node. I have no outline when the node has no shape, and then only my label is drawn. The layouts of Telescope place a node by its center: #position: takes the center, but #position stays the top left corner of the element, because Bloc reads it to draw me. I do not clip my children, because the label of a node is drawn outside of the node. I know the elements of the connections which leave me and enter me, as my adjacent nodes are asked by the layouts of Telescope such as the tree layout. I know whether the user dragged me with the mouse, because the click which ends a drag is not a click. A composite node has its children in a group: the element of the group is inside of me, at my padding from my border, and I am as big as it and the padding (#fitToChildren). Without child, or when I am collapsed, I have the dimension of my style again. A dimension of 0 gives an outline of at least one pixel. A node can have a fixed center, which a layout does not change (#defineFixedRelativePosition:): this is what the action which memorizes the position of a node does. My label is made again when the entity of the node changes. When the label of a composite node with children displayed is at its center (#inside), it is in a strip at the top of the node: the node makes room for it above its children (#headerHeight), is as wide as it when it is wider than the children, and centers the children under it. The node makes room once, when the label is measured (#fitToChildrenWhenTheHeaderChanged), and does not follow the children the user moved. A collapsed composite, and a leaf, have their label centered over them. A node which takes all the space of its line (the takeAllSpace or occupyMaximumSpace of its style, which can depend on the entity) answers true to #occupyMaxSpace: the linear layout makes it as high as the tallest node of its line, and asks for #restoreOriginalDimension before it is applied again. Applying its style again keeps the height the layout gave it. #width and #height are the ones of the dimension, because the layouts of Telescope ask them and a Bloc element has no extent before it is laid out. A shape trigger of Telescope (the small shape which runs the action of a shape interaction on click, such as the one which expands a node of the tree explorer) is a node element too, a child of the element of its node, so it follows the node: its center is on the side of the trigger position of the style sheet (on the right by default), and it is placed again when the node changes its dimension. A press on a trigger does not drag it.
+I am the Bloc element of a Telescope node. My dimension, my background and my border come from the style sheet of the node, the border being half inside and half outside of the edge, solid, dashed, dotted or double, the outline drawn a second time inside of the first one with a small gap: the colors can depend on the entity of the node, with a block or a gradient. My shape is my outline: a Geometry project shape (a polygon, a rectangle or an ellipse) built from the Telescope shape and my dimension, in my own coordinates. My Bloc geometry is derived from my outline, and the connections use my outline to find where they meet the border of the node. I have no outline when the node has no shape, and then only my label is drawn. The layouts of Telescope place a node by its center: #position: takes the center, but #position stays the top left corner of the element, because Bloc reads it to draw me. I do not clip my children, because the label of a node is drawn outside of the node. I know the elements of the connections which leave me and enter me, as my adjacent nodes are asked by the layouts of Telescope such as the tree layout. I know whether the user dragged me with the mouse, because the click which ends a drag is not a click. A composite node has its children in a group: the element of the group is inside of me, at my padding from my border, and I am as big as it and the padding (#fitToChildren). Without child, or when I am collapsed, I have the dimension of my style again. While my children are shown, my corners are rounded when I am a rectangle (#hasRoundedCorners): only my Bloc geometry, not my outline, so the connections meet me at the same places. A dimension of 0 gives an outline of at least one pixel. A node can have a fixed center, which a layout does not change (#defineFixedRelativePosition:): this is what the action which memorizes the position of a node does. My label is made again when the entity of the node changes. When the label of a composite node with children displayed is at its center (#inside), it is in a strip at the top of the node: the node makes room for it above its children (#headerHeight), is as wide as it when it is wider than the children, and centers the children under it. The node makes room once, when the label is measured (#fitToChildrenWhenTheHeaderChanged), and does not follow the children the user moved. A collapsed composite, and a leaf, have their label centered over them. A node which takes all the space of its line (the takeAllSpace or occupyMaximumSpace of its style, which can depend on the entity) answers true to #occupyMaxSpace: the linear layout makes it as high as the tallest node of its line, and asks for #restoreOriginalDimension before it is applied again. Applying its style again keeps the height the layout gave it. #width and #height are the ones of the dimension, because the layouts of Telescope ask them and a Bloc element has no extent before it is laid out. A shape trigger of Telescope (the small shape which runs the action of a shape interaction on click, such as the one which expands a node of the tree explorer) is a node element too, a child of the element of its node, so it follows the node: its center is on the side of the trigger position of the style sheet (on the right by default), and it is placed again when the node changes its dimension. A press on a trigger does not drag it.
 "
 Class {
 	#name : 'TLBlocNodeElement',
 	#superclass : 'BlElement',
+	#traits : 'TTLBlocEasedColors',
+	#classTraits : 'TTLBlocEasedColors classTrait',
 	#instVars : [
 		'dimension',
 		'outline',
@@ -18,12 +20,20 @@ Class {
 		'fixedCenter',
 		'fittedHeaderExtent',
 		'occupiesMaxSpace',
-		'triggerPosition'
+		'triggerPosition',
+		'roundedCorners'
 	],
 	#category : 'Telescope-Bloc-Elements',
 	#package : 'Telescope-Bloc',
 	#tag : 'Elements'
 }
+
+{ #category : 'accessing' }
+TLBlocNodeElement class >> compositeCornerRadius [
+	"The radius of the corners of a composite node whose children are shown, when it is a rectangle"
+
+	^ 6
+]
 
 { #category : 'initialization' }
 TLBlocNodeElement >> addInnerBorderOf: aShape [
@@ -37,7 +47,9 @@ TLBlocNodeElement >> addInnerBorderOf: aShape [
 	innerBorder := BlElement new
 		               position: inset @ inset;
 		               extent: dimension - (inset * 2);
-		               geometry: innerOutline asBlocGeometry;
+		               geometry: (roundedCorners
+				                ifTrue: [ BlRoundedRectangleGeometry cornerRadius: (self class compositeCornerRadius - inset max: 0) ]
+				                ifFalse: [ innerOutline asBlocGeometry ]);
 		               border: self border;
 		               beOutskirtsCentered;
 		               yourself.
@@ -54,6 +66,14 @@ TLBlocNodeElement >> adoptChildren: aTLBlocGroup [
 	self fitToChildren
 ]
 
+{ #category : 'colors' }
+TLBlocNodeElement >> applyColors: someColors [
+	"The background and the border"
+
+	self background: someColors first.
+	self border: (self border copyWithPaint: someColors second)
+]
+
 { #category : 'layout' }
 TLBlocNodeElement >> asBlocElement [
 	"The Bloc element that stands for a node or a group: the node itself"
@@ -66,6 +86,11 @@ TLBlocNodeElement >> childrenElement [
 	"The element which holds the children of a composite node, inside of me, or nil when I have no child displayed"
 
 	^ childrenGroup ifNotNil: [ :group | group element ]
+]
+
+{ #category : 'accessing' }
+TLBlocNodeElement >> childrenGroup [
+	^ childrenGroup
 ]
 
 { #category : 'composite' }
@@ -86,15 +111,20 @@ TLBlocNodeElement >> customizeFromNode: aNode [
 TLBlocNodeElement >> customizeFromNode: aNode styleSheet: styleSheet [
 	"The style sheet is the effective one of the node, given because merging the style sheets of the parents of a node costs. The colors, the dimension and the shape of the style sheet can depend on the entity of the node: a block, or a gradient for the colors, gives the value of each node. It can be called again when an interaction changed the style: the previous inner border is removed, a composite node is still as big as its children, and a node which takes all the space of its line keeps the height the layout gave it. The border is drawn with the line style of the style sheet, solid by default, half inside and half outside of the edge of the node"
 
-	| previous |
+	| previous backgroundColor borderColor |
 	previous := dimension.
 	self beOutskirtsCentered.
-	self background: (self valueOf: #backgroundColor in: styleSheet forNode: aNode).
+	backgroundColor := self valueOf: #backgroundColor in: styleSheet forNode: aNode.
+	self background: backgroundColor.
 	shape := self valueOf: #shape in: styleSheet forNode: aNode.
 	borderStyle := (styleSheet attributes includesKey: #borderStyle)
 		               ifTrue: [ styleSheet borderStyle ]
 		               ifFalse: [ TLSolidLineStyle ].
-	self border: (borderStyle blocBorderPaint: (self valueOf: #borderColor in: styleSheet forNode: aNode) width: styleSheet borderWidth).
+	borderColor := self valueOf: #borderColor in: styleSheet forNode: aNode.
+	self border: (borderStyle blocBorderPaint: borderColor width: styleSheet borderWidth).
+	self showColors: {
+			backgroundColor.
+			borderColor }.
 	ownDimension := (self valueOf: #width in: styleSheet forNode: aNode) @ (self valueOf: #height in: styleSheet forNode: aNode).
 	occupiesMaxSpace := (self valueOf: #takeAllSpace in: styleSheet forNode: aNode) == true.
 	self dimension: ((occupiesMaxSpace and: [ previous isNotNil ])
@@ -152,12 +182,15 @@ TLBlocNodeElement >> fitToChildren [
 	| rectangle padding target |
 	childrenGroup ifNil: [ ^ self ].
 	fittedHeaderExtent := self headerExtent.
-	childrenGroup isEmpty ifTrue: [ ^ self resizeTo: ownDimension ].
+	childrenGroup isEmpty ifTrue: [
+			self resizeTo: ownDimension.
+			^ self updateCorners ].
 	rectangle := childrenGroup localRectangle.
 	padding := self childrenPadding.
 	self resizeTo: (rectangle extent x max: self headerWidth) + (padding * 2) @ (rectangle extent y + (padding * 2) + self headerHeight).
 	target := dimension x - rectangle extent x / 2 - rectangle origin x @ (padding + self headerHeight - rectangle origin y).
-	childrenGroup element measuredBounds position = target ifFalse: [ childrenGroup element position: target ]
+	childrenGroup element measuredBounds position = target ifFalse: [ childrenGroup element position: target ].
+	self updateCorners
 ]
 
 { #category : 'children' }
@@ -186,6 +219,13 @@ TLBlocNodeElement >> fractionOf: aSide [
 	^ aSide = #center
 		  ifTrue: [ 0.5 ]
 		  ifFalse: [ 1 ]
+]
+
+{ #category : 'testing' }
+TLBlocNodeElement >> hasRoundedCorners [
+	"A composite node whose children are shown has rounded corners when it is a rectangle: it reads as a container. A collapsed one looks like the other nodes, and the other shapes keep theirs"
+
+	^ shape = TLRectangle and: [ childrenGroup isNotNil and: [ childrenGroup isEmpty not ] ]
 ]
 
 { #category : 'children' }
@@ -260,6 +300,7 @@ TLBlocNodeElement >> initialize [
 	outgoingConnections := OrderedCollection new.
 	incomingConnections := OrderedCollection new.
 	occupiesMaxSpace := false.
+	roundedCorners := false.
 	dimension := 0 @ 0.
 	self clipChildren: false
 ]
@@ -290,6 +331,13 @@ TLBlocNodeElement >> labelElement [
 	^ self children
 		  detect: [ :child | child class = TLBlocLabelElement ]
 		  ifNone: [ nil ]
+]
+
+{ #category : 'accessing' }
+TLBlocNodeElement >> mouseCursor [
+	"A node shows the normal cursor unless it was given one, for example the hand of a node which can be clicked. Without it, its children would show the cursor of their composite, although their clicks are not for the composite"
+
+	^ super mouseCursor ifNil: [ Cursor normal ]
 ]
 
 { #category : 'accessing' }
@@ -422,7 +470,8 @@ TLBlocNodeElement >> releaseChildren [
 
 	childrenGroup ifNotNil: [ :group | group element removeFromParent ].
 	childrenGroup := nil.
-	self resizeTo: ownDimension
+	self resizeTo: ownDimension.
+	self updateCorners
 ]
 
 { #category : 'initialization' }
@@ -480,16 +529,27 @@ TLBlocNodeElement >> unregisterConnection: aConnectionElement [
 	incomingConnections remove: aConnectionElement ifAbsent: [  ]
 ]
 
+{ #category : 'private' }
+TLBlocNodeElement >> updateCorners [
+	"Makes the outline again when my corners must become rounded or square: my children were shown or hidden without changing my dimension"
+
+	self hasRoundedCorners = roundedCorners ifFalse: [ self updateOutline ]
+]
+
 { #category : 'initialization' }
 TLBlocNodeElement >> updateOutline [
-	"The outline and the geometry come from the shape and the dimension. A dimension of 0, which a property such as a number of attributes can give, would make a shape which cannot exist: the outline is at least one pixel wide and high. A double border draws the outline a second time, which is made again too"
+	"The outline and the geometry come from the shape and the dimension. A dimension of 0, which a property such as a number of attributes can give, would make a shape which cannot exist: the outline is at least one pixel wide and high. The corners of a composite node whose children are shown are rounded (see #hasRoundedCorners): only its geometry, not its outline, which is where the connections meet the node. A double border draws the outline a second time, which is made again too"
 
 	innerBorder ifNotNil: [ :previous | previous removeFromParent ].
 	innerBorder := nil.
+	roundedCorners := self hasRoundedCorners.
 	outline := shape outlineOfExtent: (dimension max: 1 @ 1).
-	self geometry: (outline
-			 ifNil: [ BlEmptyGeometry new ]
-			 ifNotNil: #asBlocGeometry).
+	self geometry: (roundedCorners
+			 ifTrue: [ BlRoundedRectangleGeometry cornerRadius: self class compositeCornerRadius ]
+			 ifFalse: [
+					 outline
+						 ifNil: [ BlEmptyGeometry new ]
+						 ifNotNil: #asBlocGeometry ]).
 	borderStyle hasParallelLineInBloc ifTrue: [ self addInnerBorderOf: shape ]
 ]
 
